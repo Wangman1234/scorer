@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import Init from './scripts/Init.vue'
-import {Fencer} from "./scripts/Classes.ts";
+import {Fencer, type FencerStatus, type Status} from "./scripts/Classes.ts";
 import {CountryList} from "./scripts/Country.ts";
 
 const started = ref(false)
+const cyrano = ref(false)
 const menu = ref(false)
 const page = ref("bout")
 const change = ref<false | string>(false)
@@ -42,26 +43,39 @@ const settings = ref({
   fencer1: new Fencer(1, ["Wang", "Jason"], CountryList.CAN, "THC"),
   fencer2: new Fencer(2, ["Ito", "David"], CountryList.CAN, "THC"),
 })
-const status = ref({
+const cyranoOptions = ref({ port: 50100 })
+const status = ref<Status>({
   pooltab: settings.value.pooltab,
+  match: 1,
   round: 1,
+  time: "",
   stopwatch: settings.value.maxTime,
+  type: "I",
+  weapon: "S",
   priority: "N",
   state: "H",
 })
-const leftfencer = ref({
+const leftfencer = ref<FencerStatus>({
   fencer: settings.value.fencer1,
   score: 0,
   status: "U",
-  ycard: 0,
+  ycard: false,
   rcard: 0,
+  light: false,
+  wlight: false,
+  medical: 0,
+  reserve: false
 })
-const rightfencer = ref({
+const rightfencer = ref<FencerStatus>({
   fencer: settings.value.fencer2,
   score: 0,
   status: "U",
-  ycard: 0,
+  ycard: false,
   rcard: 0,
+  light: false,
+  wlight: false,
+  medical: 0,
+  reserve: false
 })
 const Lcard = ref(0)
 const Rcard = ref(0)
@@ -90,15 +104,15 @@ const Rcolor = computed(() => {
 watch(Lcard, (value) => {
   switch (value) {
     case 0:
-      leftfencer.value.ycard = 0;
+      leftfencer.value.ycard = false;
       leftfencer.value.rcard = 0;
       break;
     case 1:
-      leftfencer.value.ycard = 1;
+      leftfencer.value.ycard = true;
       leftfencer.value.rcard = 0;
       break;
     case 2:
-      leftfencer.value.ycard = 0;
+      leftfencer.value.ycard = false;
       leftfencer.value.rcard = 1;
       break;
   }
@@ -177,8 +191,12 @@ function changeScore(fencer: typeof rightfencer, value: number) {
 function reset() {
   status.value = {
     pooltab: settings.value.pooltab,
+    match: 1,
     round: 1,
+    time: "",
     stopwatch: settings.value.maxTime,
+    type: "I",
+    weapon: "S",
     priority: "N",
     state: "H",
   }
@@ -186,19 +204,93 @@ function reset() {
     fencer: settings.value.fencer1,
     score: 0,
     status: "U",
-    ycard: 0,
+    ycard: false,
     rcard: 0,
+    light: false,
+    wlight: false,
+    medical: 0,
+    reserve: false
   }
   rightfencer.value = {
     fencer: settings.value.fencer2,
     score: 0,
     status: "U",
-    ycard: 0,
+    ycard: false,
     rcard: 0,
+    light: false,
+    wlight: false,
+    medical: 0,
+    reserve: false
   }
   menu.value = false
   Lcard.value = 0
   Rcard.value = 0
+}
+
+async function startCyrano() {
+  const socket = new UDPSocket({
+    // remoteAddress: "192.168.2.11",
+    // remotePort: cyranoOptions.value.port,
+    localAddress: "0.0.0.0",
+    localPort: cyranoOptions.value.port,
+    receiveBufferSize:256,
+  })
+  if (!socket) {
+    console.log("Socket not connected")
+    return
+  }
+  console.log("socket started on port ", cyranoOptions.value.port)
+  cyrano.value = true
+  const { readable, writable } = await socket.opened
+  const reader = readable.getReader()
+  const writer = writable.getWriter()
+
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+
+  const message = {
+    data: encoder.encode("|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|"),
+    remoteAddress: "192.168.2.11",
+    remotePort: cyranoOptions.value.port,
+  };
+  await writer.ready;
+  await writer.write(message);
+  console.log("sent ", message.data);
+
+  // writer.releaseLock();
+
+  while (cyrano.value) {
+    console.log("awaiting message")
+    const { value, done } = await reader.read();
+    console.log("done reading")
+    if (done) {
+      console.log("done")
+      // |reader| has been canceled.
+      break;
+    }
+    console.log("message got")
+
+    // const { data } = value;
+    const { data, remoteAddress, remotePort } = value;
+    const decoded = decoder.decode(data)
+    console.log(decoded)
+    // const message = {
+    //   data: encoder.encode("|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|")
+    // };
+    if (decoded.includes("HELLO")) {
+      const message = "|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|"
+      await writer.ready;
+      await writer.write({
+        data: encoder.encode(message),
+        remoteAddress: remoteAddress,
+        remotePort: remotePort}).catch((err: Error) => console.log(err)).finally(() => console.log("sent", message));
+    }
+  }
+
+  writer.releaseLock();
+  reader.releaseLock();
+  socket.close();
+  console.log("finished")
 }
 
 function getCookies() {
@@ -361,6 +453,10 @@ onUnmounted(() => {
           </li>
         </menu>
         <button @click="reset">Reset Bout</button>
+      </div>
+      <div id="cyrano" v-if="page === 'cyrano'">
+        <button @click="startCyrano" v-if="!cyrano">Start Cyrano</button>
+        <button @click="cyrano = false" v-if="cyrano">Stop Cyrano</button>
       </div>
       <div id="keymap" v-if="page === 'controls'">
         <menu>

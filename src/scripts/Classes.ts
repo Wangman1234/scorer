@@ -66,6 +66,30 @@ export class Fencer {
     }
 }
 
+export type Status = {
+    pooltab: string
+    match: number
+    round: number
+    time?: string
+    stopwatch: number
+    type: "I" | "T"
+    weapon: "F" | "E" | "S"
+    priority: "N" | "L" | "R"
+    state: "F" | "H" | "P" | "W" | "E"
+}
+
+export type FencerStatus = {
+    fencer: Fencer
+    score: number
+    status: "U" | "V" | "D" | "A" | "E"
+    ycard?: boolean
+    rcard?: number
+    light?: boolean
+    wlight?: boolean
+    medical?: number
+    reserve?: boolean
+}
+
 export function App() {
     document.addEventListener("keydown", function (event) {
         console.log(event)
