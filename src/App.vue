@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import Init from './scripts/Init.vue'
 import {Fencer} from "./scripts/Classes.ts";
 import {CountryList} from "./scripts/Country.ts";
@@ -28,6 +28,7 @@ const config = ref({
     Timer: "Enter",
     ResetTime: "t",
     Period: "p",
+    Flip: "f",
   },
   leftColor: "red",
   rightColor: "blue",
@@ -85,6 +86,22 @@ const Lcolor = computed(() => {
 })
 const Rcolor = computed(() => {
   return color(Rcard)
+})
+watch(Lcard, (value) => {
+  switch (value) {
+    case 0:
+      leftfencer.value.ycard = 0;
+      leftfencer.value.rcard = 0;
+      break;
+    case 1:
+      leftfencer.value.ycard = 1;
+      leftfencer.value.rcard = 0;
+      break;
+    case 2:
+      leftfencer.value.ycard = 0;
+      leftfencer.value.rcard = 1;
+      break;
+  }
 })
 
 let interval: number
@@ -157,6 +174,33 @@ function changeScore(fencer: typeof rightfencer, value: number) {
   }
 }
 
+function reset() {
+  status.value = {
+    pooltab: settings.value.pooltab,
+    round: 1,
+    stopwatch: settings.value.maxTime,
+    priority: "N",
+    state: "H",
+  }
+  leftfencer.value = {
+    fencer: settings.value.fencer1,
+    score: 0,
+    status: "U",
+    ycard: 0,
+    rcard: 0,
+  }
+  rightfencer.value = {
+    fencer: settings.value.fencer2,
+    score: 0,
+    status: "U",
+    ycard: 0,
+    rcard: 0,
+  }
+  menu.value = false
+  Lcard.value = 0
+  Rcard.value = 0
+}
+
 function getCookies() {
   // console.log(localStorage.getItem("config"))
 }
@@ -192,6 +236,18 @@ function keyHandler(e: KeyboardEvent) {
         case config.value.keymap.RightAdd1:
           changeScore(rightfencer, 1);
           break;
+        case config.value.keymap.LeftAdd2:
+          changeScore(leftfencer, 2);
+          break;
+        case config.value.keymap.RightAdd2:
+          changeScore(rightfencer, 2);
+          break;
+        case config.value.keymap.LeftAdd3:
+          changeScore(leftfencer, 3);
+          break;
+        case config.value.keymap.RightAdd3:
+          changeScore(rightfencer, 3);
+          break;
         case config.value.keymap.LeftMinus1:
           changeScore(leftfencer, -1);
           break;
@@ -218,6 +274,14 @@ function keyHandler(e: KeyboardEvent) {
           break;
         case config.value.keymap.Period:
           status.value.round = status.value.round % settings.value.rounds + 1;
+          break;
+        case config.value.keymap.Flip:
+          let f1 = leftfencer.value;
+          leftfencer.value = rightfencer.value;
+          rightfencer.value = f1;
+          let c1 = Lcard.value;
+          Lcard.value = Rcard.value;
+          Rcard.value = c1;
           break;
       }
     }
@@ -286,10 +350,23 @@ onUnmounted(() => {
         <a :class="{selected:page === 'cyrano'}" @click="page='cyrano'">Cyrano</a>
         <a :class="{selected:page === 'controls'}" @click="page='controls'">Controls</a>
       </nav>
+      <div id="bout" v-if="page === 'bout'">
+        <h3>Bout Settings</h3>
+        <menu>
+          <li>
+            <div>Max time(in seconds)</div> <input v-model.number.lazy="settings.maxTime" />
+          </li>
+          <li>
+            <div>Max score</div> <input v-model.number.lazy="settings.maxScore" />
+          </li>
+        </menu>
+        <button @click="reset">Reset Bout</button>
+      </div>
       <div id="keymap" v-if="page === 'controls'">
         <menu>
           <li v-for="(item, index) in config.keymap" :key="index">
-            <div class="a">{{ index }}</div> <button @click="change=index" class="bind keys" :class="{selected:change === index}">{{ item }}</button>
+            <div>{{ index }}</div>
+            <button @click="change=index" class="bind keys" :class="{selected:change === index}">{{ item }}</button>
           </li>
         </menu>
       </div>
@@ -382,7 +459,7 @@ div.scoring {
   left: 50%;
   margin-left: -25vw;
   align-self: flex-end;
-  background-color: rgb(0.2,0.2,0.2);
+  background-color: darkslategrey;
   //backdrop-filter: invert(100%);
 }
 .blurred {
@@ -419,7 +496,8 @@ menu {
 li {
   display: flex;
   justify-content: space-between;
-  border: darkgoldenrod 2px solid;
+  padding: 0.1rem 1rem;
+  //border: darkgoldenrod 2px solid;
 }
 button {
   background-clip: border-box;

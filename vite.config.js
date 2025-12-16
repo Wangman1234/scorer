@@ -21,9 +21,6 @@ import vue from '@vitejs/plugin-vue'
 
 import wbn from 'rollup-plugin-webbundle';
 import * as wbnSign from 'wbn-sign';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const plugins = [
   vue(),
