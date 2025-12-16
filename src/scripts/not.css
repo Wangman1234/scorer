@@ -1,0 +1,104 @@
+a {
+    display: block;
+    color: white;
+    padding: 14px 16px;
+    text-decoration: none;
+    text-align: center;
+}
+menu li a {
+    width: 40%;
+    float: left;
+}
+a:hover {
+    background-color: #111;
+}
+.selected {
+    background-color: #222;
+}
+.a {
+    width: 40%;
+    color: white;
+    text-align: center;
+    float: left;
+    padding: 14px 16px;
+}
+#menu {
+    height: 100vh;
+    width: 100%;
+    display: grid;
+    grid-template-rows: none;
+}
+#start-match {
+    align-content: baseline;
+}
+#fencer-display {
+    height: 100%;
+    padding: 0;
+    overflow:auto;
+    float: top;
+}
+.name {
+    height: 100%;
+    width: 45%;
+    padding: 0;
+    overflow: auto;
+}
+#scoring-display {
+    width: 100%;
+    overflow: auto;
+    float: bottom;
+}
+menu {
+    align-content: center;
+    align-items: center;
+    list-style-type: none;
+}
+.scoring {
+    width: 25%;
+    float: left;
+    border: 20px solid;
+    border-radius: 5px;
+    background-color: gray;
+}
+.H {
+    color: white;
+}
+.F {
+    color: yellow;
+}
+#timer {
+    width: 38%;
+    float: left;
+}
+.timer {
+    height: 50%;
+    font-size: 8rem;
+}
+#rounds {
+    height: 30%;
+    font-size: 5rem;
+}
+button {
+    background-color: white;
+    border: none;
+    color: black;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+}
+.next {
+    background-color: blue;
+    color: white;
+}
+h1 {
+    font-size: 5rem;
+}
+h2 {
+    font-size: 3rem;
+}
+h3 {
+    font-size: 10rem;
+}
