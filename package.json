@@ -3,27 +3,37 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "directories": {
+    "test": "tests"
+  },
   "scripts": {
     "dev": "vite",
     "bump": "node ./bump.js",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "prettier -w ."
+    "format": "prettier -w .",
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.2",
+    "@types/underscore": "^1.13.0",
     "@vitejs/plugin-vue": "^6.0.2",
     "@vue/tsconfig": "^0.8.1",
+    "jest": "^30.2.0",
     "prettier": "^3.2.5",
     "rollup-plugin-webbundle": "^0.2.0",
     "tinycolor2": "^1.6.0",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.2.2",
+    "underscore": "^1.13.7",
     "vite": "^7.2.7",
     "vite-plugin-html-inject": "^1.1.2",
     "vue-tsc": "^3.1.8",
     "wbn-sign": "^0.2.0"
   },
   "dependencies": {
+    "underscore": "^1.13.7",
     "vue": "^3.5.25"
   }
 }

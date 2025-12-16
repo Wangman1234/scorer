@@ -45,19 +45,20 @@ export class Name {
 }
 
 export class Fencer {
-    name: Name;
-    country: Country;
-    club: string;
-    id: number;
+    name?: Name;
+    country?: Country;
+    club?: string;
+    id?: number;
     constructor(id: number, name: Name, country: Country, club: string)
     constructor(id: number, name: string, country: Country, club: string)
     constructor(id: number, name: [string, string], country: Country, club: string)
-    constructor(id: number, name: Name | string | [string, string], country: Country, club: string) {
+    constructor(id?: number, name?: string, country?: Country, club?: string)
+    constructor(id?: number, name?: Name | string | [string, string], country?: Country, club?: string) {
         if ( name instanceof Name) {
             this.name = name;
         } else if (typeof name === "string") {
             this.name = new Name(name)
-        } else {
+        } else if (typeof name !== "undefined") {
             this.name = new Name(name[0], name[1])
         }
         this.country = country
@@ -67,21 +68,21 @@ export class Fencer {
 }
 
 export type Status = {
-    pooltab: string
-    match: number
-    round: number
+    pooltab?: string
+    match?: number
+    round?: number
     time?: string
-    stopwatch: number
-    type: "I" | "T"
-    weapon: "F" | "E" | "S"
-    priority: "N" | "L" | "R"
-    state: "F" | "H" | "P" | "W" | "E"
+    stopwatch?: number
+    type?: "I" | "T"
+    weapon?: "F" | "E" | "S"
+    priority?: "N" | "L" | "R"
+    state?: "F" | "H" | "P" | "W" | "E"
 }
 
 export type FencerStatus = {
-    fencer: Fencer
-    score: number
-    status: "U" | "V" | "D" | "A" | "E"
+    fencer?: Fencer
+    score?: number
+    status?: "U" | "V" | "D" | "A" | "E"
     ycard?: boolean
     rcard?: number
     light?: boolean

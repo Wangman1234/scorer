@@ -1,3 +1,5 @@
+import _ from 'underscore'
+
 export const CountryList = {
     CAN: "Canada",
     AFG: "Afghanistan",
@@ -204,6 +206,9 @@ export const CountryList = {
     YEM: "Yemen",
     ZAM: "Zambia",
     ZIM: "Zimbabwe",
+    "": undefined,
 } as const
 
 export type Country = typeof CountryList[keyof typeof CountryList]
+
+export const reverseCountryList = _.invert(CountryList)
