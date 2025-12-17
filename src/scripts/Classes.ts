@@ -18,12 +18,13 @@ export class Name {
             } else {
                 let names = nameLastName.split(" ")
                 this.firstName = names[0]?.trim() ?? ""
-                this.lastName = names[names.length - 1]?.trim() ?? ""
+                this.lastName = names[1]?.trim() ?? ""
             }
         } else {
             this.lastName = nameLastName
             this.firstName = firstName
         }
+        console.log(this)
     }
     toString(lastNameFirst = false, shortenFirst = false, shortenSecond = true, separator = " ", ending = "") {
         let first = this.firstName
@@ -47,15 +48,15 @@ export class Name {
 }
 
 export class Fencer {
-    id: number | "";
+    id: string;
     name: Name;
     country: Country;
     club: string;
-    constructor(id: number | "", name: Name, country: Country, club: string)
-    constructor(id: number | "", name: string, country: Country, club: string)
-    constructor(id: number | "", name: [string, string], country: Country, club: string)
-    constructor(id: number | "", name: string, country: Country, club: string)
-    constructor(id: number | "", name: Name | string | [string, string], country: Country, club: string) {
+    constructor(id: string, name: Name, country: Country, club: string)
+    constructor(id: string, name: string, country: Country, club: string)
+    constructor(id: string, name: [string, string], country: Country, club: string)
+    constructor(id: string, name: string, country: Country, club: string)
+    constructor(id: string, name: Name | string | [string, string], country: Country, club: string) {
         if ( name instanceof Name) {
             this.name = name;
         } else if (typeof name === "string") {
@@ -83,6 +84,18 @@ export type Status = {
     state: "F" | "H" | "P" | "W" | "E" | ""
 }
 
+export type CorrectStatus = {
+    pooltab: string
+    match: number
+    round: number
+    time: string
+    stopwatch: number
+    type: "I" | "T"
+    weapon: "F" | "E" | "S"
+    priority: "N" | "L" | "R"
+    state: "F" | "H" | "P" | "W" | "E"
+}
+
 export const emptyStatus: Status = {
     pooltab: "",
     match: "",
@@ -105,6 +118,18 @@ export type FencerStatus = {
     wlight: boolean | ""
     medical: number | ""
     reserve: "N" | "R" | ""
+}
+
+export type CorrectFencerStatus = {
+    fencer: Fencer
+    score: number
+    status: "U" | "V" | "D" | "A" | "E"
+    ycard: boolean
+    rcard: number
+    light: boolean
+    wlight: boolean
+    medical: number
+    reserve: "N" | "R"
 }
 
 export const emptyFencerStatus: FencerStatus = {

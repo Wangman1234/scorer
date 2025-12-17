@@ -106,7 +106,7 @@ export class Cyrano {
                 state: section1s[14] as "F" | "H" | "P" | "W" | "E" ?? ""
             }
             this.ref = new Fencer(
-                cyrConvert(Number, section1s[15]),
+                section1s[15] ?? "",
                 section1s[16] ?? "",
                 CountryList[section1s[17] ?? ""] ?? "",
                 ""
@@ -118,7 +118,7 @@ export class Cyrano {
                 const section2s = section2.split("|")
                 this.leftfencer = {
                     fencer: new Fencer(
-                        cyrConvert(Number, section2s[1]),
+                        section2s[1] ?? "",
                         section2s[2] ?? "",
                         CountryList[section2s[3] ?? ""] ?? "",
                         ""),
@@ -139,7 +139,7 @@ export class Cyrano {
                 const section3s = section3.split("|")
                 this.rightfencer = {
                     fencer: new Fencer(
-                        cyrConvert(Number, section3s[1]),
+                        section3s[1] ?? "",
                         section3s[2] ?? "",
                         CountryList[section3s[3] ?? ""] ?? "",
                         ""),
@@ -175,7 +175,7 @@ export class Cyrano {
             this.status.state,
             String(this.ref.id),
             this.ref.name.toString(
-                false, true, false, ". ", ""
+                false, false, false, " ", ""
             ),
             reverseCountryList[this.ref.country],
             ""
@@ -184,7 +184,7 @@ export class Cyrano {
             "",
             String(this.leftfencer.fencer.id),
             this.leftfencer.fencer.name.toString(
-                false, true, false, ". ", ""
+                false, false, false, " ", ""
             ),
             reverseCountryList[this.leftfencer.fencer.country],
             String(this.leftfencer.score),
@@ -201,7 +201,7 @@ export class Cyrano {
             "",
             String(this.rightfencer.fencer.id),
             this.rightfencer.fencer.name.toString(
-                false, true, false, ". ", ""
+                false, false, false, " ", ""
             ),
             reverseCountryList[this.rightfencer.fencer.country],
             String(this.rightfencer.score),
