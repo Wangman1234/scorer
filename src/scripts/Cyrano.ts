@@ -1,4 +1,13 @@
-import {Fencer, type FencerStatus, type Status} from "./Classes.ts";
+import {
+    cyrConvert,
+    emptyFencer,
+    emptyFencerStatus, emptyStatus,
+    Fencer,
+    type FencerStatus,
+    type Status,
+    toSeconds,
+    toTime
+} from "./Classes.ts";
 import {CountryList, reverseCountryList} from "./Country.ts";
 
 export class Cyrano {
@@ -6,13 +15,11 @@ export class Cyrano {
     com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV"
     piste: string
     compe: string
-    phase?: number
-    status?: Status
-    refid?: string
-    refname?: string
-    refnat?: string
-    leftfencer?: FencerStatus
-    rightfencer?: FencerStatus
+    phase: number | ""
+    status: Status
+    ref: Fencer
+    leftfencer: FencerStatus
+    rightfencer: FencerStatus
     constructor(
         protocol: "EFP1" | "EFP1.1",
         com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV",
@@ -20,11 +27,16 @@ export class Cyrano {
         compe: string,
         phase: number,
         status: Status,
-        refid: string,
-        refname: string,
-        refnat: string,
+        ref: Fencer,
         leftfencer: FencerStatus,
         rightfencer: FencerStatus,
+    )
+    constructor(
+        protocol: "EFP1" | "EFP1.1",
+        com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV",
+        piste: string,
+        compe: string,
+        ...args: any[]
     )
     constructor(input: string)
     constructor(
@@ -32,13 +44,11 @@ export class Cyrano {
         com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV" = "HELLO",
         piste: string = "",
         compe: string = "",
-        phase?: number,
-        status?: Status,
-        refid?: string,
-        refname?: string,
-        refnat?: string,
-        leftfencer?: FencerStatus,
-        rightfencer?: FencerStatus,
+        phase: number | "" = "",
+        status: Status = emptyStatus,
+        ref: Fencer = emptyFencer,
+        leftfencer: FencerStatus = emptyFencerStatus,
+        rightfencer: FencerStatus = emptyFencerStatus,
     ) {
         if (inputProtocol == "EFP1" || inputProtocol == "EFP1.1") {
             this.protocol = inputProtocol
@@ -47,17 +57,14 @@ export class Cyrano {
             this.compe = compe
             this.phase = phase
             this.status = status
-            this.refid = refid
-            this.refname = refname
-            this.refnat = refnat
+            this.ref = ref
             this.leftfencer = leftfencer
             this.rightfencer = rightfencer
         } else {
             const sections = inputProtocol.split("%")
-            // @ts-ignore
-            const section1s = sections[0].split("|")
+            const section1s = sections[0]?.split("|") ?? []
             if (section1s[1] !== "EFP1" && section1s[1] !== "EFP1.1") {
-                throw new TypeError("Not a valid Cyrano message")
+                throw new TypeError("Not a valid Cyrano message, " + String(section1s[1]) + " is not a valid protocol")
             }
             this.protocol = section1s[1]
             if (
@@ -65,121 +72,153 @@ export class Cyrano {
                 && section1s[2] !== "DISP"
                 && section1s[2] !== "ACK"
                 && section1s[2] !== "NAK"
+                && section1s[2] !== "INFO"
+                && section1s[2] !== "NEXT"
+                && section1s[2] !== "PREV"
             ) {
-                throw new TypeError("Not a valid Cyrano message")
+                throw new TypeError("Not a valid Cyrano message, " + String(section1s[2]) + " is not a valid com")
             }
             this.com = section1s[2]
             if (typeof section1s[3] === "undefined" || typeof section1s[4] === "undefined") {
-                throw new TypeError("Not a valid Cyrano message")
+                throw new TypeError("Not a valid Cyrano message, " + String(section1s[3])
+                    + " or " + String(section1s[3]) + " is not valid")
             }
             this.piste = section1s[3]
             this.compe = section1s[4]
-            if (this.com !== "HELLO") {
-                if (this.com === "DISP" && (
-                    typeof section1s[5] === "undefined"
-                    || typeof section1s[6] === "undefined"
-                    || typeof section1s[7] === "undefined"
-                    || typeof section1s[8] === "undefined"
-                )) {
-                    throw new TypeError("Not a valid Cyrano message")
+            if (this.com === "DISP" && (
+                typeof section1s[5] === "undefined"
+                || typeof section1s[6] === "undefined"
+                || typeof section1s[7] === "undefined"
+                || typeof section1s[8] === "undefined"
+            )) {
+                throw new TypeError("Not a valid Cyrano message")
+            }
+            this.phase = cyrConvert(Number, section1s[5])
+            this.status = {
+                pooltab: section1s[6] ?? "",
+                match: cyrConvert(Number, section1s[7]),
+                round: cyrConvert(Number, section1s[8]),
+                time: section1s[9] ?? "",
+                stopwatch: toSeconds(section1s[10]),
+                type: section1s[11] as "I" | "T" ?? "",
+                weapon: section1s[12] as "F" | "E" | "S" ?? "",
+                priority: section1s[13] as "N" | "L" | "R" ?? "",
+                state: section1s[14] as "F" | "H" | "P" | "W" | "E" ?? ""
+            }
+            this.ref = new Fencer(
+                cyrConvert(Number, section1s[15]),
+                section1s[16] ?? "",
+                CountryList[section1s[17] ?? ""] ?? "",
+                ""
+            )
+            const section2 = sections[1]
+            if (typeof section2 === "undefined") {
+                this.leftfencer = emptyFencerStatus
+            } else {
+                const section2s = section2.split("|")
+                this.leftfencer = {
+                    fencer: new Fencer(
+                        cyrConvert(Number, section2s[1]),
+                        section2s[2] ?? "",
+                        CountryList[section2s[3] ?? ""] ?? "",
+                        ""),
+                    score: cyrConvert(Number, section2s[4]),
+                    status: section2s[5] as "U" | "V" | "D" | "A" | "E" ?? "",
+                    ycard: cyrConvert(Boolean, cyrConvert(Number, section2s[6])),
+                    rcard: cyrConvert(Number, section2s[7]),
+                    light: cyrConvert(Boolean, cyrConvert(Number, section2s[8])),
+                    wlight: cyrConvert(Boolean, cyrConvert(Number, section2s[9])),
+                    medical: cyrConvert(Number, section2s[10]),
+                    reserve: section2s[11] as "N" | "R" ?? "",
                 }
-                this.phase = Number(section1s[5])
-                this.status = {
-                    pooltab: section1s[6],
-                    match: Number(section1s[7]),
-                    round: Number(section1s[8]),
-                    time: section1s[9],
-                    stopwatch: Number(section1s[10]),
-                    type: section1s[11],
-                    weapon: section1s[12],
-                    priority: section1s[13],
-                    state: section1s[14]
-                }
-                this.refid = section1s[15]
-                this.refname = section1s[16]
-                this.refnat = section1s[17]
-                const section2 = sections[1]
-                if (typeof section2 !== "undefined") {
-                    const section2s = section2.split("|")
-                    this.leftfencer = {
-                        fencer: new Fencer(Number(section2s[1]), section2s[2], CountryList[section2s[3] ?? ""], ""),
-                        score: Number(section2s[4]),
-                        status: section2s[5],
-                        ycard: Boolean(section2s[6]),
-                        rcard: Number(section2s[7]),
-                        light: Boolean(section2s[8]),
-                        wlight: Boolean(section2s[9]),
-                        medical: Number(section2s[10]),
-                        reserve: Boolean(section2s[11]),
-                    }
-                }
-                const section3 = sections[2]
-                if (typeof section3 !== "undefined") {
-                    const section3s = section3.split("|")
-                    this.leftfencer = {
-                        fencer: new Fencer(
-                            Number(section3s[1]),
-                            section3s[2],
-                            CountryList[section3s[3] ?? ""]
-                            , ""
-                        ),
-                        score: Number(section3s[4]),
-                        status: section3s[5],
-                        ycard: Boolean(section3s[6]),
-                        rcard: Number(section3s[7]),
-                        light: Boolean(section3s[8]),
-                        wlight: Boolean(section3s[9]),
-                        medical: Number(section3s[10]),
-                        reserve: Boolean(section3s[11]),
-                    }
+            }
+            const section3 = sections[2]
+            if (typeof section3 === "undefined") {
+                this.rightfencer = emptyFencerStatus
+            } else {
+                const section3s = section3.split("|")
+                this.rightfencer = {
+                    fencer: new Fencer(
+                        cyrConvert(Number, section3s[1]),
+                        section3s[2] ?? "",
+                        CountryList[section3s[3] ?? ""] ?? "",
+                        ""),
+                    score: cyrConvert(Number, section3s[4]),
+                    status: section3s[5] as "U" | "V" | "D" | "A" | "E" ?? "",
+                    ycard: cyrConvert(Boolean, cyrConvert(Number, section3s[6])),
+                    rcard: cyrConvert(Number, section3s[7]),
+                    light: cyrConvert(Boolean, cyrConvert(Number, section3s[8])),
+                    wlight: cyrConvert(Boolean, cyrConvert(Number, section3s[9])),
+                    medical: cyrConvert(Number, section3s[10]),
+                    reserve: section3s[11] as "N" | "R" ?? "",
                 }
             }
         }
     }
 
     toString() {
-        const array:string[] = [
+        const string1:string = [
             "",
             this.protocol,
             this.com,
             this.piste,
             this.compe,
             String(this.phase),
-            this.status?.pooltab ?? "",
-            String(this.status?.match ?? ""),
-            String(this.status?.round ?? ""),
-            this.status?.time ?? "",
-            String(this.status?.stopwatch ?? ""),
-            this.status?.type ?? "",
-            this.status?.weapon ?? "",
-            this.status?.priority ?? "",
-            "%",
-            String(this.leftfencer?.fencer?.id ?? ""),
-            this.leftfencer?.fencer?.name?.toString() ?? "",
-            reverseCountryList[this.leftfencer?.fencer?.country ?? ""] ?? "",
-            String(this.leftfencer?.score ?? ""),
-            this.leftfencer?.status ?? "",
-            this.leftfencer?.ycard ?? "",
-            this.leftfencer?.rcard ?? "",
-            this.leftfencer?.light ?? "",
-            this.leftfencer?.wlight ?? "",
-            this.leftfencer?.medical ?? "",
-            this.leftfencer?.reserve ?? "",
-            "%",
-            String(this.leftfencer?.fencer?.id ?? ""),
-            this.leftfencer?.fencer?.name?.toString() ?? "",
-            reverseCountryList[this.leftfencer?.fencer?.country ?? ""] ?? "",
-            String(this.leftfencer?.score ?? ""),
-            this.rightfencer?.status ?? "",
-            this.rightfencer?.ycard ?? "",
-            this.rightfencer?.rcard ?? "",
-            this.rightfencer?.light ?? "",
-            this.rightfencer?.wlight ?? "",
-            this.rightfencer?.medical ?? "",
-            this.rightfencer?.reserve ?? "",
-            "%",
+            this.status.pooltab,
+            String(this.status.match),
+            String(this.status.round),
+            this.status.time,
+            toTime(this.status.stopwatch),
+            this.status.type,
+            this.status.weapon,
+            this.status.priority,
+            this.status.state,
+            String(this.ref.id),
+            this.ref.name.toString(
+                false, true, false, ". ", ""
+            ),
+            reverseCountryList[this.ref.country],
             ""
-        ]
-        return array.join("|")
+        ].join("|").replace(/\|*$/, "|")
+        const string2 = [
+            "",
+            String(this.leftfencer.fencer.id),
+            this.leftfencer.fencer.name.toString(
+                false, true, false, ". ", ""
+            ),
+            reverseCountryList[this.leftfencer.fencer.country],
+            String(this.leftfencer.score),
+            this.leftfencer.status,
+            String(cyrConvert(Number, this.leftfencer.ycard)),
+            String(this.leftfencer.rcard),
+            String(cyrConvert(Number, this.leftfencer.light)),
+            String(cyrConvert(Number, this.leftfencer.wlight)),
+            String(this.leftfencer.medical),
+            this.leftfencer.reserve,
+            ""
+        ].join("|").replace(/\|*$/, "|")
+        const string3 = [
+            "",
+            String(this.rightfencer.fencer.id),
+            this.rightfencer.fencer.name.toString(
+                false, true, false, ". ", ""
+            ),
+            reverseCountryList[this.rightfencer.fencer.country],
+            String(this.rightfencer.score),
+            this.rightfencer.status,
+            String(cyrConvert(Number, this.rightfencer.ycard)),
+            String(this.rightfencer.rcard),
+            String(cyrConvert(Number, this.rightfencer.light)),
+            String(cyrConvert(Number, this.rightfencer.wlight)),
+            String(this.rightfencer.medical),
+            this.rightfencer.reserve,
+            ""
+        ].join("|").replace(/\|*$/, "|")
+        return [
+            string1,
+            string2,
+            string3,
+            "|"
+            ].join("%").replace(/(%\|)*$/, "%|")
     }
 }

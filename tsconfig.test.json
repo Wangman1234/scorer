@@ -1,0 +1,23 @@
+{
+  "extends": "ts-node/node16/tsconfig.json",
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true,
+  },
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "types": ["node"],
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["tests/**/*.ts", "tests/**/*.tsx", "tests/**/*.vue"]
+}

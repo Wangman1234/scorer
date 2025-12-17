@@ -1,6 +1,8 @@
 import _ from 'underscore'
 
-export const CountryList = {
+export const CountryList: {
+    [countryCode: string]: string
+} = {
     CAN: "Canada",
     AFG: "Afghanistan",
     ALB: "Albania",
@@ -206,7 +208,7 @@ export const CountryList = {
     YEM: "Yemen",
     ZAM: "Zambia",
     ZIM: "Zimbabwe",
-    "": undefined,
+    "": "",
 } as const
 
 export type Country = typeof CountryList[keyof typeof CountryList]

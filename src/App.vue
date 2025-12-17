@@ -395,11 +395,11 @@ onUnmounted(() => {
   <div class="container" v-else>
     <div id="fencer-display">
       <div class="name fencer-1" :style="{backgroundColor: config.leftColor}">
-        <h1>{{ leftfencer.fencer.name.toString(false, true) }}</h1>
+        <h1>{{ leftfencer.fencer.name.toString(false, false, true, " ", "") }}</h1>
         <h2>{{ leftfencer.fencer.club }}</h2>
       </div>
       <div class="name fencer-2" :style="{backgroundColor: config.rightColor}">
-        <h1>{{ rightfencer.fencer.name.toString(false, true) }}</h1>
+        <h1>{{ rightfencer.fencer.name.toString(false, true, true, " ", "") }}</h1>
         <h2>{{ rightfencer.fencer.club }}</h2>
       </div>
     </div>
