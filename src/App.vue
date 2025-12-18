@@ -179,7 +179,7 @@ watch(Lcard, (value) => {
       match.value[0].rcard = 0;
       break;
     case 2:
-      match.value[0].ycard = false;
+      match.value[0].ycard = true;
       match.value[0].rcard = 1;
       break;
   }
@@ -195,7 +195,7 @@ watch(Rcard, (value) => {
       match.value[1].rcard = 0;
       break;
     case 2:
-      match.value[1].ycard = false;
+      match.value[1].ycard = true;
       match.value[1].rcard = 1;
       break;
   }
@@ -321,6 +321,7 @@ async function startCyrano() {
   reader = readable.getReader()
   writer = writable.getWriter()
 
+  await write("NEXT")
   await cyranoRun()
 }
 function stopCyrano() {
@@ -328,53 +329,61 @@ function stopCyrano() {
   reader.releaseLock();
   socket.close()
   reset()
+  menu.value = true
   cyrano.value = false;
   tournament.value = false;
   sendingData.value = false;
   cyranoLog("finished")
 }
 async function cyranoRun() {
-  await write("NEXT")
-  while (cyrano.value) {
-    while (!tournament.value) {
-      const cyranoMsg = await read()
-      if (cyranoMsg === true) {
-        return
-      } else if (
-          cyranoMsg.com === "DISP"
-          && cyranoMsg.status.poultab !== "X"
-          && cyranoMsg.status.poultab !== ""
-      ) {
-        set(cyranoMsg)
-        tournament.value = true
-        page.value = "bout"
-      } else if (cyranoMsg.com === "HELLO") {
-        await write("NEXT")
-      }
+  console.log("startCyrano")
+  while (!tournament.value) {
+    console.log("tournament not")
+    const cyranoMsg = await read()
+    if (cyranoMsg === true) {
+      return
     }
-    await sendData()
+    console.log(cyranoMsg)
+    cyranoProtocol = cyranoMsg.protocol
+    if (
+        cyranoMsg.com === "DISP"
+        && cyranoMsg.status.poultab !== "X"
+        && cyranoMsg.status.poultab !== ""
+        && cyranoMsg.status.state !== "E"
+    ) {
+      set(cyranoMsg)
+      reset()
+      tournament.value = true
+      page.value = "bout"
+      menu.value = true
+    } else if (cyranoMsg.com === "HELLO") {
+      await write("NEXT")
+    }
   }
+  sendingData.value = true
+  console.log("sendTrue")
+  await write("INFO", true)
+  console.log("sendFalse")
+  sendingData.value = false
 }
 function set(cyr: Cyrano) {
   settings.value.piste = cyr.piste
   settings.value.compe = cyr.compe
   settings.value.phase = cyr.phase === "" ? 0 : cyr.phase
-  settings.value.rounds = cyr.status.match === "" ? 0 : cyr.status.match
-  settings.value.maxTime = 180
-  settings.value.maxScore = settings.value.rounds * cyranoOptions.value.pointsPerPeriod
-  settings.value.allowTies = false
   status.value = cyr.status as CorrectStatus
   matches.value[status.value.match] = [defaultFencerStatus(), defaultFencerStatus()]
   match.value[0] = cyr.leftfencer as CorrectFencerStatus
-  match.value[1] = cyr.leftfencer as CorrectFencerStatus
-}
-async function sendData() {
-  while (status.value.state !== "E") {
-    sendingData.value = true
-    await write("INFO")
-    setTimeout(() => {}, 500)
+  match.value[1] = cyr.rightfencer as CorrectFencerStatus
+  settings.value.maxTime = 180
+  switch (status.value.poultab[0]) {
+    case "P":
+      settings.value.rounds = status.value.round;
+      break;
+    default:
+      settings.value.rounds = 3;
   }
-  sendingData.value = false
+  settings.value.maxScore = (settings.value.rounds - status.value.round + 1) * cyranoOptions.value.pointsPerPeriod;
+  settings.value.allowTies = false
 }
 async function read() {
   const {value, done} = await reader.read();
@@ -392,7 +401,7 @@ async function read() {
   cyranoLog("received ", decoded, " from ", remoteAddress, ":", remotePort)
   return new Cyrano(decoded)
 }
-async function write(com: "NEXT" | "PREV" | "INFO") {
+async function write(com: "NEXT" | "PREV" | "INFO" = "INFO", repeat = false) {
   const cyranoStart = new Cyrano(
       cyranoProtocol,
       com,
@@ -401,9 +410,10 @@ async function write(com: "NEXT" | "PREV" | "INFO") {
       settings.value.phase,
       status.value,
       emptyFencer,
-      match.value[0],
       match.value[1],
+      match.value[0],
   )
+  console.log(cyranoStart)
   let message = cyranoStart.toString();
   await writer.ready;
   await writer.write({
@@ -412,6 +422,12 @@ async function write(com: "NEXT" | "PREV" | "INFO") {
     remotePort: cyranoOptions.value.port,
   });
   cyranoLog("sent ", message, " on port ", cyranoOptions.value.port, " to ", cyranoOptions.value.remoteAddress);
+  if (repeat && status.value.state !== "E") {
+    setTimeout(async function () {
+      await write("INFO", repeat)
+      console.log("finish write")
+    }, 1000)
+  }
 }
 function cyranoLog(...args: any){
   console.log(...args)
@@ -460,49 +476,55 @@ function reset() {
 }
 
 async function update() {
-  if (cyrano.value) {
-    const cyr = new Cyrano(
-        cyranoProtocol,
-        "INFO",
-        settings.value.piste,
-        settings.value.compe,
-        settings.value.phase,
-        status.value,
-        emptyFencer,
-        match.value[0],
-        match.value[1],
-    )
-    while (sendingData.value) {
-      setTimeout(() => {}, 100)
+  const cyr = new Cyrano(
+      cyranoProtocol,
+      "INFO",
+      settings.value.piste,
+      settings.value.compe,
+      settings.value.phase,
+      status.value,
+      emptyFencer,
+      match.value[0],
+      match.value[1],
+  )
+  while (sendingData.value) {
+    console.log("not ended")
+    setTimeout(() => {}, 100)
+  }
+  while (true) {
+    console.log("ended")
+    let message = cyr.toString();
+    await writer.ready;
+    await writer.write({
+      data: encoder.encode(message),
+      remoteAddress: cyranoOptions.value.remoteAddress,
+      remotePort: cyranoOptions.value.port,
+    });
+    cyranoLog("sent ", message);
+    const cyranoMsg = await read()
+    if (cyranoMsg === true) {
+      return
     }
-    while (true) {
-      {
-        let message = cyr.toString();
-        await writer.ready;
-        await writer.write({
-          data: encoder.encode(message),
-          remoteAddress: cyranoOptions.value.remoteAddress,
-          remotePort: cyranoOptions.value.port,
-        });
-        cyranoLog("sent ", message);
-        const cyranoMsg = await read()
-        if (cyranoMsg === true) {
-          return
-        }
-        if ((cyranoMsg.com) === "ACK") {
-          return
-        }
-      }
+    if ((cyranoMsg.com) === "ACK") {
+      tournament.value = false
+      reset()
+      status.value.match = ""
+      await write("NEXT")
+      await cyranoRun()
+      return
     }
   }
 }
 
 async function finishMatch() {
   status.value.state = "E"
-  await update()
-  reset()
   page.value = "bout"
   menu.value = true
+  if (cyrano.value) {
+    await update()
+  } else {
+    reset()
+  }
 }
 function end() {
   if (match.value[0].score > match.value[1].score) {
@@ -645,7 +667,6 @@ function keyHandler(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener("keydown", keyHandler)
   getCookies()
-  update()
 })
 onUnmounted(() => {
   window.removeEventListener("keydown", keyHandler)
@@ -726,6 +747,8 @@ onUnmounted(() => {
     </nav>
     <div id="bout" v-if="page === 'bout'">
       <h3>Bout Settings</h3>
+      <h4 v-if="sendingData">Tournament Running</h4>
+      <h4 v-else>Tournament not Running</h4>
       <menu>
         <li>
           <div>Left fencer name</div>
@@ -749,6 +772,8 @@ onUnmounted(() => {
       <button @click="reset">Reset Bout</button>
     </div>
     <div id="cyrano" v-if="page === 'cyrano'">
+      <h4 v-if="sendingData">Tournament Running</h4>
+      <h4 v-else>Tournament not Running</h4>
       <menu>
         <li><div>Piste</div><input v-model="settings.piste"></li>
         <li><div>Remote Address</div><input v-model.number="cyranoOptions.remoteAddress"></li>

@@ -292,3 +292,5 @@ console.log(c1.safeStatus())
 // const nc = new Cyrano("|EFP1.1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|")
 // console.log(nc.toString())
 // console.log(msg === nc.toString())
+
+console.log(tim)

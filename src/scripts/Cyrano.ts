@@ -18,8 +18,8 @@ export class Cyrano {
     phase: number | ""
     status: Status
     ref: Fencer
-    leftfencer: FencerStatus
     rightfencer: FencerStatus
+    leftfencer: FencerStatus
     constructor(
         protocol: "EFP1" | "EFP1.1",
         com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV",
@@ -28,8 +28,8 @@ export class Cyrano {
         phase: number,
         status: Status,
         ref: Fencer,
-        leftfencer: FencerStatus,
         rightfencer: FencerStatus,
+        leftfencer: FencerStatus,
     )
     constructor(
         protocol: "EFP1" | "EFP1.1",
@@ -47,8 +47,8 @@ export class Cyrano {
         phase: number | "" = "",
         status: Status = emptyStatus,
         ref: Fencer = emptyFencer,
-        leftfencer: FencerStatus = emptyFencerStatus,
         rightfencer: FencerStatus = emptyFencerStatus,
+        leftfencer: FencerStatus = emptyFencerStatus,
     ) {
         if (inputProtocol == "EFP1" || inputProtocol == "EFP1.1") {
             this.protocol = inputProtocol
@@ -113,10 +113,10 @@ export class Cyrano {
             )
             const section2 = sections[1]
             if (typeof section2 === "undefined") {
-                this.leftfencer = emptyFencerStatus
+                this.rightfencer = emptyFencerStatus
             } else {
                 const section2s = section2.split("|")
-                this.leftfencer = {
+                this.rightfencer = {
                     fencer: new Fencer(
                         section2s[1] ?? "",
                         section2s[2] ?? "",
@@ -134,10 +134,10 @@ export class Cyrano {
             }
             const section3 = sections[2]
             if (typeof section3 === "undefined") {
-                this.rightfencer = emptyFencerStatus
+                this.leftfencer = emptyFencerStatus
             } else {
                 const section3s = section3.split("|")
-                this.rightfencer = {
+                this.leftfencer = {
                     fencer: new Fencer(
                         section3s[1] ?? "",
                         section3s[2] ?? "",
@@ -182,23 +182,6 @@ export class Cyrano {
         ].join("|").replace(/\|*$/, "|")
         const string2 = [
             "",
-            String(this.leftfencer.fencer.id),
-            this.leftfencer.fencer.name.toString(
-                false, false, false, " ", ""
-            ),
-            reverseCountryList[this.leftfencer.fencer.country],
-            String(this.leftfencer.score),
-            this.leftfencer.status,
-            String(cyrConvert(Number, this.leftfencer.ycard)),
-            String(this.leftfencer.rcard),
-            String(cyrConvert(Number, this.leftfencer.light)),
-            String(cyrConvert(Number, this.leftfencer.wlight)),
-            String(this.leftfencer.medical),
-            this.leftfencer.reserve,
-            ""
-        ].join("|").replace(/\|*$/, "|")
-        const string3 = [
-            "",
             String(this.rightfencer.fencer.id),
             this.rightfencer.fencer.name.toString(
                 false, false, false, " ", ""
@@ -212,6 +195,23 @@ export class Cyrano {
             String(cyrConvert(Number, this.rightfencer.wlight)),
             String(this.rightfencer.medical),
             this.rightfencer.reserve,
+            ""
+        ].join("|").replace(/\|*$/, "|")
+        const string3 = [
+            "",
+            String(this.leftfencer.fencer.id),
+            this.leftfencer.fencer.name.toString(
+                false, false, false, " ", ""
+            ),
+            reverseCountryList[this.leftfencer.fencer.country],
+            String(this.leftfencer.score),
+            this.leftfencer.status,
+            String(cyrConvert(Number, this.leftfencer.ycard)),
+            String(this.leftfencer.rcard),
+            String(cyrConvert(Number, this.leftfencer.light)),
+            String(cyrConvert(Number, this.leftfencer.wlight)),
+            String(this.leftfencer.medical),
+            this.leftfencer.reserve,
             ""
         ].join("|").replace(/\|*$/, "|")
         return [
