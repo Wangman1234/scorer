@@ -156,7 +156,7 @@ export class Cyrano {
         }
     }
 
-    toString() {
+    toString(includeStart = true) {
         const string1:string = [
             "",
             this.protocol,
