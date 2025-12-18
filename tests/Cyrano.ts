@@ -1,5 +1,5 @@
 import {Cyrano} from "../src/scripts/Cyrano";
-import {emptyFencer, Fencer, Name} from "../src/scripts/Classes";
+import {cyrConvert, emptyFencer, Fencer, Name} from "../src/scripts/Classes";
 import {CountryList} from "../src/scripts/Country";
 
 let messages = [
@@ -195,18 +195,21 @@ for (let msg in messages) {
 console.log(rec)
 console.log(send)
 
-// const print = String(cyrConvert(Number, cyrConvert(Boolean, 0)))
-// console.log("printed ", print, " of type", typeof print);
-//
-// const c1 = new Cyrano("|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|")
-// console.log(c1)
-// console.log(c1.toString())
-// c1.leftfencer.fencer = new Fencer("1", "Cada Lon", CountryList["CAN"], "THC")
-// c1.rightfencer.fencer = new Fencer("2", "Yarel Han", CountryList["CAN"], "DWARF")
-// console.log(c1.toString())
-// c1.leftfencer.fencer.name.lastName = "Ion"
-// console.log(c1.toString())
-//
+const print = String(cyrConvert(Number, cyrConvert(Boolean, 0)))
+console.log("printed ", print, " of type", typeof print);
+
+const c1 = new Cyrano("|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|")
+console.log(c1)
+console.log(c1.toString())
+c1.leftfencer.fencer = new Fencer("1", "Cada Lon", CountryList["CAN"], "THC")
+c1.rightfencer.fencer = new Fencer("2", "Yarel Han", CountryList["CAN"], "DWARF")
+console.log(c1.toString())
+c1.leftfencer.fencer.name.lastName = "Ion"
+console.log(c1.toString())
+
+console.log(c1.status)
+console.log(c1.safeStatus())
+
 // const rounds = {
 //     "": [
 //         {
@@ -243,48 +246,49 @@ console.log(send)
 // console.log(rounds)
 // rightfencer.score = 5
 // console.log(rounds)
-const msg = new Cyrano(
-    "EFP1.1",
-    "NEXT",
-    "1",
-    "0",
-    "",
-    {
-        poultab: '',
-        match: '',
-        round: 1,
-        time: '',
-        stopwatch: '',
-        type: '',
-        weapon: 'F',
-        priority: 'N',
-        state: ''
-    },
-    emptyFencer,
-    {
-        fencer: new Fencer(),
-        score: 0,
-        status: "U",
-        ycard: false,
-        rcard: 0,
-        light: false,
-        wlight: false,
-        medical: 0,
-        reserve: ""
-    },
-    {
-        fencer: new Fencer(),
-        score: 0,
-        status: "U",
-        ycard: false,
-        rcard: 0,
-        light: false,
-        wlight: false,
-        medical: 0,
-        reserve: ""
-    },
-).toString()
-console.log(msg)
-const nc = new Cyrano("|EFP1.1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|")
-console.log(nc.toString())
-console.log(msg === nc.toString())
+
+// const msg = new Cyrano(
+//     "EFP1.1",
+//     "NEXT",
+//     "1",
+//     "0",
+//     "",
+//     {
+//         poultab: '',
+//         match: '',
+//         round: 1,
+//         time: '',
+//         stopwatch: '',
+//         type: '',
+//         weapon: 'F',
+//         priority: 'N',
+//         state: ''
+//     },
+//     emptyFencer,
+//     {
+//         fencer: new Fencer(),
+//         score: 0,
+//         status: "U",
+//         ycard: false,
+//         rcard: 0,
+//         light: false,
+//         wlight: false,
+//         medical: 0,
+//         reserve: ""
+//     },
+//     {
+//         fencer: new Fencer(),
+//         score: 0,
+//         status: "U",
+//         ycard: false,
+//         rcard: 0,
+//         light: false,
+//         wlight: false,
+//         medical: 0,
+//         reserve: ""
+//     },
+// ).toString()
+// console.log(msg)
+// const nc = new Cyrano("|EFP1.1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|")
+// console.log(nc.toString())
+// console.log(msg === nc.toString())
