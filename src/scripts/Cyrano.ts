@@ -95,7 +95,7 @@ export class Cyrano {
             }
             this.phase = cyrConvert(Number, section1s[5])
             this.status = {
-                pooltab: section1s[6] ?? "",
+                poultab: section1s[6] ?? "",
                 match: cyrConvert(Number, section1s[7]),
                 round: cyrConvert(Number, section1s[8]),
                 time: section1s[9] ?? "",
@@ -164,7 +164,7 @@ export class Cyrano {
             this.piste,
             this.compe,
             String(this.phase),
-            this.status.pooltab,
+            this.status.poultab,
             String(this.status.match),
             String(this.status.round),
             this.status.time,

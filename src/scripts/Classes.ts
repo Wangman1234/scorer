@@ -24,7 +24,6 @@ export class Name {
             this.lastName = nameLastName
             this.firstName = firstName
         }
-        console.log(this)
     }
     toString(lastNameFirst = false, shortenFirst = false, shortenSecond = true, separator = " ", ending = "") {
         let first = this.firstName
@@ -56,7 +55,8 @@ export class Fencer {
     constructor(id: string, name: string, country: Country, club: string)
     constructor(id: string, name: [string, string], country: Country, club: string)
     constructor(id: string, name: string, country: Country, club: string)
-    constructor(id: string, name: Name | string | [string, string], country: Country, club: string) {
+    constructor()
+    constructor(id: string = "", name: Name | string | [string, string] = "", country: Country = "", club: string = "") {
         if ( name instanceof Name) {
             this.name = name;
         } else if (typeof name === "string") {
@@ -70,10 +70,10 @@ export class Fencer {
     }
 }
 
-export const emptyFencer = new Fencer("", "", "", "");
+export const emptyFencer = new Fencer();
 
 export type Status = {
-    pooltab: string
+    poultab: string
     match: number | ""
     round: number | ""
     time: string
@@ -85,19 +85,19 @@ export type Status = {
 }
 
 export type CorrectStatus = {
-    pooltab: string
-    match: number
+    poultab: string
+    match: number | ""
     round: number
     time: string
-    stopwatch: number
-    type: "I" | "T"
+    stopwatch: number | ""
+    type: "I" | "T" | ""
     weapon: "F" | "E" | "S"
     priority: "N" | "L" | "R"
-    state: "F" | "H" | "P" | "W" | "E"
+    state: "F" | "H" | "P" | "W" | "E" | ""
 }
 
 export const emptyStatus: Status = {
-    pooltab: "",
+    poultab: "",
     match: "",
     round: "",
     time: "",
@@ -129,7 +129,7 @@ export type CorrectFencerStatus = {
     light: boolean
     wlight: boolean
     medical: number
-    reserve: "N" | "R"
+    reserve: "N" | "R" | ""
 }
 
 export const emptyFencerStatus: FencerStatus = {
@@ -142,6 +142,28 @@ export const emptyFencerStatus: FencerStatus = {
     wlight: "",
     medical: "",
     reserve: ""
+}
+
+export type keyMap = {
+    Menu: string,
+    AddMin: string,
+    AddSec: string,
+    MinusMin: string,
+    MinusSec: string,
+    LeftAdd1: string,
+    RightAdd1: string,
+    LeftAdd2: string,
+    RightAdd2: string,
+    LeftAdd3: string,
+    RightAdd3: string,
+    LeftMinus1: string,
+    RightMinus1: string,
+    LeftCard: string,
+    RightCard: string,
+    Timer: string,
+    ResetTime: string,
+    Period: string,
+    Flip: string,
 }
 
 export function toSeconds(time?: string) {
@@ -173,10 +195,4 @@ export function cyrConvert<T, R>(convert: (pre: T) => R, pre?: T | ""): R | "" {
         return ""
     }
     return convert(pre1)
-}
-
-export function App() {
-    document.addEventListener("keydown", function (event) {
-        console.log(event)
-    })
 }

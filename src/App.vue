@@ -3,23 +3,32 @@ import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
 import Init from './scripts/Init.vue'
 import {
   type CorrectFencerStatus,
-  type CorrectStatus,
-  Fencer, Name,
+  type CorrectStatus, emptyFencer,
+  Fencer, type keyMap,
 } from "./scripts/Classes.ts";
+import {Cyrano} from "./scripts/Cyrano.ts";
 
-const started = ref(false)
-const cyrano = ref(false)
-const menu = ref(false)
-const winner = ref(false)
-const page = ref("bout")
-const priorityPicker = ref(false)
-const change = ref<false | string>(false)
-
-const config = ref({
-  keymap: {
+// Defaults
+function defaultFencerStatus(): CorrectFencerStatus {
+  return {
+    fencer: new Fencer(),
+    score: 0,
+    status: "U",
+    ycard: false,
+    rcard: 0,
+    light: false,
+    wlight: false,
+    medical: 0,
+    reserve: ""
+  }
+}
+const defaultKeymaps: Record<string, keyMap> = {
+  remoteKeymap1: {
     Menu: "Escape",
     AddMin: "ArrowUp",
-    AddSec: "ArrowDown",
+    AddSec: "w",
+    MinusMin: "ArrowDown",
+    MinusSec: "s",
     LeftAdd1: "AudioVolumeUp",
     RightAdd1: "PageUp",
     LeftAdd2: "",
@@ -35,6 +44,51 @@ const config = ref({
     Period: "p",
     Flip: "f",
   },
+  keyboardKeymap1: {
+    Menu: "Escape",
+    AddMin: "ArrowUp",
+    AddSec: "2",
+    MinusMin: "ArrowDown",
+    MinusSec: "1",
+    LeftAdd1: "ArrowLeft",
+    RightAdd1: "ArrowRight",
+    LeftAdd2: "",
+    RightAdd2: "",
+    LeftAdd3: "",
+    RightAdd3: "",
+    LeftMinus1: ",",
+    RightMinus1: ".",
+    LeftCard: "j",
+    RightCard: "k",
+    Timer: "Enter",
+    ResetTime: "t",
+    Period: "p",
+    Flip: "f",
+  }
+}
+
+// Flags
+const started = ref(false)
+const cyrano = ref(false)
+const menu = ref(false)
+const winner = ref(false)
+const page = ref("bout")
+const priorityPicker = ref(false)
+const change = ref<false | string>(false)
+const keymap = ref("remoteKeymap1")
+
+// Event data
+// const fencers = ref<Fencer[]>([])
+const matches = ref<Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>>({
+  "": [
+    defaultFencerStatus(),
+    defaultFencerStatus()
+  ]
+})
+
+// Match data
+const config = ref({
+  keymap: Object.assign({}, defaultKeymaps.remoteKeymap1),
   leftColor: "#ff0000",
   rightColor: "#0000ff",
   lastNameFirst: false,
@@ -44,9 +98,9 @@ const config = ref({
   ending: "",
 })
 const settings = ref({
-  piste: 1,
-  compe: "",
-  pooltab: "1",
+  piste: "1",
+  compe: "0",
+  phase: "",
   maxTime: 180,
   maxScore: 5,
   rounds: 1,
@@ -54,8 +108,8 @@ const settings = ref({
 })
 const cyranoOptions = ref({ port: 50100 })
 const status = ref<CorrectStatus>({
-  pooltab: settings.value.pooltab,
-  match: 1,
+  poultab: "",
+  match: "",
   round: 1,
   time: "",
   stopwatch: settings.value.maxTime,
@@ -64,46 +118,34 @@ const status = ref<CorrectStatus>({
   priority: "N",
   state: "H",
 })
-const leftfencer = ref<CorrectFencerStatus>({
-  fencer: new Fencer("Left", new Name("Left Swordsman"), "", ""),
-  score: 0,
-  status: "U",
-  ycard: false,
-  rcard: 0,
-  light: false,
-  wlight: false,
-  medical: 0,
-  reserve: "N"
-})
-const rightfencer = ref<CorrectFencerStatus>({
-  fencer: new Fencer("Right", new Name("Right Fencer"), "", ""),
-  score: 0,
-  status: "U",
-  ycard: false,
-  rcard: 0,
-  light: false,
-  wlight: false,
-  medical: 0,
-  reserve: "N"
-})
 const Lcard = ref(0)
 const Rcard = ref(0)
 
-const matchOver = computed(() => {
-  return (status.value.stopwatch <= 0 && status.value.round == settings.value.rounds)
-      || leftfencer.value.score >= settings.value.maxScore
-      || rightfencer.value.score >= settings.value.maxScore;
-})
-const short = computed(() => {
-  return status.value.stopwatch < 10
-})
-const button = computed(() => {
-  let name = "Timer"
-  if (matchOver.value) {
-    name = "Next"
+// Reactive data
+const stopwatch = computed(() => {
+  if (status.value.stopwatch === "") {
+    return 0
+  } else {
+    return status.value.stopwatch
   }
-  return name
 })
+const match = computed<[CorrectFencerStatus, CorrectFencerStatus]>(() => {
+  return matches.value[status.value.match] ?? [ defaultFencerStatus(), defaultFencerStatus()]
+})
+const matchOver = computed(() => {
+  return (stopwatch.value <= 0 && status.value.round == settings.value.rounds) || (
+          match.value[0].score >= settings.value.maxScore
+          || match.value[1].score >= settings.value.maxScore
+      ) && status.value.priority === 'N';
+})
+const short = computed(() => { return stopwatch.value < 10 })
+// const button = computed(() => {
+//   let name = "Timer"
+//   if (matchOver.value) {
+//     name = "Next"
+//   }
+//   return name
+// })
 const Lcolor = computed(() => {
   return color(Lcard)
 })
@@ -113,40 +155,47 @@ const Rcolor = computed(() => {
 watch(Lcard, (value) => {
   switch (value) {
     case 0:
-      leftfencer.value.ycard = false;
-      leftfencer.value.rcard = 0;
+      match.value[0].ycard = false;
+      match.value[0].rcard = 0;
       break;
     case 1:
-      leftfencer.value.ycard = true;
-      leftfencer.value.rcard = 0;
+      match.value[0].ycard = true;
+      match.value[0].rcard = 0;
       break;
     case 2:
-      leftfencer.value.ycard = false;
-      leftfencer.value.rcard = 1;
+      match.value[0].ycard = false;
+      match.value[0].rcard = 1;
       break;
   }
 })
 watch(Rcard, (value) => {
   switch (value) {
     case 0:
-      rightfencer.value.ycard = false;
-      rightfencer.value.rcard = 0;
+      match.value[1].ycard = false;
+      match.value[1].rcard = 0;
       break;
     case 1:
-      rightfencer.value.ycard = true;
-      rightfencer.value.rcard = 0;
+      match.value[1].ycard = true;
+      match.value[1].rcard = 0;
       break;
     case 2:
-      rightfencer.value.ycard = false;
-      rightfencer.value.rcard = 1;
+      match.value[1].ycard = false;
+      match.value[1].rcard = 1;
       break;
   }
 })
+watch(keymap, (value) => {
+  config.value.keymap = Object.assign({}, defaultKeymaps[value]);
+})
 
+// Timer
 let interval: number
 function startTimer(set: "F" | "P") {
   status.value.state = set
   interval = setInterval(() => {
+    if (status.value.stopwatch === "") {
+      throw TypeError("time not set")
+    }
     status.value.stopwatch -= 0.01
     if (status.value.stopwatch <= 0) {
       clearInterval(interval)
@@ -177,17 +226,19 @@ function timer() {
     stopTimer("H")
   }
 }
-
 function addTime(time: number) {
+  if (status.value.stopwatch === "") {
+    throw TypeError("time not set")
+  }
   status.value.stopwatch += time
   status.value.stopwatch %= 600
 }
 
+// Bout controls
 function card(card: typeof Lcard) {
   card.value += 1
   card.value %= 3
 }
-
 function color(card: typeof Lcard) {
   switch (card.value) {
     case 0: return "white"//"transparent"
@@ -195,19 +246,17 @@ function color(card: typeof Lcard) {
     case 2: return "red"
   }
 }
-
-function changeScore(fencer: typeof rightfencer, value: number) {
-  let val = fencer.value.score + value
+function changeScore(fencer: CorrectFencerStatus, value: number) {
+  let val = fencer.score + value
   if (status.value.priority === "N") {
-    if (!(value > 0 && fencer.value.score >= settings.value.maxScore) && (val >= 0)) {
-      fencer.value.score = val;
+    if (!(value > 0 && fencer.score >= settings.value.maxScore) && (val >= 0)) {
+      fencer.score = val;
     }
   } else {
-    fencer.value.score = val
+    fencer.score = val
     status.value.stopwatch = 0
   }
 }
-
 function choosePriority(state: "N" | "L" | "R") {
   if (state === "N") {
     if(Math.random() >= 0.5) {
@@ -221,33 +270,7 @@ function choosePriority(state: "N" | "L" | "R") {
   priorityPicker.value = false
 }
 
-function reset() {
-  status.value.pooltab = settings.value.pooltab
-  status.value.stopwatch = settings.value.maxTime
-  status.value.priority = "N"
-  status.value.state = "H"
-  leftfencer.value.score = 0
-  leftfencer.value.status = "U"
-  leftfencer.value.ycard = false
-  leftfencer.value.rcard = 0
-  leftfencer.value.light = false
-  leftfencer.value.wlight = false
-  leftfencer.value.medical = 0
-  leftfencer.value.reserve = "N"
-  rightfencer.value.score = 0
-  rightfencer.value.status = "U"
-  rightfencer.value.ycard = false
-  rightfencer.value.rcard = 0
-  rightfencer.value.light = false
-  rightfencer.value.wlight = false
-  rightfencer.value.medical = 0
-  rightfencer.value.reserve = "N"
-  winner.value = false
-  menu.value = false
-  Lcard.value = 0
-  Rcard.value = 0
-}
-
+// Cyrano
 async function startCyrano() {
   const socket = new UDPSocket({
     // remoteAddress: "192.168.2.11",
@@ -261,7 +284,25 @@ async function startCyrano() {
     return
   }
   console.log("socket started on port ", cyranoOptions.value.port)
+  matches.value = {
+    "" : [
+      defaultFencerStatus(),
+      defaultFencerStatus()
+    ]
+  }
+  status.value = {
+    poultab: '',
+    match: '',
+    round: 1,
+    time: '',
+    stopwatch: '',
+    type: '',
+    weapon: 'F',
+    priority: 'N',
+    state: ''
+  }
   cyrano.value = true
+
   const { readable, writable } = await socket.opened
   const reader = readable.getReader()
   const writer = writable.getWriter()
@@ -269,14 +310,24 @@ async function startCyrano() {
   const decoder = new TextDecoder()
   const encoder = new TextEncoder()
 
-  const message = {
-    data: encoder.encode("|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|"),
-    remoteAddress: "192.168.2.11",
-    remotePort: cyranoOptions.value.port,
-  };
+  const message = new Cyrano(
+      "EFP1.1",
+      "NEXT",
+      settings.value.piste,
+      settings.value.compe,
+      settings.value.phase,
+      status.value,
+      emptyFencer,
+      match.value[0],
+      match.value[1],
+  ).toString();
   await writer.ready;
-  await writer.write(message);
-  console.log("sent ", message.data);
+  await writer.write({
+    data: encoder.encode(message),
+        remoteAddress: "192.168.2.11",
+        remotePort: cyranoOptions.value.port,
+  });
+  console.log("sent ", message);
 
   // writer.releaseLock();
 
@@ -304,7 +355,8 @@ async function startCyrano() {
       await writer.write({
         data: encoder.encode(message),
         remoteAddress: remoteAddress,
-        remotePort: remotePort}).catch((err: Error) => console.log(err)).finally(() => console.log("sent", message));
+        remotePort: remotePort}
+      ).catch((err: Error) => console.log(err)).finally(() => console.log("sent", message));
     }
   }
 
@@ -314,10 +366,10 @@ async function startCyrano() {
   console.log("finished")
 }
 
+// Data storage
 function getCookies() {
   // console.log(localStorage.getItem("config"))
 }
-
 function setCookies() {
   // if (!('indexedDB' in window)) {
   //   // Can't use IndexedDB
@@ -328,8 +380,40 @@ function setCookies() {
   // }
 }
 
-function update() {}
+// Match controls
+function reset() {
+  status.value.stopwatch = settings.value.maxTime
+  status.value.priority = "N"
+  status.value.state = "H"
+  match.value[0].score = 0
+  match.value[0].status = "U"
+  match.value[0].ycard = false
+  match.value[0].rcard = 0
+  match.value[0].light = false
+  match.value[0].wlight = false
+  match.value[0].medical = 0
+  match.value[0].reserve = "N"
+  match.value[1].score = 0
+  match.value[1].status = "U"
+  match.value[1].ycard = false
+  match.value[1].rcard = 0
+  match.value[1].light = false
+  match.value[1].wlight = false
+  match.value[1].medical = 0
+  match.value[1].reserve = "N"
+  winner.value = false
+  menu.value = false
+  Lcard.value = 0
+  Rcard.value = 0
+}
+function update() {
+  matches.value[status.value.match] = [ match.value[0], match.value[1] ]
+  if (cyrano.value) {
 
+  } else {
+
+  }
+}
 function finishMatch() {
   status.value.state = "E"
   update()
@@ -337,24 +421,23 @@ function finishMatch() {
   page.value = "bout"
   menu.value = true
 }
-
 function end() {
-  if (leftfencer.value.score > rightfencer.value.score) {
-    leftfencer.value.status = "V"
-    rightfencer.value.status = "D"
-  } else if (leftfencer.value.score < rightfencer.value.score) {
-    leftfencer.value.status = "D"
-    rightfencer.value.status = "V"
+  if (match.value[0].score > match.value[1].score) {
+    match.value[0].status = "V"
+    match.value[1].status = "D"
+  } else if (match.value[0].score < match.value[1].score) {
+    match.value[0].status = "D"
+    match.value[1].status = "V"
   } else {
     if (settings.value.allowTies) {
-      leftfencer.value.status = "D"
-      rightfencer.value.status = "D"
+      match.value[0].status = "D"
+      match.value[1].status = "D"
     } else if (status.value.priority === "L") {
-      leftfencer.value.status = "V"
-      rightfencer.value.status = "D"
+      match.value[0].status = "V"
+      match.value[1].status = "D"
     } else if (status.value.priority === "R") {
-      leftfencer.value.status = "D"
-      rightfencer.value.status = "V"
+      match.value[0].status = "D"
+      match.value[1].status = "V"
     } else {
       status.value.state = "H"
       priorityPicker.value = true
@@ -364,7 +447,6 @@ function end() {
   }
   winner.value = true
 }
-
 function click() {
   if (winner.value) {
     finishMatch()
@@ -375,6 +457,7 @@ function click() {
   }
 }
 
+// Key handler
 function keyHandler(e: KeyboardEvent) {
   let key = e.key
   console.log(key);
@@ -413,28 +496,28 @@ function keyHandler(e: KeyboardEvent) {
       console.log("not menu")
       switch (key) {
         case config.value.keymap.LeftAdd1:
-          changeScore(leftfencer, 1);
+          changeScore(match.value[0], 1);
           break;
         case config.value.keymap.RightAdd1:
-          changeScore(rightfencer, 1);
+          changeScore(match.value[1], 1);
           break;
         case config.value.keymap.LeftAdd2:
-          changeScore(leftfencer, 2);
+          changeScore(match.value[0], 2);
           break;
         case config.value.keymap.RightAdd2:
-          changeScore(rightfencer, 2);
+          changeScore(match.value[1], 2);
           break;
         case config.value.keymap.LeftAdd3:
-          changeScore(leftfencer, 3);
+          changeScore(match.value[0], 3);
           break;
         case config.value.keymap.RightAdd3:
-          changeScore(rightfencer, 3);
+          changeScore(match.value[1], 3);
           break;
         case config.value.keymap.LeftMinus1:
-          changeScore(leftfencer, -1);
+          changeScore(match.value[0], -1);
           break;
         case config.value.keymap.RightMinus1:
-          changeScore(rightfencer, -1);
+          changeScore(match.value[1], -1);
           break;
         case config.value.keymap.LeftCard:
           card(Lcard);
@@ -451,6 +534,12 @@ function keyHandler(e: KeyboardEvent) {
         case config.value.keymap.AddSec:
           addTime(1);
           break;
+        case config.value.keymap.MinusMin:
+          addTime(-60);
+          break;
+        case config.value.keymap.MinusSec:
+          addTime(-1);
+          break;
         case config.value.keymap.ResetTime:
           status.value.stopwatch = settings.value.maxTime;
           break;
@@ -458,9 +547,9 @@ function keyHandler(e: KeyboardEvent) {
           status.value.round = status.value.round % settings.value.rounds + 1;
           break;
         case config.value.keymap.Flip:
-          let f1 = leftfencer.value;
-          leftfencer.value = rightfencer.value;
-          rightfencer.value = f1;
+          let f1 = match.value[0];
+          match.value[0] = match.value[1];
+          match.value[1] = f1;
           let c1 = Lcard.value;
           Lcard.value = Rcard.value;
           Rcard.value = c1;
@@ -473,6 +562,7 @@ function keyHandler(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener("keydown", keyHandler)
   getCookies()
+  update()
 })
 onUnmounted(() => {
   window.removeEventListener("keydown", keyHandler)
@@ -481,62 +571,70 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Init @started="(start) => started = start" v-if="!started" />
+  <Init @started="(start) => {started = start; menu = start}" v-if="!started" />
   <div class="container" v-else>
     <div id="fencer-display">
       <div class="name fencer-1" :style="{backgroundColor: config.leftColor}">
-        <h1>{{ leftfencer.fencer.name.toString(
+        <h1>{{ match[0].fencer.name.toString(
             config.lastNameFirst,
             config.shortenFirst,
             config.shortenSecond,
             config.separator,
             config.ending
         ) }}</h1>
-        <h2>{{ leftfencer.fencer.club }}</h2>
+        <h2>{{ match[0].fencer.club }}</h2>
       </div>
       <div class="name fencer-2" :style="{backgroundColor: config.rightColor}">
-        <h1>{{ rightfencer.fencer.name.toString(
+        <h1>{{ match[1].fencer.name.toString(
             config.lastNameFirst,
             config.shortenFirst,
             config.shortenSecond,
             config.separator,
             config.ending
         ) }}</h1>
-        <h2>{{ rightfencer.fencer.club }}</h2>
+        <h2>{{ match[1].fencer.club }}</h2>
       </div>
     </div>
     <div id="scoring-display">
-      <div :style="{backgroundColor: status.priority === 'L' ? config.leftColor : 'black'}">
-        <div id="fencer1-score" class="scoring fencer-1" :style="{borderColor: Lcolor}">
-          {{ leftfencer.score }}
+      <div>
+        <div
+            id="fencer1-score"
+            class="scoring fencer-1"
+            :style="{borderColor: Lcolor, backgroundColor: status.priority === 'L' ? config.leftColor : 'gray'}"
+        >
+          {{ match[0].score }}
         </div>
       </div>
       <div id="center">
+        <div id="nav">
+<!--          <button :class="{ next:matchOver }" @click="click">{{button}}</button>-->
+        </div>
         <div id="timer" :class="status.state">
           <div id="short" v-if="short">
-            <span>{{ status.stopwatch.toFixed(2) }}</span>
+            <span>{{ stopwatch.toFixed(2) }}</span>
           </div>
           <div id="long" v-else>
             <span>
-              {{ Math.floor(status.stopwatch / 60) }}:{{ (Math.floor(status.stopwatch) % 60).toString().padStart(2, "0") }}
+              {{ Math.floor(stopwatch / 60) }}:{{ (Math.floor(stopwatch) % 60).toString().padStart(2, "0") }}
             </span>
           </div>
         </div>
         <div id="rounds">
           <span>{{status.round}}</span>/<span>{{settings.rounds}}</span>
         </div>
-        <div id="nav">
-          <button :class="{ next:matchOver }" @click="click">{{button}}</button>
-        </div>
       </div>
-      <div :style="{backgroundColor: status.priority === 'R' ? config.rightColor : 'black'}">
-        <div id="fencer2-score" class="scoring fencer-2" :style="{borderColor: Rcolor}">
-          {{ rightfencer.score }}
+      <div :style="{}">
+        <div
+            id="fencer2-score"
+            class="scoring fencer-2"
+            :style="{borderColor: Rcolor, backgroundColor: status.priority === 'R' ? config.rightColor : 'gray'}"
+        >
+          {{ match[1].score }}
         </div>
       </div>
     </div>
   </div>
-  <div class="menu" v-if="menu" >
+  <div class="menu" v-if="menu && started" >
     <nav>
       <a :class="{selected:page === 'bout'}" @click="page='bout'">Bout</a>
       <a :class="{selected:page === 'cyrano'}" @click="page='cyrano'">Cyrano</a>
@@ -549,15 +647,15 @@ onUnmounted(() => {
         <li>
           <div>Left fencer name</div>
           <div>
-            <input v-model.number="leftfencer.fencer.name.firstName" placeholder="first name" />
-            <input v-model.number="leftfencer.fencer.name.lastName" placeholder="surname" />
+            <input v-model.number="match[0].fencer.name.firstName" placeholder="first name" />
+            <input v-model.number="match[0].fencer.name.lastName" placeholder="surname" />
           </div>
         </li>
         <li>
           <div>Right fencer name</div>
           <div>
-            <input v-model.number="rightfencer.fencer.name.firstName" placeholder="first name" />
-            <input v-model.number="rightfencer.fencer.name.lastName" placeholder="surname" />
+            <input v-model.number="match[1].fencer.name.firstName" placeholder="first name" />
+            <input v-model.number="match[1].fencer.name.lastName" placeholder="surname" />
           </div>
         </li>
         <li><div>Max time(in seconds)</div> <input v-model.number="settings.maxTime" /></li>
@@ -568,6 +666,9 @@ onUnmounted(() => {
       <button @click="reset">Reset Bout</button>
     </div>
     <div id="cyrano" v-if="page === 'cyrano'">
+      <menu>
+        <li><div>Piste</div><input v-model="settings.piste"></li>
+      </menu>
       <button @click="startCyrano" v-if="!cyrano">Start Cyrano</button>
       <button @click="cyrano = false" v-if="cyrano">Stop Cyrano</button>
     </div>
@@ -585,6 +686,12 @@ onUnmounted(() => {
     </div>
     <div id="keymap" v-if="page === 'controls'">
       <menu>
+        <li>
+          <div>Keymap</div>
+          <select v-model="keymap">
+            <option v-for="(_, index) in defaultKeymaps" :value="index">{{index}}</option>
+          </select>
+        </li>
         <li v-for="(item, index) in config.keymap" :key="index">
           <div>{{ index }}</div>
           <button @click="change=index" class="bind keys" :class="{selected:change === index}">{{ item }}</button>
@@ -605,16 +712,16 @@ onUnmounted(() => {
   </div>
   <div class="blurred" v-if="priorityPicker"></div>
   <div class="blurred" v-if="matchOver && !winner">
-    <h1>{{status.stopwatch === 0 ? "Time" : "Match"}}</h1>
+    <h1>Match</h1>
   </div>
   <div class="blurred" v-if="winner">
-    <h1>Match {{leftfencer.status === "V" ? "Left" : rightfencer.status === "V" ? "Right" : "Tie"}}</h1>
-    <h2>{{leftfencer.score}}-{{rightfencer.score}}</h2>
+    <h1>Match {{match[0].status === "V" ? "Left" : match[1].status === "V" ? "Right" : "Tie"}}</h1>
+    <h2>{{match[0].score}}-{{match[1].score}}</h2>
   </div>
   <div class="blurred" v-if="status.state === 'P'">
     <h1>1-min break</h1>
     <h2 style="color: blue">
-      {{ Math.floor(status.stopwatch / 60) }}:{{ (Math.floor(status.stopwatch) % 60).toString().padStart(2, "0") }}
+      {{ Math.floor(stopwatch / 60) }}:{{ (Math.floor(stopwatch) % 60).toString().padStart(2, "0") }}
     </h2>
   </div>
 </template>
@@ -662,8 +769,8 @@ div.scoring {
   background-clip: border-box;
   background-color: gray;
   align-self: center;
-  width: 100%;
-  height: 60%;
+  width: 25rem;
+  height: 20rem;
   //padding: 20% 10%;
   border: solid 40px;
   border-radius: 20px;
@@ -672,7 +779,7 @@ div.scoring {
 #center {
   display: grid;
   grid-template-columns: 100%;
-  grid-template-rows: 50% 30% 20%;
+  grid-template-rows: 20% 50% 30%;
   height: 100%;
   //background-color: dodgerblue;
 }
@@ -739,6 +846,7 @@ nav a {
 }
 nav a:hover {
   background-color: darkcyan;
+  cursor:pointer;
 }
 menu {
   list-style-type: none;
