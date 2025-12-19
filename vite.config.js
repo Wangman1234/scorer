@@ -16,13 +16,12 @@
 
 import { defineConfig } from "vite";
 import fs from "fs";
-import injectHTML from "vite-plugin-html-inject";
 import vue from "@vitejs/plugin-vue";
 
 import wbn from "rollup-plugin-webbundle";
 import * as wbnSign from "wbn-sign";
 
-const plugins = [vue(), injectHTML()];
+const plugins = [vue()];
 
 if (process.env.NODE_ENV === "production") {
   // Get the key and decrypt it to sign the web bundle

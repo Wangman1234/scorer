@@ -23,7 +23,6 @@
     "typescript": "^5.2.2",
     "underscore": "^1.13.7",
     "vite": "^7.2.7",
-    "vite-plugin-html-inject": "^1.1.2",
     "vue-tsc": "^3.1.8",
     "wbn-sign": "^0.2.0"
   },
