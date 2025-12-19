@@ -235,13 +235,6 @@ function stopTimer(set: "H") {
   status.value.state = set
   clearInterval(interval)
 }
-function timer() {
-  if (status.value.state === "H") {
-    startTimer("F")
-  } else if (status.value.state === "F") {
-    stopTimer("H")
-  }
-}
 function addTime(time: number) {
   if (status.value.stopwatch === "") {
     throw TypeError("time not set")
@@ -328,6 +321,10 @@ function stopCyrano() {
   writer.releaseLock();
   reader.releaseLock();
   socket.close()
+  settings.value.rounds = 1
+  settings.value.maxScore = 5
+  matches.value[""] = [defaultFencerStatus(), defaultFencerStatus()]
+  status.value.match = ""
   reset()
   menu.value = true
   cyrano.value = false;
@@ -350,21 +347,29 @@ async function cyranoRun() {
         && cyranoMsg.status.poultab !== "X"
         && cyranoMsg.status.poultab !== ""
         && cyranoMsg.status.state !== "E"
+        && cyranoMsg.leftfencer.status === "U"
+        && cyranoMsg.rightfencer.status === "U"
     ) {
       set(cyranoMsg)
-      reset()
+      status.value.stopwatch = settings.value.maxTime
       tournament.value = true
       page.value = "bout"
       menu.value = true
-    } else if (cyranoMsg.com === "HELLO") {
+    } else if (
+        (cyranoMsg.com === "HELLO"
+        || cyranoMsg.leftfencer.status !== "U"
+        || cyranoMsg.rightfencer.status !== "U")
+        && cyranoMsg.status.poultab !== "X"
+    ) {
       await write("NEXT")
     }
   }
+  await bout()
+}
+async function bout() {
   sendingData.value = true
   console.log("sendTrue")
-  await write("INFO", true)
-  console.log("sendFalse")
-  sendingData.value = false
+  const pm = await new Promise((res, rej) => writeRepeat(res, rej))
 }
 function set(cyr: Cyrano) {
   settings.value.piste = cyr.piste
@@ -401,7 +406,7 @@ async function read() {
   cyranoLog("received ", decoded, " from ", remoteAddress, ":", remotePort)
   return new Cyrano(decoded)
 }
-async function write(com: "NEXT" | "PREV" | "INFO" = "INFO", repeat = false) {
+async function write(com: "NEXT" | "PREV" | "INFO" = "INFO") {
   const cyranoStart = new Cyrano(
       cyranoProtocol,
       com,
@@ -422,11 +427,17 @@ async function write(com: "NEXT" | "PREV" | "INFO" = "INFO", repeat = false) {
     remotePort: cyranoOptions.value.port,
   });
   cyranoLog("sent ", message, " on port ", cyranoOptions.value.port, " to ", cyranoOptions.value.remoteAddress);
-  if (repeat && status.value.state !== "E") {
-    setTimeout(async function () {
-      await write("INFO", repeat)
-      console.log("finish write")
-    }, 1000)
+}
+async function writeRepeat(resolve: { (value: unknown): void; (): any; }, reject: (reason?: any) => void) {
+  await write("INFO")
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  console.log(status.value.state)
+  if (status.value.state === "E") {
+    console.log("sendFalse")
+    sendingData.value = false
+    return resolve()
+  } else {
+    await writeRepeat(resolve, reject)
   }
 }
 function cyranoLog(...args: any){
@@ -489,7 +500,8 @@ async function update() {
   )
   while (sendingData.value) {
     console.log("not ended")
-    setTimeout(() => {}, 100)
+    console.log(status.value.state)
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
   while (true) {
     console.log("ended")
@@ -507,10 +519,30 @@ async function update() {
     }
     if ((cyranoMsg.com) === "ACK") {
       tournament.value = false
-      reset()
-      status.value.match = ""
+      matches.value = {
+        "" : [
+          defaultFencerStatus(),
+          defaultFencerStatus()
+        ]
+      }
+      status.value = {
+        poultab: '',
+        match: '',
+        round: 1,
+        time: '',
+        stopwatch: '',
+        type: '',
+        weapon: 'F',
+        priority: 'N',
+        state: ''
+      }
+      menu.value = true
       await write("NEXT")
       await cyranoRun()
+      return
+    } else if ((cyranoMsg.com) === "NAK") {
+      menu.value = true
+      page.value = "cyrano"
       return
     }
   }
@@ -553,12 +585,16 @@ function end() {
   winner.value = true
 }
 function click() {
-  if (winner.value) {
-    finishMatch()
-  } else if (matchOver.value) {
-    end()
-  } else {
-    timer()
+  if (!cyrano.value || sendingData.value) {
+    if (status.value.state === "F") {
+      stopTimer("H")
+    } else if (winner.value) {
+      finishMatch()
+    } else if (matchOver.value) {
+      end()
+    } else if (status.value.state === "H") {
+      startTimer("F")
+    }
   }
 }
 
@@ -594,7 +630,7 @@ function keyHandler(e: KeyboardEvent) {
           break;
       }
     } else if (menu.value && (page.value === "bout" || page.value === "cyrano")) {
-      if (key === config.value.keymap.Timer) {
+      if (key === config.value.keymap.Timer && (!cyrano.value || sendingData.value)) {
         reset()
       }
     } else if (!menu.value) {
@@ -671,6 +707,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", keyHandler)
   setCookies()
+  stopCyrano()
 })
 </script>
 
