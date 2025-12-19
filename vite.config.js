@@ -14,26 +14,23 @@
  * limitations under the License.
  */
 
-import { defineConfig } from 'vite';
-import fs from 'fs';
-import injectHTML from 'vite-plugin-html-inject';
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from "vite";
+import fs from "fs";
+import injectHTML from "vite-plugin-html-inject";
+import vue from "@vitejs/plugin-vue";
 
-import wbn from 'rollup-plugin-webbundle';
-import * as wbnSign from 'wbn-sign';
+import wbn from "rollup-plugin-webbundle";
+import * as wbnSign from "wbn-sign";
 
-const plugins = [
-  vue(),
-  injectHTML()
-];
+const plugins = [vue(), injectHTML()];
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   // Get the key and decrypt it to sign the web bundle
   const key = wbnSign.parsePemKey(
-    process.env.KEY || fs.readFileSync('./certs/encrypted_key.pem'),
+    process.env.KEY || fs.readFileSync("./certs/encrypted_key.pem"),
     process.env.KEY_PASSPHRASE ||
       (await wbnSign.readPassphrase(
-        /*description=*/ './certs/encrypted_key.pem',
+        /*description=*/ "./certs/encrypted_key.pem",
       )),
   );
 
@@ -44,16 +41,16 @@ if (process.env.NODE_ENV === 'production') {
       baseURL: new wbnSign.WebBundleId(key).serializeWithIsolatedWebAppOrigin(),
       // Ensure that all content in the `public` directory is included in the web bundle
       static: {
-        dir: 'public',
+        dir: "public",
       },
       // The name of the output web bundle
-      output: 'iwa-sink.swbn',
+      output: "iwa-sink.swbn",
       // This ensures the web bundle is signed with the key
       integrityBlockSign: {
         strategy: new wbnSign.NodeCryptoSigningStrategy(key),
       },
     }),
-    enforce: 'post',
+    enforce: "post",
   });
 }
 
@@ -62,15 +59,15 @@ export default defineConfig({
   server: {
     port: 5193,
     hmr: {
-      protocol: 'ws',
-      host: 'localhost',
+      protocol: "ws",
+      host: "localhost",
       clientPort: 5193,
     },
   },
   build: {
     rollupOptions: {
       input: {
-        main: './index.html',
+        main: "./index.html",
       },
     },
   },

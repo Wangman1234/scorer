@@ -3,7 +3,7 @@
   "short_name": "Scorer",
   "name": "Scorer IWA",
   "version": "0.0.7",
-//   "update_manifest_url": "https://github.com/chromeos/iwa-sink/releases/latest/download/update.json",
+  //   "update_manifest_url": "https://github.com/chromeos/iwa-sink/releases/latest/download/update.json",
   "icons": [
     {
       "src": "/images/TorontoHistoricalCombatants.png",
@@ -14,7 +14,7 @@
   ],
   "start_url": "/",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone","borderless"],
+  "display_override": ["fullscreen", "standalone", "borderless"],
   "scope": "/",
   "isolated_storage": true,
   "permissions_policy": {
@@ -25,8 +25,8 @@
     "window-management": ["self"],
     "all-screens-capture": ["self"],
     "storage-access": ["*"],
-    "fullscreen": [ "*" ],
-    "keyboard-lock": [ "*" ]
+    "fullscreen": ["*"],
+    "keyboard-lock": ["*"]
   },
   "launch_handler": {
     "client_mode": "navigate-existing"
