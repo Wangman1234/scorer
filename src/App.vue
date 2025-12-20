@@ -7,8 +7,10 @@ import {
   emptyFencer,
   Fencer,
   type keyMap,
-} from "./scripts/Classes.ts";
+} from "./scripts/Types.ts";
 import { Cyrano } from "./scripts/Cyrano.ts";
+import { keys, min, omit } from "underscore";
+import { fencerEqual } from "./scripts/Functions.ts";
 
 // Defaults
 function defaultFencerStatus(): CorrectFencerStatus {
@@ -80,16 +82,20 @@ const winner = ref(false);
 const page = ref("bout");
 const priorityPicker = ref(false);
 const sendingData = ref(false);
+const knowList = ref(1);
+const cyranoState = ref("Waiting");
 const change = ref<false | keyof keyMap>(false);
 const keymap = ref("remoteKeymap1");
+ref(false);
 
 // async
 let socket: UDPSocket;
+let readab: ReadableStream;
+let writeab: WritableStream;
 let reader: ReadableStreamDefaultReader;
 let writer: WritableStreamDefaultWriter;
 
 // Event data
-// const fencers = ref<Fencer[]>([])
 const matches = ref<
   Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>
 >({
@@ -129,6 +135,7 @@ const cyranoOptions = ref({
   port: 50100,
   remoteAddress: "192.168.2.11",
   pointsPerPeriod: 5,
+  roundsPerTableMatch: 3,
   protocol: "ESP1.1",
 });
 const status = ref<CorrectStatus>({
@@ -140,7 +147,7 @@ const status = ref<CorrectStatus>({
   type: "I",
   weapon: "S",
   priority: "N",
-  state: "H",
+  state: "",
 });
 const cyranoOut = ref("");
 const Lcard = ref(0);
@@ -309,7 +316,7 @@ async function startCyrano() {
     localPort: cyranoOptions.value.port,
   });
   if (!socket) {
-    cyranoLog("Socket not connected");
+    cyranoLog("startCyrano", "Socket not connected");
     return;
   }
   matches.value = {
@@ -329,64 +336,216 @@ async function startCyrano() {
   cyrano.value = true;
 
   const { readable, writable } = await socket.opened;
-  reader = readable.getReader();
-  writer = writable.getWriter();
+  readab = readable;
+  writeab = writable;
+  reader = readab.getReader();
+  writer = writeab.getWriter();
 
-  await write("NEXT");
-  await cyranoRun();
+  console.log("startCyrano");
+  new Promise((res, rej) => runner(res, rej, "NEXT"));
 }
 function stopCyrano() {
   writer.releaseLock();
   reader.releaseLock();
   socket.close();
+  cyrano.value = false;
+  sendingData.value = false;
   settings.value.rounds = 1;
   settings.value.maxScore = 5;
   matches.value[""] = [defaultFencerStatus(), defaultFencerStatus()];
   status.value.match = "";
   reset();
+  page.value = "bout";
   menu.value = true;
-  cyrano.value = false;
-  sendingData.value = false;
-  cyranoLog("finished");
-}
-async function cyranoRun() {
-  console.log("startCyrano");
-  await new Promise((res, rej) => runner(res, rej));
-  await bout();
+  cyranoLog("stopCyrano", "finished");
 }
 async function runner(
-  resolve: (value?: unknown) => void,
+  resolve: (value?: any) => void,
   reject: (reason?: any) => void,
+  msg: "NEXT" | "PREV" | "INFO" | "" = "",
 ) {
-  cyranoLog("waiting for bout");
-  const cyranoMsg = await read();
-  if (cyranoMsg === true) {
-    return reject();
-  }
-  console.log(cyranoMsg);
-  cyranoProtocol = cyranoMsg.protocol;
-  if (
-    cyranoMsg.com === "DISP" &&
-    cyranoMsg.status.poultab !== "X" &&
-    cyranoMsg.status.poultab !== "" &&
-    cyranoMsg.status.state !== "E" &&
-    cyranoMsg.leftfencer.status === "U" &&
-    cyranoMsg.rightfencer.status === "U"
-  ) {
-    set(cyranoMsg);
-    status.value.stopwatch = settings.value.maxTime;
-    page.value = "bout";
-    menu.value = true;
+  if (cyrano.value === false) {
     return resolve();
-  } else if (
-    (cyranoMsg.com === "HELLO" ||
-      cyranoMsg.leftfencer.status !== "U" ||
-      cyranoMsg.rightfencer.status !== "U") &&
-    cyranoMsg.status.poultab !== "X"
-  ) {
-    await write("NEXT");
   }
-  await runner(resolve, reject);
+  try {
+    if (msg !== "") {
+      await write(msg, "runner");
+    }
+    cyranoLog(String(knowList.value), "waiting for message");
+    const cyranoMsg = await read(cyranoState.value);
+    if (cyranoMsg === true) {
+      return reject();
+    }
+    console.log(cyranoMsg);
+    cyranoProtocol = cyranoMsg.protocol;
+    msg = tester(reject, cyranoMsg);
+  } catch (error) {
+    await new Promise((resolve) => setTimeout(resolve, 100, ""));
+    if (status.value.state === "E") {
+      msg = "INFO";
+    } else {
+      msg = "";
+    }
+  }
+  await runner(resolve, reject, msg);
+}
+function tester(
+  reject: (reason?: any) => void,
+  cyranoMsg: Cyrano,
+): "NEXT" | "PREV" | "INFO" | "" {
+  switch (cyranoState.value) {
+    case "Waiting":
+    case "No Bouts":
+      if (cyranoMsg.com === "DISP" && cyranoMsg.status.poultab !== "") {
+        if (knowList.value === 0) {
+          if (cyranoMsg.status.poultab === "X") {
+            if (cyranoState.value !== "No Bouts") {
+              cyranoState.value = "No Bouts";
+              page.value = "tournament";
+              menu.value = false;
+              return "PREV";
+            } else {
+              // reset()
+            }
+          } else if (
+            cyranoMsg.status.state === "E" ||
+            cyranoMsg.leftfencer.status !== "U" ||
+            cyranoMsg.rightfencer.status !== "U"
+          ) {
+            if (typeof matches.value[cyranoMsg.status.match] === "undefined") {
+              matches.value[cyranoMsg.status.match] = [
+                defaultFencerStatus(),
+                defaultFencerStatus(),
+              ];
+            }
+            const mat = matches.value[cyranoMsg.status.match] ?? [
+              defaultFencerStatus(),
+              defaultFencerStatus(),
+            ];
+            if (
+              !(
+                fencerEqual(mat[0], cyranoMsg.leftfencer) &&
+                fencerEqual(mat[1], cyranoMsg.rightfencer)
+              )
+            ) {
+              mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
+              mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+            }
+            return "NEXT";
+          } else {
+            set(cyranoMsg);
+            if (
+              !(
+                fencerEqual(match.value[0], cyranoMsg.leftfencer) &&
+                fencerEqual(match.value[1], cyranoMsg.rightfencer)
+              )
+            ) {
+              matches.value = {
+                "": [defaultFencerStatus(), defaultFencerStatus()],
+              };
+              status.value = {
+                poultab: "",
+                match: "",
+                round: 1,
+                time: "",
+                stopwatch: "",
+                type: "",
+                weapon: "F",
+                priority: "N",
+                state: "",
+              };
+              winner.value = false;
+              cyranoState.value = "Waiting";
+              knowList.value = 1;
+              return "PREV";
+            }
+            status.value.stopwatch = settings.value.maxTime;
+            page.value = "bout";
+            menu.value = true;
+            cyranoState.value = "Bout";
+            new Promise(() => {
+              bout();
+            });
+          }
+        } else {
+          if (cyranoMsg.status.poultab === "X") {
+            knowList.value = -1;
+          } else {
+            if (typeof matches.value[cyranoMsg.status.match] === "undefined") {
+              matches.value[cyranoMsg.status.match] = [
+                defaultFencerStatus(),
+                defaultFencerStatus(),
+              ];
+            }
+            const mat = matches.value[cyranoMsg.status.match] ?? [
+              defaultFencerStatus(),
+              defaultFencerStatus(),
+            ];
+            if (
+              !(
+                fencerEqual(mat[0], cyranoMsg.leftfencer) &&
+                fencerEqual(mat[1], cyranoMsg.rightfencer)
+              )
+            ) {
+              console.log("not equal");
+              console.log(mat[0], mat[1]);
+              mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
+              mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+            } else if (
+              cyranoMsg.status.match ===
+              Number(min(keys(omit(matches.value, ""))))
+            ) {
+              knowList.value = 0;
+            }
+          }
+          if (knowList.value > 0) {
+            return "NEXT";
+          } else {
+            return "PREV";
+          }
+        }
+      } else if (
+        (cyranoMsg.com === "HELLO" ||
+          cyranoMsg.leftfencer.status !== "U" ||
+          cyranoMsg.rightfencer.status !== "U") &&
+        cyranoMsg.status.poultab !== "X"
+      ) {
+        return "NEXT";
+      }
+      break;
+    case "Bout":
+      if (cyranoMsg.com === "HELLO") {
+        return "INFO";
+      }
+      break;
+    case "Ending":
+      if (cyranoMsg.com === "ACK") {
+        console.log("ACK");
+        matches.value[""] = [defaultFencerStatus(), defaultFencerStatus()];
+        status.value = {
+          poultab: "",
+          match: "",
+          round: 1,
+          time: "",
+          stopwatch: "",
+          type: "",
+          weapon: "F",
+          priority: "N",
+          state: "",
+        };
+        Lcard.value = 0;
+        Rcard.value = 0;
+        winner.value = false;
+        cyranoState.value = "Waiting";
+        return "NEXT";
+      } else if (cyranoMsg.com === "NAK") {
+        menu.value = true;
+        page.value = "cyrano";
+        reject();
+      }
+      return "INFO";
+  }
+  return "";
 }
 async function bout() {
   sendingData.value = true;
@@ -397,58 +556,78 @@ async function writeRepeat(
   resolve: (value?: unknown) => void,
   reject: (reason?: any) => void,
 ) {
-  await write("INFO");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (check()) return resolve();
+  reader.releaseLock();
+  writer.releaseLock();
+  writer = writeab.getWriter();
+  await write("INFO", "writeRepeat");
+  reader = readab.getReader();
+  for (let i = 0; i < 10; i++) {
+    if (check()) return resolve();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   console.log(status.value.state);
+  await writeRepeat(resolve, reject);
+}
+function check(): boolean {
   if (status.value.state === "E") {
+    reader.releaseLock();
+    writer.releaseLock();
+    writer = writeab.getWriter();
+    reader = readab.getReader();
     console.log("sendFalse");
     sendingData.value = false;
-    return resolve();
-  } else {
-    await writeRepeat(resolve, reject);
+    return true;
   }
+  return false;
 }
 function set(cyr: Cyrano) {
   settings.value.piste = cyr.piste;
   settings.value.compe = cyr.compe;
   settings.value.phase = cyr.phase === "" ? 0 : cyr.phase;
   status.value = cyr.status as CorrectStatus;
-  matches.value[status.value.match] = [
-    defaultFencerStatus(),
-    defaultFencerStatus(),
-  ];
-  match.value[0] = cyr.leftfencer as CorrectFencerStatus;
-  match.value[1] = cyr.rightfencer as CorrectFencerStatus;
   settings.value.maxTime = 180;
   switch (status.value.poultab[0]) {
     case "P":
       settings.value.rounds = status.value.round;
       break;
     default:
-      settings.value.rounds = 3;
+      settings.value.rounds = cyranoOptions.value.roundsPerTableMatch;
   }
   settings.value.maxScore =
     (settings.value.rounds - status.value.round + 1) *
     cyranoOptions.value.pointsPerPeriod;
   settings.value.allowTies = false;
 }
-async function read() {
+async function read(process: string = "read") {
   const { value, done } = await reader.read();
-  cyranoLog("done reading");
+  cyranoLog(process, "done reading");
   if (done) {
     stopCyrano();
-    cyranoLog("done");
+    cyranoLog(process, "done");
     return true;
   }
-  cyranoLog("message got");
+  cyranoLog(process, "message got");
 
   const { data, remoteAddress, remotePort } = value;
   cyranoOptions.value.remoteAddress = remoteAddress;
   const decoded = decoder.decode(data);
-  cyranoLog("received ", decoded, " from ", remoteAddress, ":", remotePort);
+  cyranoLog(
+    "process",
+    process,
+    ": received ",
+    decoded,
+    " from ",
+    remoteAddress,
+    ":",
+    remotePort,
+  );
   return new Cyrano(decoded);
 }
-async function write(com: "NEXT" | "PREV" | "INFO" = "INFO") {
+async function write(
+  com: "NEXT" | "PREV" | "INFO" = "INFO",
+  process: string = "write",
+) {
   const cyranoStart = new Cyrano(
     cyranoProtocol,
     com,
@@ -460,7 +639,7 @@ async function write(com: "NEXT" | "PREV" | "INFO" = "INFO") {
     match.value[1],
     match.value[0],
   );
-  console.log(cyranoStart);
+  console.log(process, cyranoStart);
   let message = cyranoStart.toString();
   await writer.ready;
   await writer.write({
@@ -469,17 +648,18 @@ async function write(com: "NEXT" | "PREV" | "INFO" = "INFO") {
     remotePort: cyranoOptions.value.port,
   });
   cyranoLog(
-    "sent ",
+    process,
+    "sent",
     message,
-    " on port ",
+    "on port",
     cyranoOptions.value.port,
-    " to ",
+    "to",
     cyranoOptions.value.remoteAddress,
   );
 }
-function cyranoLog(...args: any) {
-  console.log(...args);
-  cyranoOut.value = args.join("");
+function cyranoLog(process: string, ...args: any) {
+  console.log("process", process, ":", ...args);
+  cyranoOut.value = args.join(" ");
 }
 
 // Data storage
@@ -494,7 +674,7 @@ function setCookies() {
 function reset() {
   status.value.stopwatch = settings.value.maxTime;
   status.value.priority = "N";
-  status.value.state = "H";
+  status.value.state = "";
   match.value[0].score = 0;
   match.value[0].status = "U";
   match.value[0].ycard = false;
@@ -518,70 +698,22 @@ function reset() {
 }
 
 async function update() {
-  const cyr = new Cyrano(
-    cyranoProtocol,
-    "INFO",
-    settings.value.piste,
-    settings.value.compe,
-    settings.value.phase,
-    status.value,
-    emptyFencer,
-    match.value[0],
-    match.value[1],
-  );
   while (sendingData.value) {
     console.log("not ended");
     console.log(status.value.state);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  while (true) {
-    console.log("ended");
-    let message = cyr.toString();
-    await writer.ready;
-    await writer.write({
-      data: encoder.encode(message),
-      remoteAddress: cyranoOptions.value.remoteAddress,
-      remotePort: cyranoOptions.value.port,
-    });
-    cyranoLog("sent ", message);
-    const cyranoMsg = await read();
-    if (cyranoMsg === true) {
-      return;
-    }
-    if (cyranoMsg.com === "ACK") {
-      matches.value = {
-        "": [defaultFencerStatus(), defaultFencerStatus()],
-      };
-      status.value = {
-        poultab: "",
-        match: "",
-        round: 1,
-        time: "",
-        stopwatch: "",
-        type: "",
-        weapon: "F",
-        priority: "N",
-        state: "",
-      };
-      menu.value = true;
-      await write("NEXT");
-      await cyranoRun();
-      return;
-    } else if (cyranoMsg.com === "NAK") {
-      menu.value = true;
-      page.value = "cyrano";
-      return;
-    }
-  }
+  cyranoState.value = "Ending";
+  console.log("ended");
 }
 
 async function finishMatch() {
   status.value.state = "E";
-  page.value = "bout";
-  menu.value = true;
   if (cyrano.value) {
     await update();
   } else {
+    page.value = "bout";
+    menu.value = true;
     reset();
   }
 }
@@ -612,14 +744,14 @@ function end() {
   winner.value = true;
 }
 function click() {
-  if (!cyrano.value || sendingData.value) {
+  if (!cyrano.value || sendingData.value || status.value.state !== "E") {
     if (status.value.state === "F") {
       stopTimer("H");
     } else if (winner.value) {
       finishMatch();
     } else if (matchOver.value) {
       end();
-    } else if (status.value.state === "H") {
+    } else if (status.value.state === "H" || status.value.state === "") {
       startTimer("F");
     }
   }
@@ -658,15 +790,24 @@ function keyHandler(e: KeyboardEvent) {
       }
     } else if (
       menu.value &&
-      (page.value === "bout" || page.value === "cyrano")
+      (page.value === "bout" ||
+        page.value === "cyrano" ||
+        page.value === "tournament")
     ) {
       if (
         key === config.value.keymap.Timer &&
         (!cyrano.value || sendingData.value)
       ) {
-        reset();
+        if (cyrano.value) {
+          menu.value = false;
+        } else {
+          reset();
+        }
       }
-    } else if (!menu.value) {
+    } else if (
+      !menu.value &&
+      (!cyrano.value || sendingData.value || status.value.state !== "E")
+    ) {
       console.log("not menu");
       switch (key) {
         case config.value.keymap.LeftAdd1:
@@ -718,7 +859,10 @@ function keyHandler(e: KeyboardEvent) {
           status.value.stopwatch = settings.value.maxTime;
           break;
         case config.value.keymap.Period:
-          status.value.round = (status.value.round % settings.value.rounds) + 1;
+          if (status.value.poultab[0] !== "P") {
+            status.value.round =
+              (status.value.round % settings.value.rounds) + 1;
+          }
           break;
         case config.value.keymap.Flip:
           let f1 = match.value[0];
@@ -835,7 +979,11 @@ onUnmounted(() => {
         </div>
         <div id="rounds">
           <span>{{ status.round }}</span
-          >/<span>{{ settings.rounds }}</span>
+          >/<span>{{
+            status.poultab[0] === "P"
+              ? Object.keys(omit(matches, "")).length
+              : settings.rounds
+          }}</span>
         </div>
       </div>
       <div :style="{}">
@@ -862,6 +1010,12 @@ onUnmounted(() => {
         :class="{ selected: page === 'bout' }"
         @click="page = 'bout'"
         >Bout</a
+      >
+      <a
+        :class="{ selected: page === 'tournament' }"
+        @click="page = 'tournament'"
+        v-if="cyrano"
+        >Tournament</a
       >
       <a
         :class="{ selected: page === 'cyrano' }"
@@ -914,8 +1068,12 @@ onUnmounted(() => {
           </div>
         </li>
         <li>
-          <div>Max time(in seconds)</div>
+          <div>Max time(in seconds), requires restart</div>
           <input v-model.number="settings.maxTime" />
+        </li>
+        <li>
+          <div>Current time(in seconds)</div>
+          <input v-model.number="status.stopwatch" />
         </li>
         <li>
           <div>Max score</div>
@@ -934,6 +1092,26 @@ onUnmounted(() => {
         </li>
       </menu>
       <button @click="reset">Reset Bout</button>
+    </div>
+    <div
+      id="tournament"
+      v-if="page === 'tournament'"
+    >
+      <h3>Bout Settings</h3>
+      <h4 v-if="sendingData">Tournament Running</h4>
+      <h4 v-else>Tournament not Running</h4>
+      <ul>
+        <li
+          v-for="(item, index) in omit(matches, '')"
+          :key="index"
+        >
+          {{ index }}. {{ item[0].fencer.name.toString() }} {{ item[0].score
+          }}{{ item[0].status === "U" ? "" : item[0].status }} vs.
+          {{ item[1].fencer.name.toString() }} {{ item[1].score
+          }}{{ item[1].status === "U" ? "" : item[1].status }}
+        </li>
+      </ul>
+      <h4 v-if="cyranoState === 'No Bouts'">No more bouts</h4>
     </div>
     <div
       id="cyrano"
@@ -957,6 +1135,10 @@ onUnmounted(() => {
         <li>
           <div>Points per Period</div>
           <input v-model.number="cyranoOptions.pointsPerPeriod" />
+        </li>
+        <li>
+          <div>Periods per Table Match</div>
+          <input v-model.number="cyranoOptions.roundsPerTableMatch" />
         </li>
       </menu>
       <div>
@@ -1059,11 +1241,6 @@ onUnmounted(() => {
     </div>
   </div>
   <div
-    class="blurred background"
-    @click="menu = false"
-    v-if="menu"
-  ></div>
-  <div
     class="priority"
     v-if="priorityPicker"
   >
@@ -1087,18 +1264,26 @@ onUnmounted(() => {
     </div>
   </div>
   <div
-    class="blurred"
-    v-if="priorityPicker"
+    class="blurred background"
+    @click="menu = false"
+    v-if="menu"
   ></div>
   <div
     class="blurred"
-    v-if="matchOver && !winner"
+    v-else-if="priorityPicker"
+  ></div>
+  <div
+    class="blurred"
+    v-else-if="
+      status.state === 'E' ||
+      ((cyranoState === 'Waiting' || cyranoState === 'No Bouts') && cyrano)
+    "
   >
-    <h1>Match</h1>
+    <h1>{{ cyranoState }}</h1>
   </div>
   <div
     class="blurred"
-    v-if="winner"
+    v-else-if="winner"
   >
     <h1>
       Match
@@ -1111,6 +1296,12 @@ onUnmounted(() => {
       }}
     </h1>
     <h2>{{ match[0].score }}-{{ match[1].score }}</h2>
+  </div>
+  <div
+    class="blurred"
+    v-else-if="matchOver"
+  >
+    <h1>Match</h1>
   </div>
   <div
     class="blurred"
@@ -1183,6 +1374,9 @@ div.scoring {
   height: 100%;
   //background-color: dodgerblue;
 }
+#timer {
+  z-index: 990;
+}
 #timer div {
   font-size: 12rem;
 }
@@ -1223,6 +1417,10 @@ div.scoring {
   display: block;
   width: 100vw;
   height: 100vh;
+  align-self: center;
+  align-items: center;
+  align-content: center;
+  color: white;
   top: 0;
   left: 0;
   background-color: rgba(0, 0, 0, 0.8);
@@ -1235,14 +1433,19 @@ div.scoring {
 nav {
   background-color: dodgerblue;
   height: 2rem;
+  overflow: auto;
+  white-space: nowrap;
+}
+nav::-webkit-scrollbar {
+  display: none;
 }
 nav a {
   background-clip: border-box;
-  display: block;
+  display: inline-block;
   font-size: 1.5rem;
   width: fit-content;
   padding: 0 1rem;
-  float: left;
+  //float: left;
 }
 nav a:hover {
   background-color: darkcyan;
@@ -1296,12 +1499,6 @@ button:hover {
 }
 .selected {
   background-color: slategrey;
-}
-.blurred {
-  align-self: center;
-  align-items: center;
-  align-content: center;
-  color: white;
 }
 .blurred * {
   color: white;

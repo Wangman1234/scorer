@@ -1,6 +1,12 @@
 import { Cyrano } from "../src/scripts/Cyrano";
-import { cyrConvert, emptyFencer, Fencer, Name } from "../src/scripts/Classes";
+import {
+  type CorrectFencerStatus,
+  emptyFencer,
+  Fencer,
+  Name,
+} from "../src/scripts/Types";
 import { CountryList } from "../src/scripts/Country";
+import { cyrConvert } from "../src/scripts/Functions";
 
 let messages = [
   "|EFP1|HELLO|17|fm-eq|%|",
@@ -188,7 +194,6 @@ c1.leftfencer.fencer.name.lastName = "Ion";
 console.log(c1.toString());
 
 console.log(c1.status);
-console.log(c1.safeStatus());
 
 // const rounds = {
 //     "": [
@@ -273,4 +278,31 @@ console.log(c1.safeStatus());
 // console.log(nc.toString())
 // console.log(msg === nc.toString())
 
-console.log(tim);
+function defaultFencerStatus(): CorrectFencerStatus {
+  return {
+    fencer: new Fencer(),
+    score: 0,
+    status: "U",
+    ycard: false,
+    rcard: 0,
+    light: false,
+    wlight: false,
+    medical: 0,
+    reserve: "",
+  };
+}
+const matches: Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]> =
+  {
+    "": [defaultFencerStatus(), defaultFencerStatus()],
+  };
+// console.log(matches);
+matches[1] = [defaultFencerStatus(), defaultFencerStatus()];
+// console.log(matches);
+console.log(matches[1][0]);
+console.log(matches[1][1]);
+let mat = matches[1];
+mat[0] = c1.leftfencer as CorrectFencerStatus;
+mat[1] = c1.rightfencer as CorrectFencerStatus;
+// console.log(matches);
+console.log(matches[1][0]);
+console.log(matches[1][1]);

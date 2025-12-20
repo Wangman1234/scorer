@@ -1,15 +1,13 @@
 import {
-  cyrConvert,
   emptyFencer,
   emptyFencerStatus,
   emptyStatus,
   Fencer,
   type FencerStatus,
   type Status,
-  toSeconds,
-  toTime,
-} from "./Classes.ts";
+} from "./Types.ts";
 import { CountryList, reverseCountryList } from "./Country.ts";
+import { cyrConvert, toSeconds, toTime } from "./Functions.ts";
 
 export class Cyrano {
   protocol: "EFP1" | "EFP1.1";
