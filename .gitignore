@@ -1,3 +1,5 @@
 /node_modules/
 /.idea/
+/secure/
 /package-lock.json
+/.env

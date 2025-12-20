@@ -17,6 +17,7 @@
     "@types/underscore": "^1.13.0",
     "@vitejs/plugin-vue": "^6.0.2",
     "@vue/tsconfig": "^0.8.1",
+    "dotenv": "^17.2.3",
     "prettier": "^3.2.5",
     "rollup-plugin-webbundle": "^0.2.0",
     "tinycolor2": "^1.6.0",
