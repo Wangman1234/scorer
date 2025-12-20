@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2025 Scorer
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import * as wbnSign from "wbn-sign";
 import dotenv from "dotenv";
 
 dotenv.config();
+s;
 
 const plugins = [vue()];
 
