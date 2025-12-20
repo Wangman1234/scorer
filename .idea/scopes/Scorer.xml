@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Scorer" pattern="file[scorer]:src//*||file[scorer]:tests//*||file[scorer]:types//*||file:index.html||file[scorer]:public//*" />
+</component>
