@@ -120,6 +120,7 @@ export class Cyrano {
         weapon: (section1s[12] as "F" | "E" | "S") ?? "",
         priority: (section1s[13] as "N" | "L" | "R") ?? "",
         state: (section1s[14] as "F" | "H" | "P" | "W" | "E") ?? "",
+        doubles: 0,
       };
       this.ref = new Fencer(
         section1s[15] ?? "",

@@ -11,6 +11,7 @@ import {
 import { Cyrano } from "./scripts/Cyrano.ts";
 import { keys, min, omit } from "underscore";
 import { fencerEqual } from "./scripts/Functions.ts";
+import NextFencer from "./scripts/NextFencer.vue";
 
 // Defaults
 function defaultFencerStatus(): CorrectFencerStatus {
@@ -39,6 +40,8 @@ const defaultKeymaps: Record<string, keyMap> = {
     RightAdd2: "",
     LeftAdd3: "",
     RightAdd3: "",
+    Double: "",
+    MinusDouble: "",
     LeftMinus1: "AudioVolumeDown",
     RightMinus1: "PageDown",
     LeftCard: "ArrowLeft",
@@ -60,6 +63,8 @@ const defaultKeymaps: Record<string, keyMap> = {
     RightAdd2: "",
     LeftAdd3: "",
     RightAdd3: "",
+    Double: "",
+    MinusDouble: "",
     LeftMinus1: ",",
     RightMinus1: ".",
     LeftCard: "j",
@@ -83,6 +88,7 @@ const page = ref("bout");
 const priorityPicker = ref(false);
 const sendingData = ref(false);
 const knowList = ref(1);
+const prev = ref(0);
 const cyranoState = ref("Waiting");
 const change = ref<false | keyof keyMap>(false);
 const keymap = ref("remoteKeymap1");
@@ -130,6 +136,8 @@ const settings = ref({
   maxScore: 5,
   rounds: 1,
   allowTies: false,
+  doublesAddPoints: 0,
+  maxDoubles: 0,
 });
 const cyranoOptions = ref({
   port: 50100,
@@ -148,7 +156,9 @@ const status = ref<CorrectStatus>({
   weapon: "S",
   priority: "N",
   state: "",
+  doubles: 0,
 });
+const showDoubles = ref(false);
 const cyranoOut = ref("");
 const Lcard = ref(0);
 const Rcard = ref(0);
@@ -174,7 +184,9 @@ const matchOver = computed(() => {
     (stopwatch.value <= 0 && status.value.round == settings.value.rounds) ||
     ((match.value[0].score >= settings.value.maxScore ||
       match.value[1].score >= settings.value.maxScore) &&
-      status.value.priority === "N")
+      status.value.priority === "N") ||
+    (settings.value.maxDoubles <= status.value.doubles &&
+      settings.value.maxDoubles > 0)
   );
 });
 const short = computed(() => {
@@ -237,7 +249,8 @@ function startTimer(set: "F" | "P") {
     if (status.value.stopwatch === "") {
       throw TypeError("time not set");
     }
-    status.value.stopwatch -= 0.01;
+    status.value.stopwatch =
+      Math.round((status.value.stopwatch - 0.01 + Number.EPSILON) * 100) / 100;
     if (status.value.stopwatch <= 0) {
       clearInterval(interval);
       if (set === "F" && status.value.round !== settings.value.rounds) {
@@ -265,6 +278,9 @@ function addTime(time: number) {
     throw TypeError("time not set");
   }
   status.value.stopwatch += time;
+  if (status.value.stopwatch < 0) {
+    status.value.stopwatch += settings.value.maxTime;
+  }
   status.value.stopwatch %= 600;
 }
 
@@ -332,6 +348,7 @@ async function startCyrano() {
     weapon: "F",
     priority: "N",
     state: "",
+    doubles: 0,
   };
   cyrano.value = true;
 
@@ -350,6 +367,7 @@ function stopCyrano() {
   socket.close();
   cyrano.value = false;
   sendingData.value = false;
+  cyranoState.value = "Waiting";
   settings.value.rounds = 1;
   settings.value.maxScore = 5;
   matches.value[""] = [defaultFencerStatus(), defaultFencerStatus()];
@@ -453,6 +471,7 @@ function tester(
                 weapon: "F",
                 priority: "N",
                 state: "",
+                doubles: 0,
               };
               winner.value = false;
               cyranoState.value = "Waiting";
@@ -495,7 +514,12 @@ function tester(
               cyranoMsg.status.match ===
               Number(min(keys(omit(matches.value, ""))))
             ) {
-              knowList.value = 0;
+              if (cyranoMsg.status.match === prev.value) {
+                knowList.value = 0;
+                prev.value = 0;
+              } else {
+                prev.value = cyranoMsg.status.match;
+              }
             }
           }
           if (knowList.value > 0) {
@@ -532,6 +556,7 @@ function tester(
           weapon: "F",
           priority: "N",
           state: "",
+          doubles: 0,
         };
         Lcard.value = 0;
         Rcard.value = 0;
@@ -675,6 +700,7 @@ function reset() {
   status.value.stopwatch = settings.value.maxTime;
   status.value.priority = "N";
   status.value.state = "";
+  status.value.doubles = 0;
   match.value[0].score = 0;
   match.value[0].status = "U";
   match.value[0].ycard = false;
@@ -718,6 +744,17 @@ async function finishMatch() {
   }
 }
 function end() {
+  if (
+    settings.value.maxDoubles <= status.value.doubles &&
+    settings.value.maxDoubles > 0
+  ) {
+    if (settings.value.allowTies) {
+      match.value[0].status = "D";
+      match.value[1].status = "D";
+      winner.value = true;
+      return;
+    }
+  }
   if (match.value[0].score > match.value[1].score) {
     match.value[0].status = "V";
     match.value[1].status = "D";
@@ -738,6 +775,7 @@ function end() {
       status.value.state = "H";
       priorityPicker.value = true;
       status.value.stopwatch = 60;
+      status.value.doubles = 0;
       return;
     }
   }
@@ -827,6 +865,16 @@ function keyHandler(e: KeyboardEvent) {
           break;
         case config.value.keymap.RightAdd3:
           changeScore(match.value[1], 3);
+          break;
+        case config.value.keymap.Double:
+          status.value.doubles++;
+          changeScore(match.value[0], settings.value.doublesAddPoints);
+          changeScore(match.value[1], settings.value.doublesAddPoints);
+          break;
+        case config.value.keymap.MinusDouble:
+          status.value.doubles--;
+          changeScore(match.value[0], -settings.value.doublesAddPoints);
+          changeScore(match.value[1], -settings.value.doublesAddPoints);
           break;
         case config.value.keymap.LeftMinus1:
           changeScore(match.value[0], -1);
@@ -955,6 +1003,15 @@ onUnmounted(() => {
       <div id="center">
         <div id="nav">
           <!--          <button :class="{ next:matchOver }" @click="click">{{button}}</button>-->
+          <NextFencer
+            v-if="
+              (match[0].score >= (3 / 5) * settings.maxScore ||
+                match[1].score >= (3 / 5) * settings.maxScore) &&
+              cyrano
+            "
+            :matches="omit(matches, '')"
+            :match="status.match === '' ? 0 : status.match"
+          />
         </div>
         <div
           id="timer"
@@ -976,6 +1033,12 @@ onUnmounted(() => {
               }}
             </span>
           </div>
+        </div>
+        <div
+          id="doubles"
+          v-if="showDoubles"
+        >
+          {{ status.doubles }} Doubles
         </div>
         <div id="rounds">
           <span>{{ status.round }}</span
@@ -1089,6 +1152,21 @@ onUnmounted(() => {
             type="checkbox"
             v-model="settings.allowTies"
           />
+        </li>
+        <li>
+          <div>Show doubles</div>
+          <input
+            type="checkbox"
+            v-model="showDoubles"
+          />
+        </li>
+        <li>
+          <div>Doubles add points</div>
+          <input v-model.number="settings.doublesAddPoints" />
+        </li>
+        <li>
+          <div>Maximum doubles</div>
+          <input v-model.number="settings.maxDoubles" />
         </li>
       </menu>
       <button @click="reset">Reset Bout</button>
@@ -1370,9 +1448,12 @@ div.scoring {
 #center {
   display: grid;
   grid-template-columns: 100%;
-  grid-template-rows: 20% 50% 30%;
+  grid-template-rows: 20% 40% 20% 20%;
   height: 100%;
   //background-color: dodgerblue;
+}
+#doubles {
+  font-size: 3rem;
 }
 #timer {
   z-index: 990;

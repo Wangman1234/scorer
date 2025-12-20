@@ -1,7 +1,7 @@
 {
   "name": "scorer",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "directories": {
     "test": "tests"
@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "underscore": "^1.13.7",
-    "vue": "^3.5.25"
+    "vue": "^3.5.25",
+    "vue3-marquee": "^4.2.2"
   }
 }

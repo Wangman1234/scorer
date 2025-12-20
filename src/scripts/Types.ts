@@ -17,8 +17,13 @@ export class Name {
         this.lastName = names[1]?.trim() ?? "";
       } else {
         let names = nameLastName.split(" ");
-        this.firstName = names[0]?.trim() ?? "";
-        this.lastName = names[1]?.trim() ?? "";
+        if (names[0] === names[0]?.toUpperCase()) {
+          this.lastName = names[0]?.trim() ?? "";
+          this.firstName = names[1]?.trim() ?? "";
+        } else {
+          this.firstName = names[0]?.trim() ?? "";
+          this.lastName = names[1]?.trim() ?? "";
+        }
       }
     } else {
       this.lastName = nameLastName;
@@ -98,6 +103,7 @@ export type Status = {
   weapon: "F" | "E" | "S" | "";
   priority: "N" | "L" | "R" | "";
   state: "F" | "H" | "P" | "W" | "E" | "";
+  doubles: number;
 };
 
 export type CorrectStatus = {
@@ -110,6 +116,7 @@ export type CorrectStatus = {
   weapon: "F" | "E" | "S";
   priority: "N" | "L" | "R";
   state: "F" | "H" | "P" | "W" | "E" | "";
+  doubles: number;
 };
 
 export const emptyStatus: Status = {
@@ -122,6 +129,7 @@ export const emptyStatus: Status = {
   weapon: "",
   priority: "",
   state: "",
+  doubles: 0,
 };
 
 export type FencerStatus = {
@@ -172,6 +180,8 @@ export type keyMap = {
   RightAdd2: string;
   LeftAdd3: string;
   RightAdd3: string;
+  Double: string;
+  MinusDouble: string;
   LeftMinus1: string;
   RightMinus1: string;
   LeftCard: string;
