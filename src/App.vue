@@ -1080,295 +1080,295 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
-  <div
-    class="menu"
-    v-if="menu && started"
-  >
-    <nav>
-      <a
-        :class="{ selected: page === 'bout' }"
-        @click="page = 'bout'"
-        >Bout</a
-      >
-      <a
-        :class="{ selected: page === 'tournament' }"
-        @click="page = 'tournament'"
-        v-if="cyrano"
-        >Tournament</a
-      >
-      <a
-        :class="{ selected: page === 'cyrano' }"
-        @click="page = 'cyrano'"
-        >Cyrano</a
-      >
-      <a
-        :class="{ selected: page === 'display' }"
-        @click="page = 'display'"
-        >Display</a
-      >
-      <a
-        :class="{ selected: page === 'controls' }"
-        @click="page = 'controls'"
-        >Controls</a
-      >
-    </nav>
-    <div
-      id="bout"
-      v-if="page === 'bout'"
-    >
-      <h3>Bout Settings</h3>
-      <h4 v-if="sendingData">Tournament Running</h4>
-      <h4 v-else>Tournament not Running</h4>
-      <menu>
-        <li>
-          <div>Left fencer name</div>
-          <div>
-            <input
-              v-model.number="match[0].fencer.name.firstName"
-              placeholder="first name"
-            />
-            <input
-              v-model.number="match[0].fencer.name.lastName"
-              placeholder="surname"
-            />
-          </div>
-        </li>
-        <li>
-          <div>Right fencer name</div>
-          <div>
-            <input
-              v-model.number="match[1].fencer.name.firstName"
-              placeholder="first name"
-            />
-            <input
-              v-model.number="match[1].fencer.name.lastName"
-              placeholder="surname"
-            />
-          </div>
-        </li>
-        <li>
-          <div>Max time(in seconds), requires restart</div>
-          <input v-model.number="settings.maxTime" />
-        </li>
-        <li>
-          <div>Current time(in seconds)</div>
-          <input v-model.number="status.stopwatch" />
-        </li>
-        <li>
-          <div>Max score</div>
-          <input v-model.number="settings.maxScore" />
-        </li>
-        <li>
-          <div>Rounds</div>
-          <input v-model.number="settings.rounds" />
-        </li>
-        <li>
-          <div>Allow ties</div>
-          <input
-            type="checkbox"
-            v-model="settings.allowTies"
-          />
-        </li>
-        <li>
-          <div>Show doubles</div>
-          <input
-            type="checkbox"
-            v-model="showDoubles"
-          />
-        </li>
-        <li>
-          <div>Doubles add points</div>
-          <input v-model.number="settings.doublesAddPoints" />
-        </li>
-        <li>
-          <div>Maximum doubles</div>
-          <input v-model.number="settings.maxDoubles" />
-        </li>
-      </menu>
-      <button @click="reset">Reset Bout</button>
-    </div>
-    <div
-      id="tournament"
-      v-if="page === 'tournament'"
-    >
-      <h3>Bout Settings</h3>
-      <h4 v-if="sendingData">Tournament Running</h4>
-      <h4 v-else>Tournament not Running</h4>
-      <ul>
-        <li
-          v-for="(item, index) in omit(matches, '')"
-          :key="index"
+  <div v-if="menu && started">
+    <div class="menu">
+      <nav>
+        <a
+          :class="{ selected: page === 'bout' }"
+          @click="page = 'bout'"
+          >Bout</a
         >
-          {{ index }}. {{ item[0].fencer.name.toString() }} {{ item[0].score
-          }}{{ item[0].status === "U" ? "" : item[0].status }} vs.
-          {{ item[1].fencer.name.toString() }} {{ item[1].score
-          }}{{ item[1].status === "U" ? "" : item[1].status }}
-        </li>
-      </ul>
-      <h4 v-if="cyranoState === 'No Bouts'">No more bouts</h4>
-    </div>
-    <div
-      id="cyrano"
-      v-if="page === 'cyrano'"
-    >
-      <h4 v-if="sendingData">Tournament Running</h4>
-      <h4 v-else>Tournament not Running</h4>
-      <menu>
-        <li>
-          <div>Piste</div>
-          <input v-model="settings.piste" />
-        </li>
-        <li>
-          <div>Remote Address</div>
-          <input v-model.number="cyranoOptions.remoteAddress" />
-        </li>
-        <li>
-          <div>Port</div>
-          <input v-model.number="cyranoOptions.port" />
-        </li>
-        <li>
-          <div>Points per Period</div>
-          <input v-model.number="cyranoOptions.pointsPerPeriod" />
-        </li>
-        <li>
-          <div>Periods per Table Match</div>
-          <input v-model.number="cyranoOptions.roundsPerTableMatch" />
-        </li>
-      </menu>
-      <div>
-        <code>{{ cyranoOut }}</code>
+        <a
+          v-if="cyrano"
+          :class="{ selected: page === 'tournament' }"
+          @click="page = 'tournament'"
+          >Tournament</a
+        >
+        <a
+          :class="{ selected: page === 'cyrano' }"
+          @click="page = 'cyrano'"
+          >Cyrano</a
+        >
+        <a
+          :class="{ selected: page === 'display' }"
+          @click="page = 'display'"
+          >Display</a
+        >
+        <a
+          :class="{ selected: page === 'controls' }"
+          @click="page = 'controls'"
+          >Controls</a
+        >
+      </nav>
+      <div
+        v-if="page === 'bout'"
+        id="bout"
+      >
+        <h3>Bout Settings</h3>
+        <h4 v-if="sendingData">Tournament Running</h4>
+        <h4 v-else>Tournament not Running</h4>
+        <menu>
+          <li>
+            <div>Left fencer name</div>
+            <div>
+              <input
+                v-model.number="match[0].fencer.name.firstName"
+                placeholder="first name"
+              />
+              <input
+                v-model.number="match[0].fencer.name.lastName"
+                placeholder="surname"
+              />
+            </div>
+          </li>
+          <li>
+            <div>Right fencer name</div>
+            <div>
+              <input
+                v-model.number="match[1].fencer.name.firstName"
+                placeholder="first name"
+              />
+              <input
+                v-model.number="match[1].fencer.name.lastName"
+                placeholder="surname"
+              />
+            </div>
+          </li>
+          <li>
+            <div>Max time(in seconds), requires restart</div>
+            <input v-model.number="settings.maxTime" />
+          </li>
+          <li>
+            <div>Current time(in seconds)</div>
+            <input v-model.number="status.stopwatch" />
+          </li>
+          <li>
+            <div>Max score</div>
+            <input v-model.number="settings.maxScore" />
+          </li>
+          <li>
+            <div>Rounds</div>
+            <input v-model.number="settings.rounds" />
+          </li>
+          <li>
+            <div>Allow ties</div>
+            <input
+              v-model="settings.allowTies"
+              type="checkbox"
+            />
+          </li>
+          <li>
+            <div>Show doubles</div>
+            <input
+              v-model="showDoubles"
+              type="checkbox"
+            />
+          </li>
+          <li>
+            <div>Doubles add points</div>
+            <input v-model.number="settings.doublesAddPoints" />
+          </li>
+          <li>
+            <div>Maximum doubles</div>
+            <input v-model.number="settings.maxDoubles" />
+          </li>
+        </menu>
+        <button @click="reset">Reset Bout</button>
       </div>
-      <button
-        @click="startCyrano"
-        v-if="!cyrano"
+      <div
+        v-if="page === 'tournament'"
+        id="tournament"
       >
-        Start Cyrano
-      </button>
-      <button
-        @click="stopCyrano"
-        v-if="cyrano"
-      >
-        Stop Cyrano
-      </button>
-    </div>
-    <div
-      id="display"
-      v-if="page === 'display'"
-    >
-      <h3>Display Settings</h3>
-      <menu>
-        <li>
-          <div>Left fencer colour</div>
-          <input
-            type="color"
-            v-model="config.leftColor"
-          />
-        </li>
-        <li>
-          <div>Right fencer colour</div>
-          <input
-            type="color"
-            v-model="config.rightColor"
-          />
-        </li>
-        <li>
-          <div>Surnames in front</div>
-          <input
-            type="checkbox"
-            v-model="config.lastNameFirst"
-          />
-        </li>
-        <li>
-          <div>Shorten the first part of the name</div>
-          <input
-            type="checkbox"
-            v-model="config.shortenFirst"
-          />
-        </li>
-        <li>
-          <div>Shorten the second part of the name</div>
-          <input
-            type="checkbox"
-            v-model="config.shortenSecond"
-          />
-        </li>
-        <li>
-          <div>Separator between the parts of the name</div>
-          <input v-model="config.separator" />
-        </li>
-        <li>
-          <div>Ending of the name</div>
-          <input v-model="config.ending" />
-        </li>
-      </menu>
-    </div>
-    <div
-      id="keymap"
-      v-if="page === 'controls'"
-    >
-      <menu>
-        <li>
-          <div>Keymap</div>
-          <select v-model="keymap">
-            <option
-              v-for="(_, index) in defaultKeymaps"
-              :value="index"
-            >
-              {{ index }}
-            </option>
-          </select>
-        </li>
-        <li
-          v-for="(item, index) in config.keymap"
-          :key="index"
-        >
-          <div>{{ index }}</div>
-          <button
-            @click="change = index"
-            class="bind keys"
-            :class="{ selected: change === index }"
+        <h3>Bout Settings</h3>
+        <h4 v-if="sendingData">Tournament Running</h4>
+        <h4 v-else>Tournament not Running</h4>
+        <ul>
+          <li
+            v-for="(item, index) in omit(matches, '')"
+            :key="index"
           >
-            {{ item }}
-          </button>
-        </li>
-      </menu>
+            {{ index }}. {{ item[0].fencer.name.toString() }} {{ item[0].score
+            }}{{ item[0].status === "U" ? "" : item[0].status }} vs.
+            {{ item[1].fencer.name.toString() }} {{ item[1].score
+            }}{{ item[1].status === "U" ? "" : item[1].status }}
+          </li>
+        </ul>
+        <h4 v-if="cyranoState === 'No Bouts'">No more bouts</h4>
+      </div>
+      <div
+        v-if="page === 'cyrano'"
+        id="cyrano"
+      >
+        <h4 v-if="sendingData">Tournament Running</h4>
+        <h4 v-else>Tournament not Running</h4>
+        <menu>
+          <li>
+            <div>Piste</div>
+            <input v-model="settings.piste" />
+          </li>
+          <li>
+            <div>Remote Address</div>
+            <input v-model.number="cyranoOptions.remoteAddress" />
+          </li>
+          <li>
+            <div>Port</div>
+            <input v-model.number="cyranoOptions.port" />
+          </li>
+          <li>
+            <div>Points per Period</div>
+            <input v-model.number="cyranoOptions.pointsPerPeriod" />
+          </li>
+          <li>
+            <div>Periods per Table Match</div>
+            <input v-model.number="cyranoOptions.roundsPerTableMatch" />
+          </li>
+        </menu>
+        <div>
+          <code>{{ cyranoOut }}</code>
+        </div>
+        <button
+          v-if="!cyrano"
+          @click="startCyrano"
+        >
+          Start Cyrano
+        </button>
+        <button
+          v-if="cyrano"
+          @click="stopCyrano"
+        >
+          Stop Cyrano
+        </button>
+      </div>
+      <div
+        v-if="page === 'display'"
+        id="display"
+      >
+        <h3>Display Settings</h3>
+        <menu>
+          <li>
+            <div>Left fencer colour</div>
+            <input
+              v-model="config.leftColor"
+              type="color"
+            />
+          </li>
+          <li>
+            <div>Right fencer colour</div>
+            <input
+              v-model="config.rightColor"
+              type="color"
+            />
+          </li>
+          <li>
+            <div>Surnames in front</div>
+            <input
+              v-model="config.lastNameFirst"
+              type="checkbox"
+            />
+          </li>
+          <li>
+            <div>Shorten the first part of the name</div>
+            <input
+              v-model="config.shortenFirst"
+              type="checkbox"
+            />
+          </li>
+          <li>
+            <div>Shorten the second part of the name</div>
+            <input
+              v-model="config.shortenSecond"
+              type="checkbox"
+            />
+          </li>
+          <li>
+            <div>Separator between the parts of the name</div>
+            <input v-model="config.separator" />
+          </li>
+          <li>
+            <div>Ending of the name</div>
+            <input v-model="config.ending" />
+          </li>
+        </menu>
+      </div>
+      <div
+        v-if="page === 'controls'"
+        id="keymap"
+      >
+        <menu>
+          <li>
+            <div>Keymap</div>
+            <select v-model="keymap">
+              <option
+                v-for="(_, index) in defaultKeymaps"
+                :value="index"
+              >
+                {{ index }}
+              </option>
+            </select>
+          </li>
+          <li
+            v-for="(item, index) in config.keymap"
+            :key="index"
+          >
+            <div>{{ index }}</div>
+            <button
+              :class="{ selected: change === index }"
+              class="bind keys"
+              @click="change = index"
+            >
+              {{ item }}
+            </button>
+          </li>
+        </menu>
+      </div>
     </div>
+    <div
+      class="blurred background"
+      @click="menu = false"
+    ></div>
+  </div>
+  <div v-if="priorityPicker">
+    <div
+      v-if="priorityPicker"
+      class="priority"
+    >
+      <h2>Choose Priority</h2>
+      <div>
+        <button
+          class="half"
+          @click="choosePriority('L')"
+        >
+          Left
+        </button>
+        <button
+          class="half"
+          @click="choosePriority('R')"
+        >
+          Right
+        </button>
+      </div>
+      <div>
+        <button @click="choosePriority('N')">Random</button>
+      </div>
+    </div>
+    <div
+      v-if="priorityPicker"
+      class="blurred"
+    ></div>
   </div>
   <div
-    class="priority"
-    v-if="priorityPicker"
-  >
-    <h2>Choose Priority</h2>
-    <div>
-      <button
-        @click="choosePriority('L')"
-        class="half"
-      >
-        Left
-      </button>
-      <button
-        @click="choosePriority('R')"
-        class="half"
-      >
-        Right
-      </button>
-    </div>
-    <div>
-      <button @click="choosePriority('N')">Random</button>
-    </div>
-  </div>
-  <div
-    class="blurred background"
-    @click="menu = false"
-    v-if="menu"
-  ></div>
-  <div
     class="blurred"
-    v-else-if="priorityPicker"
-  ></div>
-  <div
-    class="blurred"
-    v-else-if="
+    v-if="
       status.state === 'E' ||
       ((cyranoState === 'Waiting' || cyranoState === 'No Bouts') && cyrano)
     "
