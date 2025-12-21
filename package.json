@@ -28,6 +28,7 @@
     "wbn-sign": "^0.2.0"
   },
   "dependencies": {
+    "color": "^5.0.3",
     "underscore": "^1.13.7",
     "vue": "^3.5.25",
     "vue3-marquee": "^4.2.2"

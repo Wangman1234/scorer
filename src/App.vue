@@ -28,6 +28,7 @@ import { Cyrano } from "./scripts/Cyrano.ts";
 import { keys, min, omit } from "underscore";
 import { fencerEqual } from "./scripts/Functions.ts";
 import NextFencer from "./scripts/NextFencer.vue";
+import Color from "color";
 
 // Defaults
 function defaultFencerStatus(): CorrectFencerStatus {
@@ -1003,7 +1004,10 @@ onUnmounted(() => {
     <div id="fencer-display">
       <div
         class="name fencer-1"
-        :style="{ backgroundColor: config.leftColor }"
+        :style="{
+          backgroundColor: config.leftColor,
+          color: Color(config.leftColor).isLight() ? 'black' : 'white',
+        }"
       >
         <h1>
           {{
@@ -1020,7 +1024,10 @@ onUnmounted(() => {
       </div>
       <div
         class="name fencer-2"
-        :style="{ backgroundColor: config.rightColor }"
+        :style="{
+          backgroundColor: config.rightColor,
+          color: Color(config.rightColor).isLight() ? 'black' : 'white',
+        }"
       >
         <h1>
           {{
