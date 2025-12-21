@@ -101,10 +101,13 @@ const cyrano = ref(false);
 const menu = ref(false);
 const winner = ref(false);
 const page = ref("bout");
+const nak = ref(false);
 const priorityPicker = ref(false);
 const sendingData = ref(false);
 const knowList = ref(1);
 const prev = ref(0);
+const prevDisp = ref(new Cyrano("|EFP1|HELLO|0|0|%|"));
+const ret = ref<"INFO" | "NEXT" | "PREV">("INFO");
 const cyranoState = ref("Waiting");
 const change = ref<false | keyof keyMap>(false);
 const keymap = ref("remoteKeymap1");
@@ -129,20 +132,24 @@ const config = ref<{
   keymap: keyMap;
   leftColor: string;
   rightColor: string;
+  showSubSec: boolean;
   lastNameFirst: boolean;
   shortenFirst: boolean;
   shortenSecond: boolean;
   separator: string;
   ending: string;
+  showDoubles: boolean;
 }>({
   keymap: Object.assign({}, defaultKeymaps.remoteKeymap1),
   leftColor: "#ff0000",
   rightColor: "#0000ff",
+  showSubSec: false,
   lastNameFirst: false,
   shortenFirst: false,
   shortenSecond: true,
   separator: " ",
   ending: "",
+  showDoubles: false,
 });
 const settings = ref({
   piste: "1",
@@ -152,6 +159,7 @@ const settings = ref({
   maxScore: 5,
   rounds: 1,
   allowTies: false,
+  allowOver: false,
   doublesAddPoints: 0,
   maxDoubles: 0,
 });
@@ -174,7 +182,6 @@ const status = ref<CorrectStatus>({
   state: "",
   doubles: 0,
 });
-const showDoubles = ref(false);
 const cyranoOut = ref("");
 const Lcard = ref(0);
 const Rcard = ref(0);
@@ -193,6 +200,19 @@ const match = computed<[CorrectFencerStatus, CorrectFencerStatus]>(() => {
       defaultFencerStatus(),
       defaultFencerStatus(),
     ]
+  );
+});
+const cyranoMatch = computed(() => {
+  return new Cyrano(
+    cyranoProtocol,
+    ret.value,
+    settings.value.piste,
+    settings.value.compe,
+    settings.value.phase,
+    status.value,
+    emptyFencer,
+    match.value[1],
+    match.value[0],
   );
 });
 const matchOver = computed(() => {
@@ -424,9 +444,10 @@ async function runner(
   await runner(resolve, reject, msg);
 }
 function tester(
-  reject: (reason?: any) => void,
+  _reject: (reason?: any) => void,
   cyranoMsg: Cyrano,
 ): "NEXT" | "PREV" | "INFO" | "" {
+  if (nak.value) return "";
   switch (cyranoState.value) {
     case "Waiting":
     case "No Bouts":
@@ -436,7 +457,7 @@ function tester(
             if (cyranoState.value !== "No Bouts") {
               cyranoState.value = "No Bouts";
               page.value = "tournament";
-              menu.value = false;
+              menu.value = true;
               return "PREV";
             } else {
               // reset()
@@ -498,6 +519,7 @@ function tester(
             page.value = "bout";
             menu.value = true;
             cyranoState.value = "Bout";
+            prevDisp.value = cyranoMsg;
             new Promise(() => {
               bout();
             });
@@ -544,12 +566,7 @@ function tester(
             return "PREV";
           }
         }
-      } else if (
-        (cyranoMsg.com === "HELLO" ||
-          cyranoMsg.leftfencer.status !== "U" ||
-          cyranoMsg.rightfencer.status !== "U") &&
-        cyranoMsg.status.poultab !== "X"
-      ) {
+      } else if (cyranoMsg.com === "HELLO") {
         return "NEXT";
       }
       break;
@@ -580,13 +597,20 @@ function tester(
         cyranoState.value = "Waiting";
         return "NEXT";
       } else if (cyranoMsg.com === "NAK") {
+        nak.value = true;
+        page.value = "nak";
         menu.value = true;
-        page.value = "cyrano";
-        reject();
+        return "";
       }
       return "INFO";
   }
   return "";
+}
+function unNak() {
+  nak.value = false;
+  page.value = "tournament";
+  reader.releaseLock();
+  reader = readab.getReader();
 }
 async function bout() {
   sendingData.value = true;
@@ -669,19 +693,9 @@ async function write(
   com: "NEXT" | "PREV" | "INFO" = "INFO",
   process: string = "write",
 ) {
-  const cyranoStart = new Cyrano(
-    cyranoProtocol,
-    com,
-    settings.value.piste,
-    settings.value.compe,
-    settings.value.phase,
-    status.value,
-    emptyFencer,
-    match.value[1],
-    match.value[0],
-  );
-  console.log(process, cyranoStart);
-  let message = cyranoStart.toString();
+  ret.value = com;
+  console.log(process, cyranoMatch.value);
+  let message = cyranoMatch.value.toString();
   await writer.ready;
   await writer.write({
     data: encoder.encode(message),
@@ -793,6 +807,26 @@ function end() {
       status.value.stopwatch = 60;
       status.value.doubles = 0;
       return;
+    }
+  }
+  if (!settings.value.allowOver) {
+    if (match.value[0].score > settings.value.maxScore) {
+      match.value[0].score = settings.value.maxScore;
+    }
+    if (match.value[1].score > settings.value.maxScore) {
+      match.value[1].score = settings.value.maxScore;
+    }
+    if (
+      !settings.value.allowTies &&
+      match.value[0].score === match.value[1].score
+    ) {
+      if (match.value[0].status === "V") {
+        status.value.priority = "L";
+      } else if (match.value[1].status === "V") {
+        status.value.priority = "R";
+      } else {
+        throw Error("Both fencers can't lose when allowTies === false");
+      }
     }
   }
   winner.value = true;
@@ -1022,8 +1056,13 @@ onUnmounted(() => {
           <NextFencer
             v-if="
               (match[0].score >= (3 / 5) * settings.maxScore ||
-                match[1].score >= (3 / 5) * settings.maxScore) &&
-              cyrano
+                match[1].score >= (3 / 5) * settings.maxScore ||
+                (status.doubles >= settings.maxDoubles / 2 &&
+                  settings.maxDoubles !== 0) ||
+                (Number(status.stopwatch) <= settings.maxTime / 3 &&
+                  status.round == settings.rounds)) &&
+              cyrano &&
+              keys(omit(matches, '')).length > 1
             "
             :matches="omit(matches, '')"
             :match="status.match === '' ? 0 : status.match"
@@ -1034,8 +1073,20 @@ onUnmounted(() => {
           :class="status.state"
         >
           <div
+            v-if="config.showSubSec"
+            id="sub"
+          >
+            <span>
+              {{ Math.floor(stopwatch / 60) }}:{{
+                (stopwatch - 60 * Math.floor(stopwatch / 60))
+                  .toFixed(2)
+                  .padStart(5, "0")
+              }}
+            </span>
+          </div>
+          <div
             id="short"
-            v-if="short"
+            v-else-if="short"
           >
             <span>{{ stopwatch.toFixed(2) }}</span>
           </div>
@@ -1052,9 +1103,13 @@ onUnmounted(() => {
         </div>
         <div
           id="doubles"
-          v-if="showDoubles"
+          v-if="config.showDoubles"
         >
-          {{ status.doubles }} Doubles
+          {{ status.doubles
+          }}{{
+            settings.maxDoubles > 0 ? "/" + settings.maxDoubles.toString() : ""
+          }}
+          Doubles
         </div>
         <div id="rounds">
           <span>{{ status.round }}</span
@@ -1089,6 +1144,12 @@ onUnmounted(() => {
           >Bout</a
         >
         <a
+          v-if="nak"
+          :class="{ selected: page === 'nak' }"
+          @click="page = 'nak'"
+          >Tournament</a
+        >
+        <a
           v-if="cyrano"
           :class="{ selected: page === 'tournament' }"
           @click="page = 'tournament'"
@@ -1113,223 +1174,421 @@ onUnmounted(() => {
       <div
         v-if="page === 'bout'"
         id="bout"
+        class="body"
       >
-        <h3>Bout Settings</h3>
-        <h4 v-if="sendingData">Tournament Running</h4>
-        <h4 v-else>Tournament not Running</h4>
-        <menu>
-          <li>
-            <div>Left fencer name</div>
-            <div>
+        <div class="header">
+          <h3>Bout Settings</h3>
+          <h4 v-if="sendingData">Tournament Running</h4>
+          <h4 v-else>Tournament not Running</h4>
+        </div>
+        <div class="scrollable">
+          <menu>
+            <li>
+              <div>Left fencer name</div>
+              <div>
+                <input
+                  v-model.number="match[0].fencer.name.firstName"
+                  placeholder="first name"
+                />
+                <input
+                  v-model.number="match[0].fencer.name.lastName"
+                  placeholder="surname"
+                />
+              </div>
+            </li>
+            <li>
+              <div>Left fencer club</div>
+              <input v-model="match[0].fencer.club" />
+            </li>
+            <li>
+              <div>Right fencer name</div>
+              <div>
+                <input
+                  v-model.number="match[1].fencer.name.firstName"
+                  placeholder="first name"
+                />
+                <input
+                  v-model.number="match[1].fencer.name.lastName"
+                  placeholder="surname"
+                />
+              </div>
+            </li>
+            <li>
+              <div>Right fencer club</div>
+              <input v-model="match[1].fencer.club" />
+            </li>
+            <li>
+              <div>Max time(in seconds), requires restart</div>
+              <input v-model.number="settings.maxTime" />
+            </li>
+            <li>
+              <div>Current time(in seconds)</div>
+              <input v-model.number="status.stopwatch" />
+            </li>
+            <li>
+              <div>Max score</div>
+              <input v-model.number="settings.maxScore" />
+            </li>
+            <li>
+              <div>Rounds</div>
+              <input v-model.number="settings.rounds" />
+            </li>
+            <li>
+              <div>Allow ties</div>
               <input
-                v-model.number="match[0].fencer.name.firstName"
-                placeholder="first name"
+                v-model="settings.allowTies"
+                type="checkbox"
               />
+            </li>
+            <li>
+              <div>Allow point overflow</div>
               <input
-                v-model.number="match[0].fencer.name.lastName"
-                placeholder="surname"
+                v-model="settings.allowOver"
+                type="checkbox"
               />
-            </div>
-          </li>
-          <li>
-            <div>Right fencer name</div>
-            <div>
-              <input
-                v-model.number="match[1].fencer.name.firstName"
-                placeholder="first name"
-              />
-              <input
-                v-model.number="match[1].fencer.name.lastName"
-                placeholder="surname"
-              />
-            </div>
-          </li>
-          <li>
-            <div>Max time(in seconds), requires restart</div>
-            <input v-model.number="settings.maxTime" />
-          </li>
-          <li>
-            <div>Current time(in seconds)</div>
-            <input v-model.number="status.stopwatch" />
-          </li>
-          <li>
-            <div>Max score</div>
-            <input v-model.number="settings.maxScore" />
-          </li>
-          <li>
-            <div>Rounds</div>
-            <input v-model.number="settings.rounds" />
-          </li>
-          <li>
-            <div>Allow ties</div>
-            <input
-              v-model="settings.allowTies"
-              type="checkbox"
-            />
-          </li>
-          <li>
-            <div>Show doubles</div>
-            <input
-              v-model="showDoubles"
-              type="checkbox"
-            />
-          </li>
-          <li>
-            <div>Doubles add points</div>
-            <input v-model.number="settings.doublesAddPoints" />
-          </li>
-          <li>
-            <div>Maximum doubles</div>
-            <input v-model.number="settings.maxDoubles" />
-          </li>
-        </menu>
-        <button @click="reset">Reset Bout</button>
+            </li>
+            <li>
+              <div>Doubles add points</div>
+              <input v-model.number="settings.doublesAddPoints" />
+            </li>
+            <li>
+              <div>Maximum doubles</div>
+              <input v-model.number="settings.maxDoubles" />
+            </li>
+          </menu>
+        </div>
+        <div class="button">
+          <button @click="reset">Reset Bout</button>
+        </div>
+      </div>
+      <div
+        v-if="page === 'nak'"
+        class="body"
+      >
+        <div class="header">
+          <h3>Correction Menu</h3>
+          <h4>
+            NAK received on Cyrano connection,<br />
+            please check match data and resend.
+          </h4>
+          <div>
+            last DISP message: <code>{{ prevDisp.toString() }}</code>
+          </div>
+          <div>
+            sending: <code>{{ cyranoMatch.toString() }}</code>
+          </div>
+        </div>
+        <div class="scrollable">
+          <menu>
+            <li>
+              <div>piste</div>
+              <input v-model="settings.piste" />
+            </li>
+            <li>
+              <div>compe</div>
+              <input v-model="settings.compe" />
+            </li>
+            <li>
+              <div>phase</div>
+              <input v-model.number="settings.phase" />
+            </li>
+            <li v-for="(_item, index) in status">
+              <div>{{ index }}</div>
+              <input v-model="status[index]" />
+            </li>
+          </menu>
+          <div class="table">
+            <menu>
+              <h4>Left Fencer</h4>
+              <li>
+                <div>id</div>
+                <input v-model="match[0].fencer.id" />
+              </li>
+              <li>
+                <div>name</div>
+                <div>
+                  <input
+                    v-model.number="match[0].fencer.name.firstName"
+                    placeholder="first name"
+                  />
+                  <input
+                    v-model.number="match[0].fencer.name.lastName"
+                    placeholder="surname"
+                  />
+                </div>
+              </li>
+              <li>
+                <div>country</div>
+                <input v-model="match[0].fencer.country" />
+              </li>
+              <li v-for="(_item, index) in omit(match[0], 'fencer')">
+                <div>{{ index }}</div>
+                <input v-model="match[0][index]" />
+              </li>
+            </menu>
+            <menu>
+              <h4>Right Fencer</h4>
+              <li>
+                <div>id</div>
+                <input v-model="match[1].fencer.id" />
+              </li>
+              <li>
+                <div>name</div>
+                <div>
+                  <input
+                    v-model.number="match[1].fencer.name.firstName"
+                    placeholder="first name"
+                  />
+                  <input
+                    v-model.number="match[1].fencer.name.lastName"
+                    placeholder="surname"
+                  />
+                </div>
+              </li>
+              <li>
+                <div>country</div>
+                <input v-model="match[1].fencer.country" />
+              </li>
+              <li v-for="(_item, index) in omit(match[1], 'fencer')">
+                <div>{{ index }}</div>
+                <input v-model="match[1][index]" />
+              </li>
+            </menu>
+          </div>
+        </div>
+        <div class="button">
+          <button @click="unNak">Resend Data</button>
+        </div>
       </div>
       <div
         v-if="page === 'tournament'"
         id="tournament"
+        class="body"
       >
-        <h3>Bout Settings</h3>
-        <h4 v-if="sendingData">Tournament Running</h4>
-        <h4 v-else>Tournament not Running</h4>
-        <ul>
-          <li
-            v-for="(item, index) in omit(matches, '')"
-            :key="index"
-          >
-            {{ index }}. {{ item[0].fencer.name.toString() }} {{ item[0].score
-            }}{{ item[0].status === "U" ? "" : item[0].status }} vs.
-            {{ item[1].fencer.name.toString() }} {{ item[1].score
-            }}{{ item[1].status === "U" ? "" : item[1].status }}
-          </li>
-        </ul>
-        <h4 v-if="cyranoState === 'No Bouts'">No more bouts</h4>
+        <div class="header">
+          <h3>Tournament Bouts</h3>
+          <h4 v-if="sendingData">Tournament Running</h4>
+          <h4 v-else>Tournament not Running</h4>
+        </div>
+        <div class="scrollable">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Bout</th>
+                <th scope="col">Left fencer</th>
+                <th colspan="5"></th>
+                <th scope="col">Right fencer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(item, index) in omit(matches, '')"
+                :key="index"
+                :class="index == status.match ? 'running' : 'not'"
+              >
+                <th scope="row">{{ index }}.</th>
+                <td>
+                  {{ item[0].fencer.id }}
+                  {{
+                    item[0].fencer.name.toString(
+                      config.lastNameFirst,
+                      false,
+                      false,
+                      " ",
+                      "",
+                    )
+                  }}
+                </td>
+                <td class="score">{{ item[0].status }}</td>
+                <td class="score">{{ item[0].score }}</td>
+                <td>vs.</td>
+                <td class="score">{{ item[1].score }}</td>
+                <td class="score">{{ item[1].status }}</td>
+                <td>
+                  {{ item[0].fencer.id }}
+                  {{
+                    item[1].fencer.name.toString(
+                      config.lastNameFirst,
+                      false,
+                      false,
+                      " ",
+                      "",
+                    )
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <h4 v-if="cyranoState === 'No Bouts'">No more bouts</h4>
+        </div>
       </div>
       <div
         v-if="page === 'cyrano'"
         id="cyrano"
+        class="body"
       >
-        <h4 v-if="sendingData">Tournament Running</h4>
-        <h4 v-else>Tournament not Running</h4>
-        <menu>
-          <li>
-            <div>Piste</div>
-            <input v-model="settings.piste" />
-          </li>
-          <li>
-            <div>Remote Address</div>
-            <input v-model.number="cyranoOptions.remoteAddress" />
-          </li>
-          <li>
-            <div>Port</div>
-            <input v-model.number="cyranoOptions.port" />
-          </li>
-          <li>
-            <div>Points per Period</div>
-            <input v-model.number="cyranoOptions.pointsPerPeriod" />
-          </li>
-          <li>
-            <div>Periods per Table Match</div>
-            <input v-model.number="cyranoOptions.roundsPerTableMatch" />
-          </li>
-        </menu>
-        <div>
-          <code>{{ cyranoOut }}</code>
+        <div class="header">
+          <h4 v-if="sendingData">Tournament Running</h4>
+          <h4 v-else>Tournament not Running</h4>
         </div>
-        <button
-          v-if="!cyrano"
-          @click="startCyrano"
-        >
-          Start Cyrano
-        </button>
-        <button
-          v-if="cyrano"
-          @click="stopCyrano"
-        >
-          Stop Cyrano
-        </button>
+        <div class="scrollable">
+          <menu>
+            <li>
+              <div>Piste</div>
+              <input v-model="settings.piste" />
+            </li>
+            <li>
+              <div>Remote Address</div>
+              <input v-model.number="cyranoOptions.remoteAddress" />
+            </li>
+            <li>
+              <div>Port</div>
+              <input v-model.number="cyranoOptions.port" />
+            </li>
+            <li>
+              <div>Points per Period</div>
+              <input v-model.number="cyranoOptions.pointsPerPeriod" />
+            </li>
+            <li>
+              <div>Periods per Table Match</div>
+              <input v-model.number="cyranoOptions.roundsPerTableMatch" />
+            </li>
+            <li>
+              <div>
+                Allow point overflow(if true, ensure max points + max overflow =
+                max points in FT)
+              </div>
+              <input
+                v-model="settings.allowOver"
+                type="checkbox"
+              />
+            </li>
+          </menu>
+          <div>
+            <code>{{ cyranoOut }}</code>
+          </div>
+        </div>
+        <div class="button">
+          <button
+            v-if="!cyrano"
+            @click="startCyrano"
+          >
+            Start Cyrano
+          </button>
+          <button
+            v-if="cyrano"
+            @click="stopCyrano"
+          >
+            Stop Cyrano
+          </button>
+        </div>
       </div>
       <div
         v-if="page === 'display'"
         id="display"
+        class="body"
       >
-        <h3>Display Settings</h3>
-        <menu>
-          <li>
-            <div>Left fencer colour</div>
-            <input
-              v-model="config.leftColor"
-              type="color"
-            />
-          </li>
-          <li>
-            <div>Right fencer colour</div>
-            <input
-              v-model="config.rightColor"
-              type="color"
-            />
-          </li>
-          <li>
-            <div>Surnames in front</div>
-            <input
-              v-model="config.lastNameFirst"
-              type="checkbox"
-            />
-          </li>
-          <li>
-            <div>Shorten the first part of the name</div>
-            <input
-              v-model="config.shortenFirst"
-              type="checkbox"
-            />
-          </li>
-          <li>
-            <div>Shorten the second part of the name</div>
-            <input
-              v-model="config.shortenSecond"
-              type="checkbox"
-            />
-          </li>
-          <li>
-            <div>Separator between the parts of the name</div>
-            <input v-model="config.separator" />
-          </li>
-          <li>
-            <div>Ending of the name</div>
-            <input v-model="config.ending" />
-          </li>
-        </menu>
+        <div class="header">
+          <h3>Display Settings</h3>
+        </div>
+        <div class="scrollable">
+          <menu>
+            <li>
+              <div>Left fencer colour</div>
+              <input
+                v-model="config.leftColor"
+                type="color"
+              />
+            </li>
+            <li>
+              <div>Right fencer colour</div>
+              <input
+                v-model="config.rightColor"
+                type="color"
+              />
+            </li>
+            <li>
+              <div>Surnames in front</div>
+              <input
+                v-model="config.lastNameFirst"
+                type="checkbox"
+              />
+            </li>
+            <li>
+              <div>Shorten the first part of the name</div>
+              <input
+                v-model="config.shortenFirst"
+                type="checkbox"
+              />
+            </li>
+            <li>
+              <div>Shorten the second part of the name</div>
+              <input
+                v-model="config.shortenSecond"
+                type="checkbox"
+              />
+            </li>
+            <li>
+              <div>Separator between the parts of the name</div>
+              <input v-model="config.separator" />
+            </li>
+            <li>
+              <div>Ending of the name</div>
+              <input v-model="config.ending" />
+            </li>
+            <li>
+              <div>Show doubles</div>
+              <input
+                v-model="config.showDoubles"
+                type="checkbox"
+              />
+            </li>
+            <li>
+              <div>Always show subsecond</div>
+              <input
+                v-model="config.showSubSec"
+                type="checkbox"
+              />
+            </li>
+          </menu>
+        </div>
       </div>
       <div
         v-if="page === 'controls'"
         id="keymap"
+        class="body"
       >
-        <menu>
-          <li>
-            <div>Keymap</div>
-            <select v-model="keymap">
-              <option
-                v-for="(_, index) in defaultKeymaps"
-                :value="index"
-              >
-                {{ index }}
-              </option>
-            </select>
-          </li>
-          <li
-            v-for="(item, index) in config.keymap"
-            :key="index"
-          >
-            <div>{{ index }}</div>
-            <button
-              :class="{ selected: change === index }"
-              class="bind keys"
-              @click="change = index"
+        <div class="header">
+          <h3>Keymap</h3>
+        </div>
+        <div class="scrollable">
+          <menu>
+            <li>
+              <div>Keymap</div>
+              <select v-model="keymap">
+                <option
+                  v-for="(_item, index) in defaultKeymaps"
+                  :value="index"
+                >
+                  {{ index }}
+                </option>
+              </select>
+            </li>
+            <li
+              v-for="(item, index) in config.keymap"
+              :key="index"
             >
-              {{ item }}
-            </button>
-          </li>
-        </menu>
+              <div>{{ index }}</div>
+              <button
+                :class="{ selected: change === index }"
+                class="bind keys"
+                @click="change = index"
+              >
+                {{ item }}
+              </button>
+            </li>
+          </menu>
+        </div>
       </div>
     </div>
     <div
@@ -1440,6 +1699,12 @@ onUnmounted(() => {
   width: 50%;
   padding: 1%;
 }
+#fencer-display h1 {
+  font-size: 5rem;
+}
+#fencer-display h2 {
+  font-size: 3rem;
+}
 #scoring-display {
   display: grid;
   grid-template-columns: 25% 50% 25%;
@@ -1495,17 +1760,53 @@ div.scoring {
   float: none;
   position: fixed;
   display: block;
-  width: 50vw;
-  height: 60vh;
-  top: 20%;
+  width: 50rem;
+  height: 50rem;
+  top: 50%;
   left: 50%;
-  margin-left: -25vw;
+  margin-top: -25rem;
+  margin-left: -25rem;
   align-self: flex-end;
   background-color: darkslategrey;
-  //backdrop-filter: invert(100%);
 }
-.menu div {
-  overflow: hidden;
+.body {
+  height: 48rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.header {
+  border-color: black;
+  border-style: solid;
+  border-width: 0 0 2px 0;
+  padding: 0.5rem;
+}
+.scrollable {
+  padding: 1rem 0.5rem;
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+  align-self: center;
+}
+.button button {
+  width: 100%;
+  height: 4rem;
+  border-width: 2px 0 0 0;
+}
+.table {
+  display: flex;
+  flex-direction: row;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 0 0.5rem;
+}
+tr.running {
+  border: 1px solid gold;
 }
 .blurred {
   z-index: 998;
@@ -1591,10 +1892,10 @@ button {
   border: black 2px solid;
   background-color: lightgrey;
 }
-button:hover {
-  background-color: slategrey;
-}
 .selected {
+  background-color: darkslategray;
+}
+button:hover {
   background-color: slategrey;
 }
 .blurred * {

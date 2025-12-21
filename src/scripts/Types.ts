@@ -34,8 +34,17 @@ export class Name {
       } else {
         let names = nameLastName.split(" ");
         if (names[0] === names[0]?.toUpperCase()) {
-          this.lastName = names[0]?.trim() ?? "";
-          this.firstName = names[1]?.trim() ?? "";
+          this.lastName = "";
+          this.firstName = "";
+          for (const namesKey in names) {
+            if (names[namesKey] === names[namesKey]?.toUpperCase()) {
+              this.lastName += " " + names[namesKey];
+            } else {
+              this.firstName += " " + names[namesKey];
+            }
+          }
+          this.lastName = this.lastName.trim();
+          this.firstName = this.firstName.trim();
         } else {
           this.firstName = names[0]?.trim() ?? "";
           this.lastName = names[1]?.trim() ?? "";
