@@ -25,10 +25,11 @@ import {
   type keyMap,
 } from "./scripts/Types.ts";
 import { Cyrano } from "./scripts/Cyrano.ts";
-import { keys, min, omit } from "underscore";
+import { min, omit } from "underscore";
 import { fencerEqual } from "./scripts/Functions.ts";
 import NextFencer from "./scripts/NextFencer.vue";
 import Color from "color";
+import Poule from "./scripts/Poule.vue";
 
 // Defaults
 function defaultFencerStatus(): CorrectFencerStatus {
@@ -551,7 +552,7 @@ function tester(
               mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
             } else if (
               cyranoMsg.status.match ===
-              Number(min(keys(omit(matches.value, ""))))
+              Number(min(Object.keys(omit(matches.value, ""))))
             ) {
               if (cyranoMsg.status.match === prev.value) {
                 knowList.value = 0;
@@ -1069,7 +1070,7 @@ onUnmounted(() => {
                 (Number(status.stopwatch) <= settings.maxTime / 3 &&
                   status.round == settings.rounds)) &&
               cyrano &&
-              keys(omit(matches, '')).length > 1
+              Object.keys(omit(matches, '')).length > 1
             "
             :matches="omit(matches, '')"
             :match="status.match === '' ? 0 : status.match"
@@ -1378,6 +1379,7 @@ onUnmounted(() => {
           <h4 v-else>Tournament not Running</h4>
         </div>
         <div class="scrollable">
+          <Poule :matches="omit(matches, '')" />
           <table>
             <thead>
               <tr>
@@ -1412,7 +1414,7 @@ onUnmounted(() => {
                 <td class="score">{{ item[1].score }}</td>
                 <td class="score">{{ item[1].status }}</td>
                 <td>
-                  {{ item[0].fencer.id }}
+                  {{ item[1].fencer.id }}
                   {{
                     item[1].fencer.name.toString(
                       config.lastNameFirst,
