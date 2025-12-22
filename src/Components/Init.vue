@@ -15,12 +15,9 @@
   -->
 
 <script setup lang="ts">
-import { ref } from "vue";
-
 const emit = defineEmits<{
   started: [start: boolean];
 }>();
-const started = ref(false);
 
 async function launch() {
   await document.documentElement.requestFullscreen();
@@ -37,21 +34,21 @@ async function launch() {
   } else {
     console.log("not granted");
   }
-  started.value = true;
   emit("started", true);
 }
 </script>
 
 <template>
-  <div id="butn">
+  <div>
     <button @click="launch">launch</button>
   </div>
 </template>
 
 <style scoped>
-#butn {
-  height: 95vh;
-  width: 98%;
+div {
+  background-clip: border-box;
+  height: 100%;
+  width: 100%;
   align-content: center;
 }
 </style>

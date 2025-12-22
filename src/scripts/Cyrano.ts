@@ -13,242 +13,374 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import {
-  emptyFencer,
-  emptyFencerStatus,
-  emptyStatus,
-  Fencer,
-  type FencerStatus,
-  type Status,
-} from "./Types.ts";
-import { CountryList, reverseCountryList } from "./Country.ts";
-import { cyrConvert, toSeconds, toTime } from "./Functions.ts";
+import { defaultFencerStatus, fencerEqual } from "@/scripts/Functions.ts";
+import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
+import type { CorrectFencerStatus, CorrectStatus } from "@/scripts/Types.ts";
+import { min, omit } from "underscore";
+import { useMatchStore } from "@/stores/match.ts";
+import { useSettingsStore } from "@/stores/settings.ts";
+import { useNavStore } from "@/stores/nav.ts";
 
 export class Cyrano {
-  protocol: "EFP1" | "EFP1.1";
-  com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV";
-  piste: string;
-  compe: string;
-  phase: number | "";
-  status: Status;
-  ref: Fencer;
-  rightfencer: FencerStatus;
-  leftfencer: FencerStatus;
-  constructor(
-    protocol: "EFP1" | "EFP1.1",
-    com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV",
-    piste: string,
-    compe: string,
-    phase: number,
-    status: Status,
-    ref: Fencer,
-    rightfencer: FencerStatus,
-    leftfencer: FencerStatus,
-  );
-  constructor(
-    protocol: "EFP1" | "EFP1.1",
-    com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV",
-    piste: string,
-    compe: string,
-    ...args: any[]
-  );
-  constructor(input: string);
-  constructor(
-    inputProtocol: "EFP1" | "EFP1.1" | string,
-    com: "HELLO" | "DISP" | "ACK" | "NAK" | "INFO" | "NEXT" | "PREV" = "HELLO",
-    piste: string = "",
-    compe: string = "",
-    phase: number | "" = "",
-    status: Status = emptyStatus,
-    ref: Fencer = emptyFencer,
-    rightfencer: FencerStatus = emptyFencerStatus,
-    leftfencer: FencerStatus = emptyFencerStatus,
+  matchStore = useMatchStore();
+  settingsStore = useSettingsStore();
+  navStore = useNavStore();
+
+  socket: UDPSocket;
+  readab?: ReadableStream;
+  writeab?: WritableStream;
+  reader?: ReadableStreamDefaultReader;
+  writer?: WritableStreamDefaultWriter;
+  decoder = new TextDecoder();
+  encoder = new TextEncoder();
+  nak = false;
+  sendingData = false;
+  knowList = 1;
+  prev = 0;
+  prevDisp = new CyranoMessage("|EFP1|HELLO|0|0|%|");
+  cyranoState = "Waiting";
+  cyranoOut = "";
+
+  constructor() {
+    this.socket = new UDPSocket({
+      localAddress: "0.0.0.0",
+      localPort: this.settingsStore.cyranoOptions.port,
+    });
+    if (!this.socket) {
+      this.cyranoLog("startCyrano", "Socket not connected");
+      return;
+    }
+    this.matchStore.$reset();
+  }
+  async startCyrano() {
+    const { readable, writable } = await this.socket.opened;
+    this.readab = readable;
+    this.writeab = writable;
+    this.reader = this.readab.getReader();
+    this.writer = this.writeab.getWriter();
+    console.log("startCyrano");
+    new Promise((res, rej) => this.runner(res, rej, "NEXT")).catch((reason) => {
+      console.log(reason);
+    });
+  }
+  async stopCyrano(resolve: (value?: any) => void) {
+    this.writer?.releaseLock();
+    this.reader?.releaseLock();
+    await this.socket.close();
+    this.sendingData = false;
+    this.cyranoState = "Closed";
+    this.settingsStore.settings.rounds = 1;
+    this.settingsStore.settings.maxScore = 5;
+    this.matchStore.matches[""] = [
+      defaultFencerStatus(),
+      defaultFencerStatus(),
+    ];
+    this.matchStore.status.match = "";
+    this.cyranoLog("stopCyrano", "finished");
+    resolve();
+  }
+  async runner(
+    resolve: (value?: any) => void,
+    reject: (reason?: any) => void,
+    msg: "NEXT" | "PREV" | "INFO" | "" = "",
   ) {
-    if (inputProtocol == "EFP1" || inputProtocol == "EFP1.1") {
-      this.protocol = inputProtocol;
-      this.com = com;
-      this.piste = piste;
-      this.compe = compe;
-      this.phase = phase;
-      this.status = status;
-      this.ref = ref;
-      this.leftfencer = leftfencer;
-      this.rightfencer = rightfencer;
-    } else {
-      const sections = inputProtocol.split("%");
-      const section1s = sections[0]?.split("|") ?? [];
-      if (section1s[1] !== "EFP1" && section1s[1] !== "EFP1.1") {
-        throw new TypeError(
-          "Not a valid Cyrano message, " +
-            String(section1s[1]) +
-            " is not a valid protocol",
-        );
+    try {
+      if (msg !== "") {
+        await this.write(msg, "runner");
       }
-      this.protocol = section1s[1];
-      if (
-        section1s[2] !== "HELLO" &&
-        section1s[2] !== "DISP" &&
-        section1s[2] !== "ACK" &&
-        section1s[2] !== "NAK" &&
-        section1s[2] !== "INFO" &&
-        section1s[2] !== "NEXT" &&
-        section1s[2] !== "PREV"
-      ) {
-        throw new TypeError(
-          "Not a valid Cyrano message, " +
-            String(section1s[2]) +
-            " is not a valid com",
-        );
+      this.cyranoLog(String(this.knowList), "waiting for message");
+      const cyranoMsg = await this.read(this.cyranoState);
+      if (cyranoMsg === true) {
+        return reject("message doesn't exist");
       }
-      this.com = section1s[2];
-      if (
-        typeof section1s[3] === "undefined" ||
-        typeof section1s[4] === "undefined"
-      ) {
-        throw new TypeError(
-          "Not a valid Cyrano message, " +
-            String(section1s[3]) +
-            " or " +
-            String(section1s[3]) +
-            " is not valid",
-        );
+      console.log(cyranoMsg);
+      this.settingsStore.cyranoOptions.protocol = cyranoMsg.protocol;
+      msg = this.tester(reject, cyranoMsg);
+      console.log(msg);
+    } catch (error) {
+      if (this.cyranoState === "Closed") {
+        return reject("Cyrano ended");
       }
-      this.piste = section1s[3];
-      this.compe = section1s[4];
-      if (
-        this.com === "DISP" &&
-        (typeof section1s[5] === "undefined" ||
-          typeof section1s[6] === "undefined" ||
-          typeof section1s[7] === "undefined" ||
-          typeof section1s[8] === "undefined")
-      ) {
-        throw new TypeError("Not a valid Cyrano message");
-      }
-      this.phase = cyrConvert(Number, section1s[5]);
-      this.status = {
-        poultab: section1s[6] ?? "",
-        match: cyrConvert(Number, section1s[7]),
-        round: cyrConvert(Number, section1s[8]),
-        time: section1s[9] ?? "",
-        stopwatch: toSeconds(section1s[10]),
-        type: (section1s[11] as "I" | "T") ?? "",
-        weapon: (section1s[12] as "F" | "E" | "S") ?? "",
-        priority: (section1s[13] as "N" | "L" | "R") ?? "",
-        state: (section1s[14] as "F" | "H" | "P" | "W" | "E") ?? "",
-        doubles: 0,
-      };
-      this.ref = new Fencer(
-        section1s[15] ?? "",
-        section1s[16] ?? "",
-        CountryList[section1s[17] ?? ""] ?? "",
-        "",
-      );
-      const section2 = sections[1];
-      if (typeof section2 === "undefined") {
-        this.rightfencer = emptyFencerStatus;
+      await new Promise((resolve) => setTimeout(resolve, 100, ""));
+      if (this.matchStore.status.state === "E") {
+        msg = "INFO";
       } else {
-        const section2s = section2.split("|");
-        this.rightfencer = {
-          fencer: new Fencer(
-            section2s[1] ?? "",
-            section2s[2] ?? "",
-            CountryList[section2s[3] ?? ""] ?? "",
-            "",
-          ),
-          score: cyrConvert(Number, section2s[4]),
-          status: (section2s[5] as "U" | "V" | "D" | "A" | "E") ?? "",
-          ycard: cyrConvert(Boolean, cyrConvert(Number, section2s[6])),
-          rcard: cyrConvert(Number, section2s[7]),
-          light: cyrConvert(Boolean, cyrConvert(Number, section2s[8])),
-          wlight: cyrConvert(Boolean, cyrConvert(Number, section2s[9])),
-          medical: cyrConvert(Number, section2s[10]),
-          reserve: (section2s[11] as "N" | "R") ?? "",
-        };
-      }
-      const section3 = sections[2];
-      if (typeof section3 === "undefined") {
-        this.leftfencer = emptyFencerStatus;
-      } else {
-        const section3s = section3.split("|");
-        this.leftfencer = {
-          fencer: new Fencer(
-            section3s[1] ?? "",
-            section3s[2] ?? "",
-            CountryList[section3s[3] ?? ""] ?? "",
-            "",
-          ),
-          score: cyrConvert(Number, section3s[4]),
-          status: (section3s[5] as "U" | "V" | "D" | "A" | "E") ?? "",
-          ycard: cyrConvert(Boolean, cyrConvert(Number, section3s[6])),
-          rcard: cyrConvert(Number, section3s[7]),
-          light: cyrConvert(Boolean, cyrConvert(Number, section3s[8])),
-          wlight: cyrConvert(Boolean, cyrConvert(Number, section3s[9])),
-          medical: cyrConvert(Number, section3s[10]),
-          reserve: (section3s[11] as "N" | "R") ?? "",
-        };
+        msg = "";
       }
     }
+    await this.runner(resolve, reject, msg).catch((reason) =>
+      console.log(reason),
+    );
   }
+  tester(
+    _reject: (reason?: any) => void,
+    cyranoMsg: CyranoMessage,
+  ): "NEXT" | "PREV" | "INFO" | "" {
+    if (this.nak) return "";
+    switch (this.cyranoState) {
+      case "Waiting":
+      case "No Bouts":
+        if (cyranoMsg.com === "DISP" && cyranoMsg.status.poultab !== "") {
+          if (this.knowList === 0) {
+            if (cyranoMsg.status.poultab === "X") {
+              if (this.cyranoState !== "No Bouts") {
+                this.cyranoState = "No Bouts";
+                this.navStore.page = "tournament";
+                this.navStore.menu = true;
+                return "PREV";
+              } else {
+                // reset()
+              }
+            } else if (
+              cyranoMsg.status.state === "E" ||
+              cyranoMsg.leftfencer.status !== "U" ||
+              cyranoMsg.rightfencer.status !== "U"
+            ) {
+              if (
+                typeof this.matchStore.matches[cyranoMsg.status.match] ===
+                "undefined"
+              ) {
+                this.matchStore.matches[cyranoMsg.status.match] = [
+                  defaultFencerStatus(),
+                  defaultFencerStatus(),
+                ];
+              }
+              const mat = this.matchStore.matches[cyranoMsg.status.match] ?? [
+                defaultFencerStatus(),
+                defaultFencerStatus(),
+              ];
+              if (
+                !(
+                  fencerEqual(mat[0], cyranoMsg.leftfencer) &&
+                  fencerEqual(mat[1], cyranoMsg.rightfencer)
+                )
+              ) {
+                mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
+                mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+              }
+              return "NEXT";
+            } else {
+              this.set(cyranoMsg);
+              if (
+                !(
+                  fencerEqual(this.matchStore.match[0], cyranoMsg.leftfencer) &&
+                  fencerEqual(this.matchStore.match[1], cyranoMsg.rightfencer)
+                )
+              ) {
+                this.matchStore.$reset();
+                this.cyranoState = "Waiting";
+                this.knowList = 1;
+                return "PREV";
+              }
+              this.matchStore.status.stopwatch =
+                this.settingsStore.settings.maxTime;
+              this.navStore.page = "bout";
+              this.navStore.menu = true;
+              this.cyranoState = "Bout";
+              this.prevDisp = cyranoMsg;
+              this.bout().then();
+            }
+          } else {
+            if (cyranoMsg.status.poultab === "X") {
+              this.knowList = -1;
+            } else {
+              if (
+                typeof this.matchStore.matches[cyranoMsg.status.match] ===
+                "undefined"
+              ) {
+                this.matchStore.matches[cyranoMsg.status.match] = [
+                  defaultFencerStatus(),
+                  defaultFencerStatus(),
+                ];
+              }
+              const mat = this.matchStore.matches[cyranoMsg.status.match] ?? [
+                defaultFencerStatus(),
+                defaultFencerStatus(),
+              ];
+              if (
+                !(
+                  fencerEqual(mat[0], cyranoMsg.leftfencer) &&
+                  fencerEqual(mat[1], cyranoMsg.rightfencer)
+                )
+              ) {
+                console.log("not equal");
+                console.log(mat[0], mat[1]);
+                mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
+                mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+              } else if (
+                cyranoMsg.status.match ===
+                Number(min(Object.keys(omit(this.matchStore.matches, ""))))
+              ) {
+                if (cyranoMsg.status.match === this.prev) {
+                  this.knowList = 0;
+                  this.prev = 0;
+                } else {
+                  this.prev = cyranoMsg.status.match;
+                }
+              }
+            }
+            if (this.knowList > 0) {
+              return "NEXT";
+            } else {
+              return "PREV";
+            }
+          }
+        } else if (cyranoMsg.com === "HELLO") {
+          this.settingsStore.settings.compe = cyranoMsg.compe;
+          this.settingsStore.settings.piste = cyranoMsg.piste;
+          return "NEXT";
+        }
+        break;
+      case "Bout":
+        if (cyranoMsg.com === "HELLO") {
+          return "INFO";
+        }
+        break;
+      case "Ending":
+        if (cyranoMsg.com === "ACK") {
+          console.log("ACK");
+          this.matchStore.matches[""] = [
+            defaultFencerStatus(),
+            defaultFencerStatus(),
+          ];
+          this.matchStore.status = {
+            poultab: "",
+            match: "",
+            round: 1,
+            time: "",
+            stopwatch: "",
+            type: "",
+            weapon: "F",
+            priority: "N",
+            state: "",
+            doubles: 0,
+          };
+          this.matchStore.Lcard = 0;
+          this.matchStore.Rcard = 0;
+          this.cyranoState = "Waiting";
+          return "NEXT";
+        } else if (cyranoMsg.com === "NAK") {
+          this.nak = true;
+          this.navStore.page = "nak";
+          this.navStore.menu = true;
+          return "";
+        }
+        return "INFO";
+    }
+    return "";
+  }
+  unNak() {
+    this.nak = false;
+    this.navStore.page = "tournament";
+    this.reader?.releaseLock();
+    this.reader = this.readab?.getReader();
+  }
+  async bout() {
+    this.sendingData = true;
+    console.log("sendTrue");
+    await new Promise((res, rej) => this.writeRepeat(res, rej));
+  }
+  async writeRepeat(
+    resolve: (value?: unknown) => void,
+    reject: (reason?: any) => void,
+  ) {
+    if (this.check()) return resolve();
+    this.reader?.releaseLock();
+    this.writer?.releaseLock();
+    this.writer = this.writeab?.getWriter();
+    await this.write("INFO", "writeRepeat");
+    this.reader = this.readab?.getReader();
+    for (let i = 0; i < 10; i++) {
+      if (this.check()) return resolve();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    console.log(this.matchStore.status.state);
+    await this.writeRepeat(resolve, reject);
+  }
+  check(): boolean {
+    if (this.matchStore.status.state === "E") {
+      this.reader?.releaseLock();
+      this.writer?.releaseLock();
+      this.writer = this.writeab?.getWriter();
+      this.reader = this.readab?.getReader();
+      console.log("sendFalse");
+      this.sendingData = false;
+      return true;
+    }
+    return false;
+  }
+  set(cyr: CyranoMessage) {
+    this.settingsStore.settings.piste = cyr.piste;
+    this.settingsStore.settings.compe = cyr.compe;
+    this.settingsStore.settings.phase = cyr.phase === "" ? 0 : cyr.phase;
+    this.matchStore.status = cyr.status as CorrectStatus;
+    this.settingsStore.settings.maxTime = 180;
+    switch (this.matchStore.status.poultab[0]) {
+      case "P":
+        this.settingsStore.settings.rounds = this.matchStore.status.round;
+        break;
+      default:
+        this.settingsStore.settings.rounds =
+          this.settingsStore.cyranoOptions.roundsPerTableMatch;
+    }
+    this.settingsStore.settings.maxScore =
+      (this.settingsStore.settings.rounds - this.matchStore.status.round + 1) *
+      this.settingsStore.cyranoOptions.pointsPerPeriod;
+    this.settingsStore.settings.allowTies = false;
+  }
+  async read(process: string = "read") {
+    const { value, done } = (await this.reader?.read()) ?? {
+      value: "",
+      done: true,
+    };
+    this.cyranoLog(process, "done reading");
+    if (done) {
+      await new Promise((res) => this.stopCyrano(res));
+      this.cyranoLog(process, "done");
+      return true;
+    }
+    this.cyranoLog(process, "message got");
 
-  toString() {
-    const string1: string = [
-      "",
-      this.protocol,
-      this.com,
-      this.piste,
-      this.compe,
-      String(this.phase),
-      this.status.poultab,
-      String(this.status.match),
-      String(this.status.round),
-      this.status.time,
-      toTime(this.status.stopwatch),
-      this.status.type,
-      this.status.weapon,
-      this.status.priority,
-      this.status.state,
-      String(this.ref.id),
-      this.ref.name.toString(false, false, false, " ", ""),
-      reverseCountryList[this.ref.country],
-      "",
-    ]
-      .join("|")
-      .replace(/\|*$/, "|");
-    const string2 = [
-      "",
-      String(this.rightfencer.fencer.id),
-      this.rightfencer.fencer.name.toString(false, false, false, " ", ""),
-      reverseCountryList[this.rightfencer.fencer.country],
-      String(this.rightfencer.score),
-      this.rightfencer.status,
-      String(cyrConvert(Number, this.rightfencer.ycard)),
-      String(this.rightfencer.rcard),
-      String(cyrConvert(Number, this.rightfencer.light)),
-      String(cyrConvert(Number, this.rightfencer.wlight)),
-      String(this.rightfencer.medical),
-      this.rightfencer.reserve,
-      "",
-    ]
-      .join("|")
-      .replace(/\|*$/, "|");
-    const string3 = [
-      "",
-      String(this.leftfencer.fencer.id),
-      this.leftfencer.fencer.name.toString(false, false, false, " ", ""),
-      reverseCountryList[this.leftfencer.fencer.country],
-      String(this.leftfencer.score),
-      this.leftfencer.status,
-      String(cyrConvert(Number, this.leftfencer.ycard)),
-      String(this.leftfencer.rcard),
-      String(cyrConvert(Number, this.leftfencer.light)),
-      String(cyrConvert(Number, this.leftfencer.wlight)),
-      String(this.leftfencer.medical),
-      this.leftfencer.reserve,
-      "",
-    ]
-      .join("|")
-      .replace(/\|*$/, "|");
-    return [string1, string2, string3, "|"].join("%").replace(/(%\|)*$/, "%|");
+    const { data, remoteAddress, remotePort } = value;
+    this.settingsStore.cyranoOptions.remoteAddress = remoteAddress;
+    const decoded = this.decoder.decode(data);
+    this.cyranoLog(
+      "process",
+      process,
+      ": received ",
+      decoded,
+      " from ",
+      remoteAddress,
+      ":",
+      remotePort,
+    );
+    return new CyranoMessage(decoded);
+  }
+  async write(
+    com: "NEXT" | "PREV" | "INFO" = "INFO",
+    process: string = "write",
+  ) {
+    this.settingsStore.cyranoOptions.ret = com;
+    console.log(process, this.matchStore.cyranoMatch);
+    let message = this.matchStore.cyranoMatch.toString();
+    await this.writer?.ready;
+    await this.writer?.write({
+      data: this.encoder.encode(message),
+      remoteAddress: this.settingsStore.cyranoOptions.remoteAddress,
+      remotePort: this.settingsStore.cyranoOptions.port,
+    });
+    this.cyranoLog(
+      process,
+      "sent",
+      message,
+      "on port",
+      this.settingsStore.cyranoOptions.port,
+      "to",
+      this.settingsStore.cyranoOptions.remoteAddress,
+    );
+  }
+  cyranoLog(process: string, ...args: any) {
+    console.log("process", process, ":", ...args);
+    this.cyranoOut = args.join(" ");
   }
 }

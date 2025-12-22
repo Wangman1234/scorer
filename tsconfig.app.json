@@ -15,6 +15,7 @@
     "noUncheckedSideEffectImports": true,
 
     "paths": {
+      "@/*": ["./src/*"],
       "$types/*": ["./types/*.d.ts"]
     }
   },

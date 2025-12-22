@@ -15,7 +15,7 @@
   -->
 
 <script setup lang="ts">
-import { type CorrectFencerStatus } from "./Types.ts";
+import { type CorrectFencerStatus } from "../scripts/Types.ts";
 import { Vue3Marquee } from "vue3-marquee";
 import { computed } from "vue";
 

@@ -15,7 +15,7 @@
   -->
 
 <script lang="ts" setup>
-import { type CorrectFencerStatus, Fencer } from "./Types.ts";
+import { type CorrectFencerStatus, Fencer } from "../scripts/Types.ts";
 import { computed } from "vue";
 
 const props = defineProps<{

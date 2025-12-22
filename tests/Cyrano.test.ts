@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Cyrano } from "../src/scripts/Cyrano";
+import { CyranoMessage } from "../src/scripts/CyranoMessage";
 import {
   type CorrectFencerStatus,
   emptyFencer,
@@ -33,8 +33,8 @@ let messages = [
   "|EFP1.1|INFO||||||||||||W||%|",
 ];
 let cyranos = [
-  new Cyrano("EFP1", "HELLO", "17", "fm-eq"),
-  new Cyrano(
+  new CyranoMessage("EFP1", "HELLO", "17", "fm-eq"),
+  new CyranoMessage(
     "EFP1.1",
     "INFO",
     "",
@@ -75,7 +75,7 @@ let cyranos = [
       reserve: "N",
     },
   ),
-  new Cyrano(
+  new CyranoMessage(
     "EFP1.1",
     "INFO",
     "17",
@@ -116,7 +116,7 @@ let cyranos = [
       reserve: "N",
     },
   ),
-  new Cyrano(
+  new CyranoMessage(
     "EFP1.1",
     "INFO",
     "17",
@@ -157,7 +157,7 @@ let cyranos = [
       reserve: "N",
     },
   ),
-  new Cyrano("EFP1.1", "INFO", "", "", "", {
+  new CyranoMessage("EFP1.1", "INFO", "", "", "", {
     poultab: "",
     match: "",
     round: "",
@@ -174,7 +174,7 @@ let rec: boolean[] = [];
 let send: boolean[] = [];
 for (let msg in messages) {
   console.log(messages[msg]);
-  let cyrano0 = new Cyrano(messages[msg]);
+  let cyrano0 = new CyranoMessage(messages[msg]);
   // console.log(cyrano0)
   // console.log(messages[msg])
   console.log(cyrano0.toString());
@@ -193,7 +193,7 @@ console.log(send);
 const print = String(cyrConvert(Number, cyrConvert(Boolean, 0)));
 console.log("printed ", print, " of type", typeof print);
 
-const c1 = new Cyrano(
+const c1 = new CyranoMessage(
   "|EFP1|NEXT|1|0||||1||||F|N|||||%||||0|U|0|0|0|0|0||%||||0|U|0|0|0|0|0||%|",
 );
 console.log(c1);

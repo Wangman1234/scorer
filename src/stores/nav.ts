@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2025 Scorer
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,22 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { defineStore } from "pinia";
+import { ref } from "vue";
 
-* {
-  box-sizing: border-box;
-  background-clip: content-box;
-}
+export const useNavStore = defineStore("nav", () => {
+  const menu = ref(false);
+  const page = ref("bout");
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: system-ui, sans-serif;
-  text-align: center;
-  overflow: auto;
-  background-color: black;
-  color: white;
-}
+  return { menu, page };
+});

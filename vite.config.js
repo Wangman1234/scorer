@@ -23,6 +23,7 @@ import vue from "@vitejs/plugin-vue";
 import wbn from "rollup-plugin-webbundle";
 import * as wbnSign from "wbn-sign";
 import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
 
 dotenv.config();
 
@@ -60,6 +61,11 @@ if (process.env.NODE_ENV === "production") {
 
 export default defineConfig({
   plugins,
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   server: {
     port: 5193,
     hmr: {

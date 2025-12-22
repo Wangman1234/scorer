@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import type { FencerStatus } from "./Types.ts";
+import {
+  type CorrectFencerStatus,
+  Fencer,
+  type FencerStatus,
+} from "./Types.ts";
 
 export function toSeconds(time?: string) {
   const time1 = time ?? "";
@@ -53,4 +57,18 @@ export function fencerEqual(fencer1: FencerStatus, fencer2: FencerStatus) {
     fencer1.score === fencer2.score &&
     fencer1.status === fencer2.status
   );
+}
+
+export function defaultFencerStatus(): CorrectFencerStatus {
+  return {
+    fencer: new Fencer(),
+    score: 0,
+    status: "U",
+    ycard: false,
+    rcard: 0,
+    light: false,
+    wlight: false,
+    medical: 0,
+    reserve: "",
+  };
 }
