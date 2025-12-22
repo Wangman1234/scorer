@@ -310,26 +310,36 @@ function keyHandler(e: KeyboardEvent) {
           changeScore(matchStore.match[1], 3);
           break;
         case settingsStore.config.keymap.Double:
-          matchStore.status.doubles++;
-          changeScore(
-            matchStore.match[0],
-            settingsStore.settings.doublesAddPoints,
-          );
-          changeScore(
-            matchStore.match[1],
-            settingsStore.settings.doublesAddPoints,
-          );
+          if (
+            matchStore.status.doubles < settingsStore.settings.maxDoubles ||
+            settingsStore.settings.maxDoubles === 0
+          ) {
+            matchStore.status.doubles++;
+            changeScore(
+              matchStore.match[0],
+              settingsStore.settings.doublesAddPoints,
+            );
+            changeScore(
+              matchStore.match[1],
+              settingsStore.settings.doublesAddPoints,
+            );
+          }
           break;
         case settingsStore.config.keymap.MinusDouble:
-          matchStore.status.doubles--;
-          changeScore(
-            matchStore.match[0],
-            -settingsStore.settings.doublesAddPoints,
-          );
-          changeScore(
-            matchStore.match[1],
-            -settingsStore.settings.doublesAddPoints,
-          );
+          if (
+            matchStore.status.doubles > 0 ||
+            settingsStore.settings.maxDoubles === 0
+          ) {
+            matchStore.status.doubles--;
+            changeScore(
+              matchStore.match[0],
+              -settingsStore.settings.doublesAddPoints,
+            );
+            changeScore(
+              matchStore.match[1],
+              -settingsStore.settings.doublesAddPoints,
+            );
+          }
           break;
         case settingsStore.config.keymap.LeftMinus1:
           changeScore(matchStore.match[0], -1);
