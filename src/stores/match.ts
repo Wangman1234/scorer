@@ -26,7 +26,7 @@ import { useSettingsStore } from "./settings.ts";
 import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 
 export const useMatchStore = defineStore("match", () => {
-  const settingsStore = useSettingsStore();
+  const settings = useSettingsStore();
   const matches = ref<
     Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>
   >({
@@ -37,13 +37,21 @@ export const useMatchStore = defineStore("match", () => {
     match: "",
     round: 1,
     time: "",
-    stopwatch: settingsStore.settings.maxTime,
+    stopwatch: settings.settings.maxTime,
     type: "",
     weapon: "F",
     priority: "N",
     state: "",
     doubles: 0,
   });
+  const matchData = ref<
+    Array<{
+      stopwatch: string;
+      leftFencerStatus: CorrectFencerStatus;
+      rightFencerStatus: CorrectFencerStatus;
+      doubles: number;
+    }>
+  >([]);
   const Lcard = ref(0);
   const Rcard = ref(0);
 
@@ -65,16 +73,22 @@ export const useMatchStore = defineStore("match", () => {
   const cyranoMatch = computed(() => {
     console.log("cyrano changed");
     return new CyranoMessage(
-      settingsStore.cyranoOptions.protocol,
-      settingsStore.cyranoOptions.ret,
-      settingsStore.settings.piste,
-      settingsStore.settings.compe,
-      settingsStore.settings.phase,
+      settings.cyranoOptions.protocol,
+      settings.cyranoOptions.ret,
+      settings.settings.piste,
+      settings.settings.compe,
+      settings.settings.phase,
       status.value,
       emptyFencer,
       match.value[1],
       match.value[0],
     );
+  });
+  const Lcolor = computed(() => {
+    return color(Lcard.value);
+  });
+  const Rcolor = computed(() => {
+    return color(Rcard.value);
   });
 
   watch(Lcard, (value) => {
@@ -110,6 +124,24 @@ export const useMatchStore = defineStore("match", () => {
     }
   });
 
+  function color(card: number) {
+    switch (card) {
+      case 0:
+        return "white"; //"transparent"
+      case 1:
+        return "yellow";
+      case 2:
+        return "red";
+    }
+  }
+  function LcardAdd() {
+    Lcard.value += 1;
+    Lcard.value %= 3;
+  }
+  function RcardAdd() {
+    Rcard.value += 1;
+    Rcard.value %= 3;
+  }
   function $reset() {
     matches.value = {
       "": [defaultFencerStatus(), defaultFencerStatus()],
@@ -119,23 +151,32 @@ export const useMatchStore = defineStore("match", () => {
       match: "",
       round: 1,
       time: "",
-      stopwatch: settingsStore.settings.maxTime,
+      stopwatch: settings.settings.maxTime,
       type: "",
       weapon: "F",
       priority: "N",
       state: "",
       doubles: 0,
     };
+    matchData.value = [];
+    Lcard.value = 0;
+    Rcard.value = 0;
   }
 
   return {
     matches,
     status,
+    matchData,
+    Lcard,
+    Rcard,
     match,
     stopwatch,
     cyranoMatch,
-    Lcard,
-    Rcard,
+    Lcolor,
+    Rcolor,
+    color,
+    LcardAdd,
+    RcardAdd,
     $reset,
   };
 });

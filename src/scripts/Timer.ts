@@ -17,55 +17,54 @@ import { useMatchStore } from "@/stores/match.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
 
 export class Timer {
-  matchStore = useMatchStore();
-  settingsStore = useSettingsStore();
+  match = useMatchStore();
+  settings = useSettingsStore();
 
   interval: number = 0;
 
   startTimer(set: "F" | "P") {
-    this.matchStore.status.state = set;
+    this.match.status.state = set;
     this.interval = setInterval(() => {
-      if (this.matchStore.status.stopwatch === "") {
+      if (this.match.status.stopwatch === "") {
         throw TypeError("time not set");
       }
-      this.matchStore.status.stopwatch =
+      this.match.status.stopwatch =
         Math.round(
-          (this.matchStore.status.stopwatch - 0.01 + Number.EPSILON) * 100,
+          (this.match.status.stopwatch - 0.01 + Number.EPSILON) * 100,
         ) / 100;
-      if (this.matchStore.status.stopwatch <= 0) {
+      if (this.match.status.stopwatch <= 0) {
         clearInterval(this.interval);
         if (
           set === "F" &&
-          this.matchStore.status.round !== this.settingsStore.settings.rounds
+          this.match.status.round !== this.settings.settings.rounds
         ) {
-          this.matchStore.status.state = "P";
-          this.matchStore.status.stopwatch = 60;
+          this.match.status.state = "P";
+          this.match.status.stopwatch = 60;
           this.startTimer("P");
         } else {
-          this.matchStore.status.state = "H";
+          this.match.status.state = "H";
           if (set === "P") {
-            this.matchStore.status.stopwatch =
-              this.settingsStore.settings.maxTime;
-            this.matchStore.status.round += 1;
+            this.match.status.stopwatch = this.settings.settings.maxTime;
+            this.match.status.round += 1;
           } else {
-            this.matchStore.status.stopwatch = 0;
+            this.match.status.stopwatch = 0;
           }
         }
       }
     }, 10);
   }
   stopTimer(set: "H") {
-    this.matchStore.status.state = set;
+    this.match.status.state = set;
     clearInterval(this.interval);
   }
   addTime(time: number) {
-    if (this.matchStore.status.stopwatch === "") {
+    if (this.match.status.stopwatch === "") {
       throw TypeError("time not set");
     }
-    this.matchStore.status.stopwatch += time;
-    if (this.matchStore.status.stopwatch < 0) {
-      this.matchStore.status.stopwatch += this.settingsStore.settings.maxTime;
+    this.match.status.stopwatch += time;
+    if (this.match.status.stopwatch < 0) {
+      this.match.status.stopwatch += this.settings.settings.maxTime;
     }
-    this.matchStore.status.stopwatch %= 600;
+    this.match.status.stopwatch %= this.settings.settings.maxTime;
   }
 }

@@ -22,15 +22,15 @@ import { useMatchStore } from "@/stores/match.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
 import { computed } from "vue";
 
-const matchStore = useMatchStore();
-const settingsStore = useSettingsStore();
+const match = useMatchStore();
+const settings = useSettingsStore();
 
 defineProps<{
   cyrano: boolean;
 }>();
 
 const short = computed(() => {
-  return matchStore.stopwatch < 10;
+  return match.stopwatch < 10;
 });
 // const button = computed(() => {
 //   let name = "Timer"
@@ -39,22 +39,6 @@ const short = computed(() => {
 //   }
 //   return name
 // })
-function color(card: number) {
-  switch (card) {
-    case 0:
-      return "white"; //"transparent"
-    case 1:
-      return "yellow";
-    case 2:
-      return "red";
-  }
-}
-const Lcolor = computed(() => {
-  return color(matchStore.Lcard);
-});
-const Rcolor = computed(() => {
-  return color(matchStore.Rcard);
-});
 </script>
 
 <template>
@@ -62,30 +46,28 @@ const Rcolor = computed(() => {
     <div id="fencer-display">
       <div
         :style="{
-          backgroundColor: settingsStore.config.leftColor,
-          color: Color(settingsStore.config.leftColor).isLight()
-            ? 'black'
-            : 'white',
+          backgroundColor: settings.config.leftColor,
+          color: Color(settings.config.leftColor).isLight() ? 'black' : 'white',
         }"
         class="name fencer-1"
       >
         <h1>
           {{
-            matchStore.match[0].fencer.name.toString(
-              settingsStore.config.lastNameFirst,
-              settingsStore.config.shortenFirst,
-              settingsStore.config.shortenSecond,
-              settingsStore.config.separator,
-              settingsStore.config.ending,
+            match.match[0].fencer.name.toString(
+              settings.config.lastNameFirst,
+              settings.config.shortenFirst,
+              settings.config.shortenSecond,
+              settings.config.separator,
+              settings.config.ending,
             )
           }}
         </h1>
-        <h2>{{ matchStore.match[0].fencer.club }}</h2>
+        <h2>{{ match.match[0].fencer.club }}</h2>
       </div>
       <div
         :style="{
-          backgroundColor: settingsStore.config.rightColor,
-          color: Color(settingsStore.config.rightColor).isLight()
+          backgroundColor: settings.config.rightColor,
+          color: Color(settings.config.rightColor).isLight()
             ? 'black'
             : 'white',
         }"
@@ -93,16 +75,16 @@ const Rcolor = computed(() => {
       >
         <h1>
           {{
-            matchStore.match[1].fencer.name.toString(
-              settingsStore.config.lastNameFirst,
-              settingsStore.config.shortenFirst,
-              settingsStore.config.shortenSecond,
-              settingsStore.config.separator,
-              settingsStore.config.ending,
+            match.match[1].fencer.name.toString(
+              settings.config.lastNameFirst,
+              settings.config.shortenFirst,
+              settings.config.shortenSecond,
+              settings.config.separator,
+              settings.config.ending,
             )
           }}
         </h1>
-        <h2>{{ matchStore.match[1].fencer.club }}</h2>
+        <h2>{{ match.match[1].fencer.club }}</h2>
       </div>
     </div>
     <div id="scoring-display">
@@ -110,15 +92,15 @@ const Rcolor = computed(() => {
         <div
           id="fencer1-score"
           :style="{
-            borderColor: Lcolor,
+            borderColor: match.Lcolor,
             backgroundColor:
-              matchStore.status.priority === 'L'
-                ? settingsStore.config.leftColor
+              match.status.priority === 'L'
+                ? settings.config.leftColor
                 : 'gray',
           }"
           class="scoring fencer-1"
         >
-          {{ matchStore.match[0].score }}
+          {{ match.match[0].score }}
         </div>
       </div>
       <div id="center">
@@ -126,39 +108,31 @@ const Rcolor = computed(() => {
           <!--          <button :class="{ next:matchOver }" @click="click">{{button}}</button>-->
           <NextFencer
             v-if="
-              (matchStore.match[0].score >=
-                (3 / 5) * settingsStore.settings.maxScore ||
-                matchStore.match[1].score >=
-                  (3 / 5) * settingsStore.settings.maxScore ||
-                (matchStore.status.doubles >=
-                  settingsStore.settings.maxDoubles / 2 &&
-                  settingsStore.settings.maxDoubles !== 0) ||
-                (Number(matchStore.status.stopwatch) <=
-                  settingsStore.settings.maxTime / 3 &&
-                  matchStore.status.round == settingsStore.settings.rounds)) &&
+              (match.match[0].score >= (3 / 5) * settings.settings.maxScore ||
+                match.match[1].score >= (3 / 5) * settings.settings.maxScore ||
+                (match.status.doubles >= settings.settings.maxDoubles / 2 &&
+                  settings.settings.maxDoubles !== 0) ||
+                (Number(match.status.stopwatch) <=
+                  settings.settings.maxTime / 3 &&
+                  match.status.round == settings.settings.rounds)) &&
               cyrano &&
-              Object.keys(omit(matchStore.matches, '')).length > 1
+              Object.keys(omit(match.matches, '')).length > 1
             "
-            :match="
-              matchStore.status.match === '' ? 0 : matchStore.status.match
-            "
-            :matches="omit(matchStore.matches, '')"
+            :match="match.status.match === '' ? 0 : match.status.match"
+            :matches="omit(match.matches, '')"
           />
         </div>
         <div
           id="timer"
-          :class="matchStore.status.state"
+          :class="match.status.state"
         >
           <div
-            v-if="settingsStore.config.showSubSec"
+            v-if="settings.config.showSubSec"
             id="sub"
           >
             <span>
-              {{ Math.floor(matchStore.stopwatch / 60) }}:{{
-                (
-                  matchStore.stopwatch -
-                  60 * Math.floor(matchStore.stopwatch / 60)
-                )
+              {{ Math.floor(match.stopwatch / 60) }}:{{
+                (match.stopwatch - 60 * Math.floor(match.stopwatch / 60))
                   .toFixed(2)
                   .padStart(5, "0")
               }}
@@ -168,42 +142,40 @@ const Rcolor = computed(() => {
             v-else-if="short"
             id="short"
           >
-            <span>{{ matchStore.stopwatch.toFixed(2) }}</span>
+            <span>{{ match.stopwatch.toFixed(2) }}</span>
           </div>
           <div
             v-else
             id="long"
           >
             <span>
-              {{ Math.floor(matchStore.stopwatch / 60) }}:{{
-                (Math.floor(matchStore.stopwatch) % 60)
-                  .toString()
-                  .padStart(2, "0")
+              {{ Math.floor(match.stopwatch / 60) }}:{{
+                (Math.floor(match.stopwatch) % 60).toString().padStart(2, "0")
               }}
             </span>
           </div>
         </div>
         <div
-          v-if="settingsStore.config.showDoubles"
+          v-if="settings.config.showDoubles"
           id="doubles"
         >
-          {{ matchStore.status.doubles
+          {{ match.status.doubles
           }}{{
-            settingsStore.settings.maxDoubles > 0
-              ? "/" + settingsStore.settings.maxDoubles.toString()
+            settings.settings.maxDoubles > 0
+              ? "/" + settings.settings.maxDoubles.toString()
               : ""
           }}
           Doubles
         </div>
         <div id="rounds">
           <span>{{
-            matchStore.status.poultab[0] === "P" ? "Match " : "Period "
+            match.status.poultab[0] === "P" ? "Match " : "Period "
           }}</span>
           <span>
-            {{ matchStore.status.round }}/{{
-              matchStore.status.poultab[0] === "P"
-                ? Object.keys(omit(matchStore.matches, "")).length
-                : settingsStore.settings.rounds
+            {{ match.status.round }}/{{
+              match.status.poultab[0] === "P"
+                ? Object.keys(omit(match.matches, "")).length
+                : settings.settings.rounds
             }}
           </span>
         </div>
@@ -212,15 +184,15 @@ const Rcolor = computed(() => {
         <div
           id="fencer2-score"
           :style="{
-            borderColor: Rcolor,
+            borderColor: match.Rcolor,
             backgroundColor:
-              matchStore.status.priority === 'R'
-                ? settingsStore.config.rightColor
+              match.status.priority === 'R'
+                ? settings.config.rightColor
                 : 'gray',
           }"
           class="scoring fencer-2"
         >
-          {{ matchStore.match[1].score }}
+          {{ match.match[1].score }}
         </div>
       </div>
     </div>

@@ -27,10 +27,12 @@ import Scoreboard from "@/Components/Scoreboard.vue";
 import { Timer } from "@/scripts/Timer.ts";
 import { Cyrano } from "@/scripts/Cyrano.ts";
 import { useNavStore } from "@/stores/nav.ts";
+import { toTime } from "@/scripts/Functions.ts";
+import BoutProgress from "@/Components/BoutProgress.vue";
 
-const settingsStore = useSettingsStore();
-const matchStore = useMatchStore();
-const navStore = useNavStore();
+const settings = useSettingsStore();
+const match = useMatchStore();
+const nav = useNavStore();
 
 // Flags
 const started = ref(false);
@@ -42,56 +44,49 @@ ref(false);
 // Reactive data
 const matchOver = computed(() => {
   return (
-    (matchStore.stopwatch <= 0 &&
-      matchStore.status.round == settingsStore.settings.rounds) ||
-    ((matchStore.match[0].score >= settingsStore.settings.maxScore ||
-      matchStore.match[1].score >= settingsStore.settings.maxScore) &&
-      matchStore.status.priority === "N") ||
-    (settingsStore.settings.maxDoubles <= matchStore.status.doubles &&
-      settingsStore.settings.maxDoubles > 0)
+    (match.stopwatch <= 0 && match.status.round == settings.settings.rounds) ||
+    ((match.match[0].score >= settings.settings.maxScore ||
+      match.match[1].score >= settings.settings.maxScore) &&
+      match.status.priority === "N") ||
+    (settings.settings.maxDoubles <= match.status.doubles &&
+      settings.settings.maxDoubles > 0)
   );
 });
 const winner = computed(() => {
-  return (
-    matchStore.match[0].status === "D" || matchStore.match[1].status === "D"
-  );
+  return match.match[0].status === "D" || match.match[1].status === "D";
 });
 watch(keymap, (value) => {
-  settingsStore.config.keymap = Object.assign({}, defaultKeymaps[value]);
+  settings.config.keymap = Object.assign({}, defaultKeymaps[value]);
 });
 
 // Timer
 const timer = new Timer();
 
 // Bout controls
-function card(card: number) {
-  card += 1;
-  card %= 3;
-  return card;
-}
+
 function changeScore(fencer: CorrectFencerStatus, value: number) {
   let val = fencer.score + value;
-  if (matchStore.status.priority === "N") {
+  if (match.status.priority === "N") {
     if (
-      !(value > 0 && fencer.score >= settingsStore.settings.maxScore) &&
+      !(value > 0 && fencer.score >= settings.settings.maxScore) &&
       val >= 0
     ) {
       fencer.score = val;
     }
   } else {
     fencer.score = val;
-    matchStore.status.stopwatch = 0;
+    match.status.stopwatch = 0;
   }
 }
 function choosePriority(state: "N" | "L" | "R") {
   if (state === "N") {
     if (Math.random() >= 0.5) {
-      matchStore.status.priority = "R";
+      match.status.priority = "R";
     } else {
-      matchStore.status.priority = "L";
+      match.status.priority = "L";
     }
   } else {
-    matchStore.status.priority = state;
+    match.status.priority = state;
   }
   priorityPicker.value = false;
 }
@@ -109,41 +104,42 @@ async function stopCyrano() {
   delete cyrano.value;
   cyrano.value = undefined;
   reset();
-  navStore.page = "bout";
-  navStore.menu = true;
+  nav.page = "bout";
+  nav.menu = true;
 }
 
 // Match controls
 function reset() {
-  matchStore.status.stopwatch = settingsStore.settings.maxTime;
-  matchStore.status.priority = "N";
-  matchStore.status.state = "";
-  matchStore.status.doubles = 0;
-  matchStore.match[0].score = 0;
-  matchStore.match[0].status = "U";
-  matchStore.match[0].ycard = false;
-  matchStore.match[0].rcard = 0;
-  matchStore.match[0].light = false;
-  matchStore.match[0].wlight = false;
-  matchStore.match[0].medical = 0;
-  matchStore.match[0].reserve = "N";
-  matchStore.match[1].score = 0;
-  matchStore.match[1].status = "U";
-  matchStore.match[1].ycard = false;
-  matchStore.match[1].rcard = 0;
-  matchStore.match[1].light = false;
-  matchStore.match[1].wlight = false;
-  matchStore.match[1].medical = 0;
-  matchStore.match[1].reserve = "N";
-  navStore.menu = false;
-  matchStore.Lcard = 0;
-  matchStore.Rcard = 0;
+  match.status.stopwatch = settings.settings.maxTime;
+  match.status.priority = "N";
+  match.status.state = "";
+  match.status.doubles = 0;
+  match.match[0].score = 0;
+  match.match[0].status = "U";
+  match.match[0].ycard = false;
+  match.match[0].rcard = 0;
+  match.match[0].light = false;
+  match.match[0].wlight = false;
+  match.match[0].medical = 0;
+  match.match[0].reserve = "N";
+  match.match[1].score = 0;
+  match.match[1].status = "U";
+  match.match[1].ycard = false;
+  match.match[1].rcard = 0;
+  match.match[1].light = false;
+  match.match[1].wlight = false;
+  match.match[1].medical = 0;
+  match.match[1].reserve = "N";
+  match.matchData = [];
+  nav.menu = false;
+  match.Lcard = 0;
+  match.Rcard = 0;
 }
 
 async function update() {
   while (cyrano.value?.sendingData) {
     console.log("not ended");
-    console.log(matchStore.status.state);
+    console.log(match.status.state);
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   const cs = cyrano.value ?? { cyranoState: "" };
@@ -152,65 +148,65 @@ async function update() {
 }
 
 async function finishMatch() {
-  matchStore.status.state = "E";
+  match.status.state = "E";
   if (cyrano.value) {
     await update();
   } else {
-    navStore.page = "bout";
-    navStore.menu = true;
+    nav.page = "bout";
+    nav.menu = true;
     reset();
   }
 }
 function end() {
   if (
-    settingsStore.settings.maxDoubles <= matchStore.status.doubles &&
-    settingsStore.settings.maxDoubles > 0
+    settings.settings.maxDoubles <= match.status.doubles &&
+    settings.settings.maxDoubles > 0
   ) {
-    if (settingsStore.settings.allowTies) {
-      matchStore.match[0].status = "D";
-      matchStore.match[1].status = "D";
+    if (settings.settings.allowTies) {
+      match.match[0].status = "D";
+      match.match[1].status = "D";
       return;
     }
   }
-  if (matchStore.match[0].score > matchStore.match[1].score) {
-    matchStore.match[0].status = "V";
-    matchStore.match[1].status = "D";
-  } else if (matchStore.match[0].score < matchStore.match[1].score) {
-    matchStore.match[0].status = "D";
-    matchStore.match[1].status = "V";
+  if (match.match[0].score > match.match[1].score) {
+    match.match[0].status = "V";
+    match.match[1].status = "D";
+  } else if (match.match[0].score < match.match[1].score) {
+    match.match[0].status = "D";
+    match.match[1].status = "V";
   } else {
-    if (settingsStore.settings.allowTies) {
-      matchStore.match[0].status = "D";
-      matchStore.match[1].status = "D";
-    } else if (matchStore.status.priority === "L") {
-      matchStore.match[0].status = "V";
-      matchStore.match[1].status = "D";
-    } else if (matchStore.status.priority === "R") {
-      matchStore.match[0].status = "D";
-      matchStore.match[1].status = "V";
+    if (settings.settings.allowTies) {
+      match.match[0].status = "D";
+      match.match[1].status = "D";
+    } else if (match.status.priority === "L") {
+      match.match[0].status = "V";
+      match.match[1].status = "D";
+    } else if (match.status.priority === "R") {
+      match.match[0].status = "D";
+      match.match[1].status = "V";
     } else {
-      matchStore.status.state = "H";
+      match.status.state = "H";
       priorityPicker.value = true;
-      matchStore.status.stopwatch = 60;
-      matchStore.status.doubles = 0;
+      match.status.stopwatch = 60;
+      match.status.doubles = 0;
       return;
     }
   }
-  if (!settingsStore.settings.allowOver) {
-    if (matchStore.match[0].score > settingsStore.settings.maxScore) {
-      matchStore.match[0].score = settingsStore.settings.maxScore;
+  if (!settings.settings.allowOver) {
+    if (match.match[0].score > settings.settings.maxScore) {
+      match.match[0].score = settings.settings.maxScore;
     }
-    if (matchStore.match[1].score > settingsStore.settings.maxScore) {
-      matchStore.match[1].score = settingsStore.settings.maxScore;
+    if (match.match[1].score > settings.settings.maxScore) {
+      match.match[1].score = settings.settings.maxScore;
     }
     if (
-      !settingsStore.settings.allowTies &&
-      matchStore.match[0].score === matchStore.match[1].score
+      !settings.settings.allowTies &&
+      match.match[0].score === match.match[1].score
     ) {
-      if (matchStore.match[0].status === "V") {
-        matchStore.status.priority = "L";
-      } else if (matchStore.match[1].status === "V") {
-        matchStore.status.priority = "R";
+      if (match.match[0].status === "V") {
+        match.status.priority = "L";
+      } else if (match.match[1].status === "V") {
+        match.status.priority = "R";
       } else {
         throw Error("Both fencers can't lose when allowTies === false");
       }
@@ -218,21 +214,25 @@ function end() {
   }
 }
 function click() {
-  if (
-    !cyrano.value ||
-    cyrano.value.sendingData ||
-    matchStore.status.state !== "E"
-  ) {
-    if (matchStore.status.state === "F") {
+  if (match.status.state !== "F") {
+    Array.prototype.push.call(match.matchData, {
+      stopwatch:
+        toTime(match.status.stopwatch) +
+        (match.status.priority === "N" ? "" : "P"),
+      leftFencerStatus: JSON.parse(JSON.stringify(match.match[0])),
+      rightFencerStatus: JSON.parse(JSON.stringify(match.match[1])),
+      doubles: match.status.doubles,
+    });
+    match.matchData = Array.from(match.matchData);
+  }
+  if (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E") {
+    if (match.status.state === "F") {
       timer.stopTimer("H");
     } else if (winner.value) {
       finishMatch();
     } else if (matchOver.value) {
       end();
-    } else if (
-      matchStore.status.state === "H" ||
-      matchStore.status.state === ""
-    ) {
+    } else if (match.status.state === "H" || match.status.state === "") {
       timer.startTimer("F");
     }
   }
@@ -243,147 +243,129 @@ function keyHandler(e: KeyboardEvent) {
   let key = e.key;
   console.log(key);
   if (started.value) {
-    if (key === settingsStore.config.keymap.Menu) {
-      navStore.menu = !navStore.menu;
+    if (key === settings.config.keymap.Menu) {
+      nav.menu = !nav.menu;
     }
     if (change.value != false) {
-      settingsStore.config.keymap[change.value] = key;
+      settings.config.keymap[change.value] = key;
       change.value = false;
     } else if (priorityPicker.value) {
       switch (key) {
-        case settingsStore.config.keymap.LeftAdd1:
+        case settings.config.keymap.LeftAdd1:
           choosePriority("L");
           break;
-        case settingsStore.config.keymap.LeftCard:
+        case settings.config.keymap.LeftCard:
           choosePriority("L");
           break;
-        case settingsStore.config.keymap.RightAdd1:
+        case settings.config.keymap.RightAdd1:
           choosePriority("R");
           break;
-        case settingsStore.config.keymap.RightCard:
+        case settings.config.keymap.RightCard:
           choosePriority("R");
           break;
-        case settingsStore.config.keymap.Timer:
+        case settings.config.keymap.Timer:
           choosePriority("N");
           break;
       }
     } else if (
-      navStore.menu &&
-      (navStore.page === "bout" ||
-        navStore.page === "cyrano" ||
-        navStore.page === "tournament")
+      nav.menu &&
+      (nav.page === "bout" ||
+        nav.page === "cyrano" ||
+        nav.page === "tournament")
     ) {
       if (
-        key === settingsStore.config.keymap.Timer &&
+        key === settings.config.keymap.Timer &&
         (!cyrano.value || cyrano.value.sendingData)
       ) {
-        if (cyrano.value) {
-          navStore.menu = false;
-        } else {
-          reset();
-        }
+        nav.menu = false;
       }
     } else if (
-      !navStore.menu &&
-      (!cyrano.value ||
-        cyrano.value.sendingData ||
-        matchStore.status.state !== "E")
+      !nav.menu &&
+      (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E")
     ) {
       console.log("not menu");
       switch (key) {
-        case settingsStore.config.keymap.LeftAdd1:
-          changeScore(matchStore.match[0], 1);
+        case settings.config.keymap.LeftAdd1:
+          changeScore(match.match[0], 1);
           break;
-        case settingsStore.config.keymap.RightAdd1:
-          changeScore(matchStore.match[1], 1);
+        case settings.config.keymap.RightAdd1:
+          changeScore(match.match[1], 1);
           break;
-        case settingsStore.config.keymap.LeftAdd2:
-          changeScore(matchStore.match[0], 2);
+        case settings.config.keymap.LeftAdd2:
+          changeScore(match.match[0], 2);
           break;
-        case settingsStore.config.keymap.RightAdd2:
-          changeScore(matchStore.match[1], 2);
+        case settings.config.keymap.RightAdd2:
+          changeScore(match.match[1], 2);
           break;
-        case settingsStore.config.keymap.LeftAdd3:
-          changeScore(matchStore.match[0], 3);
+        case settings.config.keymap.LeftAdd3:
+          changeScore(match.match[0], 3);
           break;
-        case settingsStore.config.keymap.RightAdd3:
-          changeScore(matchStore.match[1], 3);
+        case settings.config.keymap.RightAdd3:
+          changeScore(match.match[1], 3);
           break;
-        case settingsStore.config.keymap.Double:
+        case settings.config.keymap.Double:
           if (
-            matchStore.status.doubles < settingsStore.settings.maxDoubles ||
-            settingsStore.settings.maxDoubles === 0
+            match.status.doubles < settings.settings.maxDoubles ||
+            settings.settings.maxDoubles === 0
           ) {
-            matchStore.status.doubles++;
-            changeScore(
-              matchStore.match[0],
-              settingsStore.settings.doublesAddPoints,
-            );
-            changeScore(
-              matchStore.match[1],
-              settingsStore.settings.doublesAddPoints,
-            );
+            match.status.doubles++;
+            changeScore(match.match[0], settings.settings.doublesAddPoints);
+            changeScore(match.match[1], settings.settings.doublesAddPoints);
           }
           break;
-        case settingsStore.config.keymap.MinusDouble:
-          if (
-            matchStore.status.doubles > 0 ||
-            settingsStore.settings.maxDoubles === 0
-          ) {
-            matchStore.status.doubles--;
-            changeScore(
-              matchStore.match[0],
-              -settingsStore.settings.doublesAddPoints,
-            );
-            changeScore(
-              matchStore.match[1],
-              -settingsStore.settings.doublesAddPoints,
-            );
+        case settings.config.keymap.MinusDouble:
+          if (match.status.doubles > 0 || settings.settings.maxDoubles === 0) {
+            match.status.doubles--;
+            changeScore(match.match[0], -settings.settings.doublesAddPoints);
+            changeScore(match.match[1], -settings.settings.doublesAddPoints);
           }
           break;
-        case settingsStore.config.keymap.LeftMinus1:
-          changeScore(matchStore.match[0], -1);
+        case settings.config.keymap.LeftMinus1:
+          changeScore(match.match[0], -1);
           break;
-        case settingsStore.config.keymap.RightMinus1:
-          changeScore(matchStore.match[1], -1);
+        case settings.config.keymap.RightMinus1:
+          changeScore(match.match[1], -1);
           break;
-        case settingsStore.config.keymap.LeftCard:
-          matchStore.Lcard = card(matchStore.Lcard);
+        case settings.config.keymap.LeftCard:
+          match.LcardAdd();
           break;
-        case settingsStore.config.keymap.RightCard:
-          matchStore.Rcard = card(matchStore.Rcard);
+        case settings.config.keymap.RightCard:
+          match.RcardAdd();
           break;
-        case settingsStore.config.keymap.Timer:
+        case settings.config.keymap.Timer:
           click();
           break;
-        case settingsStore.config.keymap.AddMin:
+        case settings.config.keymap.AddMin:
           timer.addTime(60);
           break;
-        case settingsStore.config.keymap.AddSec:
+        case settings.config.keymap.AddSec:
           timer.addTime(1);
           break;
-        case settingsStore.config.keymap.MinusMin:
+        case settings.config.keymap.MinusMin:
           timer.addTime(-60);
           break;
-        case settingsStore.config.keymap.MinusSec:
+        case settings.config.keymap.MinusSec:
           timer.addTime(-1);
           break;
-        case settingsStore.config.keymap.ResetTime:
-          matchStore.status.stopwatch = settingsStore.settings.maxTime;
+        case settings.config.keymap.ResetTime:
+          match.status.stopwatch = settings.settings.maxTime;
           break;
-        case settingsStore.config.keymap.Period:
-          if (matchStore.status.poultab[0] !== "P") {
-            matchStore.status.round =
-              (matchStore.status.round % settingsStore.settings.rounds) + 1;
+        case settings.config.keymap.ResetBout:
+          reset();
+          break;
+        case settings.config.keymap.Period:
+          if (match.status.poultab[0] !== "P") {
+            match.status.round =
+              (match.status.round % settings.settings.rounds) + 1;
           }
           break;
-        case settingsStore.config.keymap.Flip:
-          let f1 = matchStore.match[0];
-          matchStore.match[0] = matchStore.match[1];
-          matchStore.match[1] = f1;
-          let c1 = matchStore.Lcard;
-          matchStore.Lcard = matchStore.Rcard;
-          matchStore.Rcard = c1;
+        case settings.config.keymap.Flip:
+          let f1 = match.match[0];
+          match.match[0] = match.match[1];
+          match.match[1] = f1;
+          let c1 = match.Lcard;
+          match.Lcard = match.Rcard;
+          match.Rcard = c1;
           break;
       }
     }
@@ -391,6 +373,7 @@ function keyHandler(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  match.$reset();
   window.addEventListener("keydown", keyHandler);
   window.addEventListener("contextmenu", (event) => event.preventDefault());
   document.addEventListener("fullscreenchange", () => {
@@ -400,8 +383,9 @@ onMounted(() => {
   });
 });
 onUnmounted(() => {
-  window.removeEventListener("keydown", keyHandler);
   window.removeEventListener("contextmenu", (event) => event.preventDefault());
+  window.removeEventListener("keydown", keyHandler);
+  match.$reset();
   stopCyrano();
 });
 </script>
@@ -412,50 +396,50 @@ onUnmounted(() => {
     @started="
       (start) => {
         started = start;
-        navStore.menu = start;
+        nav.menu = start;
       }
     "
     v-if="!started"
   />
   <Scoreboard :cyrano="!!cyrano" />
-  <div v-if="navStore.menu">
+  <div v-if="nav.menu">
     <div class="menu">
       <nav>
         <a
-          :class="{ selected: navStore.page === 'bout' }"
-          @click="navStore.page = 'bout'"
+          :class="{ selected: nav.page === 'bout' }"
+          @click="nav.page = 'bout'"
           >Bout</a
         >
         <a
           v-if="cyrano?.nak"
-          :class="{ selected: navStore.page === 'nak' }"
-          @click="navStore.page = 'nak'"
+          :class="{ selected: nav.page === 'nak' }"
+          @click="nav.page = 'nak'"
           >Tournament</a
         >
         <a
           v-if="cyrano"
-          :class="{ selected: navStore.page === 'tournament' }"
-          @click="navStore.page = 'tournament'"
+          :class="{ selected: nav.page === 'tournament' }"
+          @click="nav.page = 'tournament'"
           >Tournament</a
         >
         <a
-          :class="{ selected: navStore.page === 'cyrano' }"
-          @click="navStore.page = 'cyrano'"
+          :class="{ selected: nav.page === 'cyrano' }"
+          @click="nav.page = 'cyrano'"
           >Cyrano</a
         >
         <a
-          :class="{ selected: navStore.page === 'display' }"
-          @click="navStore.page = 'display'"
+          :class="{ selected: nav.page === 'display' }"
+          @click="nav.page = 'display'"
           >Display</a
         >
         <a
-          :class="{ selected: navStore.page === 'controls' }"
-          @click="navStore.page = 'controls'"
+          :class="{ selected: nav.page === 'controls' }"
+          @click="nav.page = 'controls'"
           >Controls</a
         >
       </nav>
       <div
-        v-if="navStore.page === 'bout'"
+        v-if="nav.page === 'bout'"
         id="bout"
         class="body"
       >
@@ -470,82 +454,83 @@ onUnmounted(() => {
               <div>Left fencer name</div>
               <div>
                 <input
-                  v-model.number="matchStore.match[0].fencer.name.firstName"
+                  v-model.number="match.match[0].fencer.name.firstName"
                   placeholder="first name"
                 />
                 <input
-                  v-model.number="matchStore.match[0].fencer.name.lastName"
+                  v-model.number="match.match[0].fencer.name.lastName"
                   placeholder="surname"
                 />
               </div>
             </li>
             <li>
               <div>Left fencer club</div>
-              <input v-model="matchStore.match[0].fencer.club" />
+              <input v-model="match.match[0].fencer.club" />
             </li>
             <li>
               <div>Right fencer name</div>
               <div>
                 <input
-                  v-model.number="matchStore.match[1].fencer.name.firstName"
+                  v-model.number="match.match[1].fencer.name.firstName"
                   placeholder="first name"
                 />
                 <input
-                  v-model.number="matchStore.match[1].fencer.name.lastName"
+                  v-model.number="match.match[1].fencer.name.lastName"
                   placeholder="surname"
                 />
               </div>
             </li>
             <li>
               <div>Right fencer club</div>
-              <input v-model="matchStore.match[1].fencer.club" />
+              <input v-model="match.match[1].fencer.club" />
             </li>
             <li>
               <div>Max time(in seconds), requires restart</div>
-              <input v-model.number="settingsStore.settings.maxTime" />
+              <input v-model.number="settings.settings.maxTime" />
             </li>
             <li>
               <div>Current time(in seconds)</div>
-              <input v-model.number="matchStore.status.stopwatch" />
+              <input v-model.number="match.status.stopwatch" />
             </li>
             <li>
               <div>Max score</div>
-              <input v-model.number="settingsStore.settings.maxScore" />
+              <input v-model.number="settings.settings.maxScore" />
             </li>
             <li>
               <div>Rounds</div>
-              <input v-model.number="settingsStore.settings.rounds" />
+              <input v-model.number="settings.settings.rounds" />
             </li>
             <li>
               <div>Allow ties</div>
               <input
-                v-model="settingsStore.settings.allowTies"
+                v-model="settings.settings.allowTies"
                 type="checkbox"
               />
             </li>
             <li>
               <div>Allow point overflow</div>
               <input
-                v-model="settingsStore.settings.allowOver"
+                v-model="settings.settings.allowOver"
                 type="checkbox"
               />
             </li>
             <li>
               <div>Doubles add points</div>
-              <input v-model.number="settingsStore.settings.doublesAddPoints" />
+              <input v-model.number="settings.settings.doublesAddPoints" />
             </li>
             <li>
               <div>Maximum doubles</div>
-              <input v-model.number="settingsStore.settings.maxDoubles" />
+              <input v-model.number="settings.settings.maxDoubles" />
             </li>
           </menu>
+          <BoutProgress />
         </div>
         <div class="button">
           <button @click="reset">Reset Bout</button>
         </div>
       </div>
       <div
-        v-if="navStore.page === 'nak'"
+        v-if="nav.page === 'nak'"
         class="body"
       >
         <div class="header">
@@ -558,26 +543,26 @@ onUnmounted(() => {
             last DISP message: <code>{{ cyrano?.prevDisp.toString() }}</code>
           </div>
           <div>
-            sending: <code>{{ matchStore.cyranoMatch.toString() }}</code>
+            sending: <code>{{ match.cyranoMatch.toString() }}</code>
           </div>
         </div>
         <div class="scrollable">
           <menu>
             <li>
               <div>piste</div>
-              <input v-model="settingsStore.settings.piste" />
+              <input v-model="settings.settings.piste" />
             </li>
             <li>
               <div>compe</div>
-              <input v-model="settingsStore.settings.compe" />
+              <input v-model="settings.settings.compe" />
             </li>
             <li>
               <div>phase</div>
-              <input v-model.number="settingsStore.settings.phase" />
+              <input v-model.number="settings.settings.phase" />
             </li>
-            <li v-for="(_item, index) in matchStore.status">
+            <li v-for="(_item, index) in match.status">
               <div>{{ index }}</div>
-              <input v-model="matchStore.status[index]" />
+              <input v-model="match.status[index]" />
             </li>
           </menu>
           <div class="table">
@@ -585,56 +570,56 @@ onUnmounted(() => {
               <li><h4>Left Fencer</h4></li>
               <li>
                 <div>id</div>
-                <input v-model="matchStore.match[0].fencer.id" />
+                <input v-model="match.match[0].fencer.id" />
               </li>
               <li>
                 <div>name</div>
                 <div>
                   <input
-                    v-model.number="matchStore.match[0].fencer.name.firstName"
+                    v-model.number="match.match[0].fencer.name.firstName"
                     placeholder="first name"
                   />
                   <input
-                    v-model.number="matchStore.match[0].fencer.name.lastName"
+                    v-model.number="match.match[0].fencer.name.lastName"
                     placeholder="surname"
                   />
                 </div>
               </li>
               <li>
                 <div>country</div>
-                <input v-model="matchStore.match[0].fencer.country" />
+                <input v-model="match.match[0].fencer.country" />
               </li>
-              <li v-for="(_item, index) in omit(matchStore.match[0], 'fencer')">
+              <li v-for="(_item, index) in omit(match.match[0], 'fencer')">
                 <div>{{ index }}</div>
-                <input v-model="matchStore.match[0][index]" />
+                <input v-model="match.match[0][index]" />
               </li>
             </menu>
             <menu>
               <li><h4>Right Fencer</h4></li>
               <li>
                 <div>id</div>
-                <input v-model="matchStore.match[1].fencer.id" />
+                <input v-model="match.match[1].fencer.id" />
               </li>
               <li>
                 <div>name</div>
                 <div>
                   <input
-                    v-model.number="matchStore.match[1].fencer.name.firstName"
+                    v-model.number="match.match[1].fencer.name.firstName"
                     placeholder="first name"
                   />
                   <input
-                    v-model.number="matchStore.match[1].fencer.name.lastName"
+                    v-model.number="match.match[1].fencer.name.lastName"
                     placeholder="surname"
                   />
                 </div>
               </li>
               <li>
                 <div>country</div>
-                <input v-model="matchStore.match[1].fencer.country" />
+                <input v-model="match.match[1].fencer.country" />
               </li>
-              <li v-for="(_item, index) in omit(matchStore.match[1], 'fencer')">
+              <li v-for="(_item, index) in omit(match.match[1], 'fencer')">
                 <div>{{ index }}</div>
-                <input v-model="matchStore.match[1][index]" />
+                <input v-model="match.match[1][index]" />
               </li>
             </menu>
           </div>
@@ -644,7 +629,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div
-        v-if="navStore.page === 'tournament'"
+        v-if="nav.page === 'tournament'"
         id="tournament"
         class="body"
       >
@@ -654,7 +639,7 @@ onUnmounted(() => {
           <h4 v-else>Tournament not Running</h4>
         </div>
         <div class="scrollable">
-          <Poule :matches="omit(matchStore.matches, '')" />
+          <Poule :matches="omit(match.matches, '')" />
           <table>
             <thead>
               <tr>
@@ -666,16 +651,16 @@ onUnmounted(() => {
             </thead>
             <tbody>
               <tr
-                v-for="(item, index) in omit(matchStore.matches, '')"
+                v-for="(item, index) in omit(match.matches, '')"
                 :key="index"
-                :class="index == matchStore.status.match ? 'running' : 'not'"
+                :class="index == match.status.match ? 'running' : 'not'"
               >
                 <th scope="row">{{ index }}.</th>
                 <td>
                   {{ item[0].fencer.id }}
                   {{
                     item[0].fencer.name.toString(
-                      settingsStore.config.lastNameFirst,
+                      settings.config.lastNameFirst,
                       false,
                       false,
                       " ",
@@ -692,7 +677,7 @@ onUnmounted(() => {
                   {{ item[1].fencer.id }}
                   {{
                     item[1].fencer.name.toString(
-                      settingsStore.config.lastNameFirst,
+                      settings.config.lastNameFirst,
                       false,
                       false,
                       " ",
@@ -707,7 +692,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div
-        v-if="navStore.page === 'cyrano'"
+        v-if="nav.page === 'cyrano'"
         id="cyrano"
         class="body"
       >
@@ -719,28 +704,24 @@ onUnmounted(() => {
           <menu>
             <li>
               <div>Piste</div>
-              <input v-model="settingsStore.settings.piste" />
+              <input v-model="settings.settings.piste" />
             </li>
             <li>
               <div>Remote Address</div>
-              <input
-                v-model.number="settingsStore.cyranoOptions.remoteAddress"
-              />
+              <input v-model.number="settings.cyranoOptions.remoteAddress" />
             </li>
             <li>
               <div>Port</div>
-              <input v-model.number="settingsStore.cyranoOptions.port" />
+              <input v-model.number="settings.cyranoOptions.port" />
             </li>
             <li>
               <div>Points per Period</div>
-              <input
-                v-model.number="settingsStore.cyranoOptions.pointsPerPeriod"
-              />
+              <input v-model.number="settings.cyranoOptions.pointsPerPeriod" />
             </li>
             <li>
               <div>Periods per Table Match</div>
               <input
-                v-model.number="settingsStore.cyranoOptions.roundsPerTableMatch"
+                v-model.number="settings.cyranoOptions.roundsPerTableMatch"
               />
             </li>
             <li>
@@ -749,7 +730,7 @@ onUnmounted(() => {
                 max points in FT)
               </div>
               <input
-                v-model="settingsStore.settings.allowOver"
+                v-model="settings.settings.allowOver"
                 type="checkbox"
               />
             </li>
@@ -774,7 +755,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div
-        v-if="navStore.page === 'display'"
+        v-if="nav.page === 'display'"
         id="display"
         class="body"
       >
@@ -786,57 +767,57 @@ onUnmounted(() => {
             <li>
               <div>Left fencer colour</div>
               <input
-                v-model="settingsStore.config.leftColor"
+                v-model="settings.config.leftColor"
                 type="color"
               />
             </li>
             <li>
               <div>Right fencer colour</div>
               <input
-                v-model="settingsStore.config.rightColor"
+                v-model="settings.config.rightColor"
                 type="color"
               />
             </li>
             <li>
               <div>Surnames in front</div>
               <input
-                v-model="settingsStore.config.lastNameFirst"
+                v-model="settings.config.lastNameFirst"
                 type="checkbox"
               />
             </li>
             <li>
               <div>Shorten the first part of the name</div>
               <input
-                v-model="settingsStore.config.shortenFirst"
+                v-model="settings.config.shortenFirst"
                 type="checkbox"
               />
             </li>
             <li>
               <div>Shorten the second part of the name</div>
               <input
-                v-model="settingsStore.config.shortenSecond"
+                v-model="settings.config.shortenSecond"
                 type="checkbox"
               />
             </li>
             <li>
               <div>Separator between the parts of the name</div>
-              <input v-model="settingsStore.config.separator" />
+              <input v-model="settings.config.separator" />
             </li>
             <li>
               <div>Ending of the name</div>
-              <input v-model="settingsStore.config.ending" />
+              <input v-model="settings.config.ending" />
             </li>
             <li>
               <div>Show doubles</div>
               <input
-                v-model="settingsStore.config.showDoubles"
+                v-model="settings.config.showDoubles"
                 type="checkbox"
               />
             </li>
             <li>
               <div>Always show subsecond</div>
               <input
-                v-model="settingsStore.config.showSubSec"
+                v-model="settings.config.showSubSec"
                 type="checkbox"
               />
             </li>
@@ -844,7 +825,7 @@ onUnmounted(() => {
         </div>
       </div>
       <div
-        v-if="navStore.page === 'controls'"
+        v-if="nav.page === 'controls'"
         id="keymap"
         class="body"
       >
@@ -865,7 +846,7 @@ onUnmounted(() => {
               </select>
             </li>
             <li
-              v-for="(item, index) in settingsStore.config.keymap"
+              v-for="(item, index) in settings.config.keymap"
               :key="index"
             >
               <div>{{ index }}</div>
@@ -883,7 +864,7 @@ onUnmounted(() => {
     </div>
     <div
       class="blurred background"
-      @click="navStore.menu = false"
+      @click="nav.menu = false"
     ></div>
   </div>
   <div v-if="priorityPicker">
@@ -918,7 +899,7 @@ onUnmounted(() => {
   <div
     class="blurred"
     v-if="
-      matchStore.status.state === 'E' ||
+      match.status.state === 'E' ||
       ((cyrano?.cyranoState === 'Waiting' ||
         cyrano?.cyranoState === 'No Bouts') &&
         cyrano)
@@ -933,14 +914,14 @@ onUnmounted(() => {
     <h1>
       Match
       {{
-        matchStore.match[0].status === "V"
+        match.match[0].status === "V"
           ? "Left"
-          : matchStore.match[1].status === "V"
+          : match.match[1].status === "V"
             ? "Right"
             : "Tie"
       }}
     </h1>
-    <h2>{{ matchStore.match[0].score }}-{{ matchStore.match[1].score }}</h2>
+    <h2>{{ match.match[0].score }}-{{ match.match[1].score }}</h2>
   </div>
   <div
     class="blurred"
@@ -950,12 +931,12 @@ onUnmounted(() => {
   </div>
   <div
     class="blurred"
-    v-if="matchStore.status.state === 'P'"
+    v-if="match.status.state === 'P'"
   >
     <h1>1-min break</h1>
     <h2 style="color: blue">
-      {{ Math.floor(matchStore.stopwatch / 60) }}:{{
-        (Math.floor(matchStore.stopwatch) % 60).toString().padStart(2, "0")
+      {{ Math.floor(match.stopwatch / 60) }}:{{
+        (Math.floor(match.stopwatch) % 60).toString().padStart(2, "0")
       }}
     </h2>
   </div>

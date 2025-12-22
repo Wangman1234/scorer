@@ -213,6 +213,7 @@ export type keyMap = {
   RightCard: string;
   Timer: string;
   ResetTime: string;
+  ResetBout: string;
   Period: string;
   Flip: string;
   [action: string]: string;
