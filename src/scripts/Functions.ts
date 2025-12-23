@@ -29,8 +29,8 @@ export function toSeconds(time?: string) {
   return Number(split[0]) * 60 + Number(split[1]);
 }
 
-export function toTime(seconds: number | "") {
-  if (seconds === "") {
+export function toTime(seconds?: number | "") {
+  if (seconds === "" || typeof seconds === "undefined") {
     return "";
   }
   const minutes = Math.floor(seconds / 60);

@@ -40,7 +40,7 @@ async function launch() {
 
 <template>
   <div>
-    <button @click="launch">launch</button>
+    <Button @click="launch">launch</Button>
   </div>
 </template>
 

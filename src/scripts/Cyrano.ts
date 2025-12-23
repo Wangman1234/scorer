@@ -248,7 +248,7 @@ export class Cyrano {
             match: "",
             round: 1,
             time: "",
-            stopwatch: "",
+            stopwatch: undefined,
             type: "",
             weapon: "F",
             priority: "N",

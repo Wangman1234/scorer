@@ -64,7 +64,7 @@ export const useMatchStore = defineStore("match", () => {
     );
   });
   const stopwatch = computed(() => {
-    if (status.value.stopwatch === "") {
+    if (typeof status.value.stopwatch === "undefined") {
       return 0;
     } else {
       return status.value.stopwatch;

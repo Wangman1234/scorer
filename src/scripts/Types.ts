@@ -136,7 +136,7 @@ export type CorrectStatus = {
   match: number | "";
   round: number;
   time: string;
-  stopwatch: number | "";
+  stopwatch?: number;
   type: "I" | "T" | "";
   weapon: "F" | "E" | "S";
   priority: "N" | "L" | "R";

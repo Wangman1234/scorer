@@ -19,6 +19,8 @@
 import { defineConfig } from "vite";
 import fs from "fs";
 import vue from "@vitejs/plugin-vue";
+import Components from "unplugin-vue-components/vite";
+import { PrimeVueResolver } from "@primevue/auto-import-resolver";
 
 import wbn from "rollup-plugin-webbundle";
 import * as wbnSign from "wbn-sign";
@@ -27,7 +29,12 @@ import { fileURLToPath } from "node:url";
 
 dotenv.config();
 
-const plugins = [vue()];
+const plugins = [
+  vue(),
+  Components({
+    resolvers: [PrimeVueResolver()],
+  }),
+];
 
 if (process.env.NODE_ENV === "production") {
   // Get the key and decrypt it to sign the web bundle

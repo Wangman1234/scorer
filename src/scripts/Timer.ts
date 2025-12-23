@@ -25,7 +25,7 @@ export class Timer {
   startTimer(set: "F" | "P") {
     this.match.status.state = set;
     this.interval = setInterval(() => {
-      if (this.match.status.stopwatch === "") {
+      if (typeof this.match.status.stopwatch === "undefined") {
         throw TypeError("time not set");
       }
       this.match.status.stopwatch =
@@ -58,7 +58,7 @@ export class Timer {
     clearInterval(this.interval);
   }
   addTime(time: number) {
-    if (this.match.status.stopwatch === "") {
+    if (typeof this.match.status.stopwatch === "undefined") {
       throw TypeError("time not set");
     }
     this.match.status.stopwatch += time;
