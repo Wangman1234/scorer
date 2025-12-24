@@ -151,6 +151,7 @@ async function finishMatch() {
   match.status.state = "E";
   if (cyrano.value) {
     await update();
+    match.matchData = [];
   } else {
     nav.page = "bout";
     nav.menu = true;

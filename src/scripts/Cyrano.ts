@@ -239,24 +239,7 @@ export class Cyrano {
       case "Ending":
         if (cyranoMsg.com === "ACK") {
           console.log("ACK");
-          this.matchStore.matches[""] = [
-            defaultFencerStatus(),
-            defaultFencerStatus(),
-          ];
-          this.matchStore.status = {
-            poultab: "",
-            match: "",
-            round: 1,
-            time: "",
-            stopwatch: undefined,
-            type: "",
-            weapon: "F",
-            priority: "N",
-            state: "",
-            doubles: 0,
-          };
-          this.matchStore.Lcard = 0;
-          this.matchStore.Rcard = 0;
+          this.matchStore.$reset();
           this.cyranoState = "Waiting";
           return "NEXT";
         } else if (cyranoMsg.com === "NAK") {

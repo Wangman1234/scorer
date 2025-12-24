@@ -7,3 +7,7 @@ This is a chrome
 for communicating with Fencing tournament software such as
 [Fencing time](https://www.fencingtime.com/) for a simpler tournament 
 running experience.
+
+## Screenshots
+
+![scoreboard.png](docs/scoreboard.png)
