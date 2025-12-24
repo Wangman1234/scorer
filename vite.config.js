@@ -56,7 +56,7 @@ if (process.env.NODE_ENV === "production") {
         dir: "public",
       },
       // The name of the output web bundle
-      output: "iwa-sink.swbn",
+      output: "scorer.swbn",
       // This ensures the web bundle is signed with the key
       integrityBlockSign: {
         strategy: new wbnSign.NodeCryptoSigningStrategy(key),
