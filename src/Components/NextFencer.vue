@@ -73,9 +73,6 @@ function disp() {
 </template>
 
 <style scoped>
-.outer {
-  //border: 1px solid gold;
-}
 span {
   font-size: 4rem;
   padding: 0 5rem;

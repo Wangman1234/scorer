@@ -246,7 +246,6 @@ div.scoring {
   align-self: center;
   width: 25rem;
   height: 20rem;
-  //padding: 20% 10%;
   border: solid 40px;
   border-radius: 20px;
   corner-shape: squircle;
@@ -257,7 +256,6 @@ div.scoring {
   grid-template-columns: 100%;
   grid-template-rows: 20% 40% 20% 20%;
   height: 100%;
-  //background-color: dodgerblue;
 }
 #doubles {
   font-size: 3rem;
@@ -278,7 +276,6 @@ div.scoring {
   color: blue;
 }
 #rounds {
-  //background-color: blueviolet;
   font-size: 5rem;
 }
 </style>

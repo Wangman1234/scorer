@@ -1100,7 +1100,6 @@ nav a {
   font-size: 1.5rem;
   width: fit-content;
   padding: 0 1rem;
-  //float: left;
 }
 nav a:hover {
   background-color: darkcyan;
@@ -1114,7 +1113,6 @@ li {
   display: flex;
   justify-content: space-between;
   padding: 0.1rem 1rem;
-  //border: darkgoldenrod 2px solid;
 }
 .priority {
   z-index: 1000;
@@ -1130,7 +1128,6 @@ li {
   margin-left: -15vw;
   align-self: flex-end;
   background-color: darkslategrey;
-  //backdrop-filter: invert(100%);
 }
 .priority div {
   align-items: center;
