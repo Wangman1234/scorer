@@ -63,6 +63,7 @@ export const useSettingsStore = defineStore(
       roundsPerTableMatch: number;
       protocol: "EFP1" | "EFP1.1";
       ret: "INFO" | "NEXT" | "PREV";
+      interval: number;
     }>({
       port: 50100,
       remoteAddress: "192.168.2.11",
@@ -70,6 +71,7 @@ export const useSettingsStore = defineStore(
       roundsPerTableMatch: 3,
       protocol: "EFP1.1",
       ret: "INFO",
+      interval: 10,
     });
 
     return { config, settings, cyranoOptions };

@@ -288,7 +288,6 @@ function keyHandler(e: KeyboardEvent) {
       !nav.menu &&
       (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E")
     ) {
-      console.log("not menu");
       switch (key) {
         case settings.config.keymap.LeftAdd1:
           changeScore(match.match[0], 1);
@@ -373,6 +372,8 @@ function keyHandler(e: KeyboardEvent) {
           match.Rcard = c1;
           break;
       }
+      if (cyrano.value?.sendingData && match.status.state !== "E")
+        cyrano.value.forceWrite();
     }
   }
 }
@@ -774,6 +775,15 @@ onUnmounted(() => {
                   v-model.number="settings.cyranoOptions.port"
                   :useGrouping="false"
                   size="small"
+                />
+              </li>
+              <li>
+                <div>Send Interval</div>
+                <InputNumber
+                  v-model.number="settings.cyranoOptions.interval"
+                  :useGrouping="false"
+                  size="small"
+                  suffix="×10⁻¹ s"
                 />
               </li>
               <li>

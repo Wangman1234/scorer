@@ -22,9 +22,9 @@ import { useSettingsStore } from "@/stores/settings.ts";
 import { useNavStore } from "@/stores/nav.ts";
 
 export class Cyrano {
-  matchStore = useMatchStore();
-  settingsStore = useSettingsStore();
-  navStore = useNavStore();
+  match = useMatchStore();
+  settings = useSettingsStore();
+  nav = useNavStore();
 
   socket: UDPSocket;
   readab?: ReadableStream;
@@ -44,13 +44,13 @@ export class Cyrano {
   constructor() {
     this.socket = new UDPSocket({
       localAddress: "0.0.0.0",
-      localPort: this.settingsStore.cyranoOptions.port,
+      localPort: this.settings.cyranoOptions.port,
     });
     if (!this.socket) {
       this.cyranoLog("startCyrano", "Socket not connected");
       return;
     }
-    this.matchStore.$reset();
+    this.match.$reset();
   }
   async startCyrano() {
     const { readable, writable } = await this.socket.opened;
@@ -69,13 +69,10 @@ export class Cyrano {
     await this.socket.close();
     this.sendingData = false;
     this.cyranoState = "Closed";
-    this.settingsStore.settings.rounds = 1;
-    this.settingsStore.settings.maxScore = 5;
-    this.matchStore.matches[""] = [
-      defaultFencerStatus(),
-      defaultFencerStatus(),
-    ];
-    this.matchStore.status.match = "";
+    this.settings.settings.rounds = 1;
+    this.settings.settings.maxScore = 5;
+    this.match.matches[""] = [defaultFencerStatus(), defaultFencerStatus()];
+    this.match.status.match = "";
     this.cyranoLog("stopCyrano", "finished");
     resolve();
   }
@@ -94,7 +91,7 @@ export class Cyrano {
         return reject("message doesn't exist");
       }
       console.log(cyranoMsg);
-      this.settingsStore.cyranoOptions.protocol = cyranoMsg.protocol;
+      this.settings.cyranoOptions.protocol = cyranoMsg.protocol;
       msg = this.tester(reject, cyranoMsg);
       console.log(msg);
     } catch (error) {
@@ -102,7 +99,7 @@ export class Cyrano {
         return reject("Cyrano ended");
       }
       await new Promise((resolve) => setTimeout(resolve, 100, ""));
-      if (this.matchStore.status.state === "E") {
+      if (this.match.status.state === "E") {
         msg = "INFO";
       } else {
         msg = "";
@@ -125,8 +122,8 @@ export class Cyrano {
             if (cyranoMsg.status.poultab === "X") {
               if (this.cyranoState !== "No Bouts") {
                 this.cyranoState = "No Bouts";
-                this.navStore.page = "tournament";
-                this.navStore.menu = true;
+                this.nav.page = "tournament";
+                this.nav.menu = true;
                 return "PREV";
               } else {
                 // reset()
@@ -137,15 +134,15 @@ export class Cyrano {
               cyranoMsg.rightfencer.status !== "U"
             ) {
               if (
-                typeof this.matchStore.matches[cyranoMsg.status.match] ===
+                typeof this.match.matches[cyranoMsg.status.match] ===
                 "undefined"
               ) {
-                this.matchStore.matches[cyranoMsg.status.match] = [
+                this.match.matches[cyranoMsg.status.match] = [
                   defaultFencerStatus(),
                   defaultFencerStatus(),
                 ];
               }
-              const mat = this.matchStore.matches[cyranoMsg.status.match] ?? [
+              const mat = this.match.matches[cyranoMsg.status.match] ?? [
                 defaultFencerStatus(),
                 defaultFencerStatus(),
               ];
@@ -163,19 +160,18 @@ export class Cyrano {
               this.set(cyranoMsg);
               if (
                 !(
-                  fencerEqual(this.matchStore.match[0], cyranoMsg.leftfencer) &&
-                  fencerEqual(this.matchStore.match[1], cyranoMsg.rightfencer)
+                  fencerEqual(this.match.match[0], cyranoMsg.leftfencer) &&
+                  fencerEqual(this.match.match[1], cyranoMsg.rightfencer)
                 )
               ) {
-                this.matchStore.$reset();
+                this.match.$reset();
                 this.cyranoState = "Waiting";
                 this.knowList = 1;
                 return "PREV";
               }
-              this.matchStore.status.stopwatch =
-                this.settingsStore.settings.maxTime;
-              this.navStore.page = "bout";
-              this.navStore.menu = true;
+              this.match.status.stopwatch = this.settings.settings.maxTime;
+              this.nav.page = "bout";
+              this.nav.menu = true;
               this.cyranoState = "Bout";
               this.prevDisp = cyranoMsg;
               this.bout().then();
@@ -185,15 +181,15 @@ export class Cyrano {
               this.knowList = -1;
             } else {
               if (
-                typeof this.matchStore.matches[cyranoMsg.status.match] ===
+                typeof this.match.matches[cyranoMsg.status.match] ===
                 "undefined"
               ) {
-                this.matchStore.matches[cyranoMsg.status.match] = [
+                this.match.matches[cyranoMsg.status.match] = [
                   defaultFencerStatus(),
                   defaultFencerStatus(),
                 ];
               }
-              const mat = this.matchStore.matches[cyranoMsg.status.match] ?? [
+              const mat = this.match.matches[cyranoMsg.status.match] ?? [
                 defaultFencerStatus(),
                 defaultFencerStatus(),
               ];
@@ -209,7 +205,7 @@ export class Cyrano {
                 mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
               } else if (
                 cyranoMsg.status.match ===
-                Number(min(Object.keys(omit(this.matchStore.matches, ""))))
+                Number(min(Object.keys(omit(this.match.matches, ""))))
               ) {
                 if (cyranoMsg.status.match === this.prev) {
                   this.knowList = 0;
@@ -226,8 +222,8 @@ export class Cyrano {
             }
           }
         } else if (cyranoMsg.com === "HELLO") {
-          this.settingsStore.settings.compe = cyranoMsg.compe;
-          this.settingsStore.settings.piste = cyranoMsg.piste;
+          this.settings.settings.compe = cyranoMsg.compe;
+          this.settings.settings.piste = cyranoMsg.piste;
           return "NEXT";
         }
         break;
@@ -239,13 +235,13 @@ export class Cyrano {
       case "Ending":
         if (cyranoMsg.com === "ACK") {
           console.log("ACK");
-          this.matchStore.$reset();
+          this.match.$reset();
           this.cyranoState = "Waiting";
           return "NEXT";
         } else if (cyranoMsg.com === "NAK") {
           this.nak = true;
-          this.navStore.page = "nak";
-          this.navStore.menu = true;
+          this.nav.page = "nak";
+          this.nav.menu = true;
           return "";
         }
         return "INFO";
@@ -254,7 +250,7 @@ export class Cyrano {
   }
   unNak() {
     this.nak = false;
-    this.navStore.page = "tournament";
+    this.nav.page = "tournament";
     this.reader?.releaseLock();
     this.reader = this.readab?.getReader();
   }
@@ -268,20 +264,25 @@ export class Cyrano {
     reject: (reason?: any) => void,
   ) {
     if (this.check()) return resolve();
+    try {
+      await this.forceWrite();
+    } catch (e) {}
+    for (let i = 0; i < this.settings.cyranoOptions.interval; i++) {
+      if (this.check()) return resolve();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    console.log(this.match.status.state);
+    await this.writeRepeat(resolve, reject);
+  }
+  async forceWrite() {
     this.reader?.releaseLock();
     this.writer?.releaseLock();
     this.writer = this.writeab?.getWriter();
     await this.write("INFO", "writeRepeat");
     this.reader = this.readab?.getReader();
-    for (let i = 0; i < 10; i++) {
-      if (this.check()) return resolve();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    console.log(this.matchStore.status.state);
-    await this.writeRepeat(resolve, reject);
   }
   check(): boolean {
-    if (this.matchStore.status.state === "E") {
+    if (this.match.status.state === "E") {
       this.reader?.releaseLock();
       this.writer?.releaseLock();
       this.writer = this.writeab?.getWriter();
@@ -293,23 +294,23 @@ export class Cyrano {
     return false;
   }
   set(cyr: CyranoMessage) {
-    this.settingsStore.settings.piste = cyr.piste;
-    this.settingsStore.settings.compe = cyr.compe;
-    this.settingsStore.settings.phase = cyr.phase === "" ? 0 : cyr.phase;
-    this.matchStore.status = cyr.status as CorrectStatus;
-    this.settingsStore.settings.maxTime = 180;
-    switch (this.matchStore.status.poultab[0]) {
+    this.settings.settings.piste = cyr.piste;
+    this.settings.settings.compe = cyr.compe;
+    this.settings.settings.phase = cyr.phase === "" ? 0 : cyr.phase;
+    this.match.status = cyr.status as CorrectStatus;
+    this.settings.settings.maxTime = 180;
+    switch (this.match.status.poultab[0]) {
       case "P":
-        this.settingsStore.settings.rounds = this.matchStore.status.round;
+        this.settings.settings.rounds = this.match.status.round;
         break;
       default:
-        this.settingsStore.settings.rounds =
-          this.settingsStore.cyranoOptions.roundsPerTableMatch;
+        this.settings.settings.rounds =
+          this.settings.cyranoOptions.roundsPerTableMatch;
     }
-    this.settingsStore.settings.maxScore =
-      (this.settingsStore.settings.rounds - this.matchStore.status.round + 1) *
-      this.settingsStore.cyranoOptions.pointsPerPeriod;
-    this.settingsStore.settings.allowTies = false;
+    this.settings.settings.maxScore =
+      (this.settings.settings.rounds - this.match.status.round + 1) *
+      this.settings.cyranoOptions.pointsPerPeriod;
+    this.settings.settings.allowTies = false;
   }
   async read(process: string = "read") {
     const { value, done } = (await this.reader?.read()) ?? {
@@ -325,7 +326,7 @@ export class Cyrano {
     this.cyranoLog(process, "message got");
 
     const { data, remoteAddress, remotePort } = value;
-    this.settingsStore.cyranoOptions.remoteAddress = remoteAddress;
+    this.settings.cyranoOptions.remoteAddress = remoteAddress;
     const decoded = this.decoder.decode(data);
     this.cyranoLog(
       "process",
@@ -343,23 +344,23 @@ export class Cyrano {
     com: "NEXT" | "PREV" | "INFO" = "INFO",
     process: string = "write",
   ) {
-    this.settingsStore.cyranoOptions.ret = com;
-    console.log(process, this.matchStore.cyranoMatch);
-    let message = this.matchStore.cyranoMatch.toString();
+    this.settings.cyranoOptions.ret = com;
+    console.log(process, this.match.cyranoMatch);
+    let message = this.match.cyranoMatch.toString();
     await this.writer?.ready;
     await this.writer?.write({
       data: this.encoder.encode(message),
-      remoteAddress: this.settingsStore.cyranoOptions.remoteAddress,
-      remotePort: this.settingsStore.cyranoOptions.port,
+      remoteAddress: this.settings.cyranoOptions.remoteAddress,
+      remotePort: this.settings.cyranoOptions.port,
     });
     this.cyranoLog(
       process,
       "sent",
       message,
       "on port",
-      this.settingsStore.cyranoOptions.port,
+      this.settings.cyranoOptions.port,
       "to",
-      this.settingsStore.cyranoOptions.remoteAddress,
+      this.settings.cyranoOptions.remoteAddress,
     );
   }
   cyranoLog(process: string, ...args: any) {
