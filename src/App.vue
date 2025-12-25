@@ -765,7 +765,7 @@ onUnmounted(() => {
               <li>
                 <div>Remote Address</div>
                 <InputText
-                  v-model.number="settings.cyranoOptions.remoteAddress"
+                  v-model="settings.cyranoOptions.remoteAddress"
                   size="small"
                 />
               </li>
