@@ -193,28 +193,32 @@ export const emptyFencerStatus: FencerStatus = {
   reserve: "",
 };
 
-export type keyMap = {
-  Menu: string;
-  AddMin: string;
-  AddSec: string;
-  MinusMin: string;
-  MinusSec: string;
-  LeftAdd1: string;
-  RightAdd1: string;
-  LeftAdd2: string;
-  RightAdd2: string;
-  LeftAdd3: string;
-  RightAdd3: string;
-  Double: string;
-  MinusDouble: string;
-  LeftMinus1: string;
-  RightMinus1: string;
-  LeftCard: string;
-  RightCard: string;
-  Timer: string;
-  ResetTime: string;
-  ResetBout: string;
-  Period: string;
-  Flip: string;
-  [action: string]: string;
+export type map<T> = {
+  Menu: T;
+  AddMin: T;
+  AddSec: T;
+  MinusMin: T;
+  MinusSec: T;
+  LeftAdd1: T;
+  RightAdd1: T;
+  LeftAdd2: T;
+  RightAdd2: T;
+  LeftAdd3: T;
+  RightAdd3: T;
+  Double: T;
+  MinusDouble: T;
+  LeftMinus1: T;
+  RightMinus1: T;
+  LeftCard: T;
+  RightCard: T;
+  Timer: T;
+  ResetTime: T;
+  ResetBout: T;
+  PrioritySelector: T;
+  PriorityLeft: T;
+  PriorityRight: T;
+  ResetPriority: T;
+  Period: T;
+  Flip: T;
+  [action: string]: T;
 };

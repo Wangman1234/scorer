@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { keyMap } from "./Types.ts";
+import type { map } from "./Types.ts";
 
-export const defaultKeymaps: Record<string, keyMap> = {
+export const defaultKeymaps: Record<string, map<string>> = {
   remoteKeymap1: {
     Menu: "Escape",
     AddMin: "ArrowUp",
@@ -37,6 +37,10 @@ export const defaultKeymaps: Record<string, keyMap> = {
     Timer: "Enter",
     ResetTime: "t",
     ResetBout: "g",
+    PrioritySelector: "",
+    PriorityLeft: "",
+    PriorityRight: "",
+    ResetPriority: "",
     Period: "p",
     Flip: "f",
   },
@@ -61,6 +65,10 @@ export const defaultKeymaps: Record<string, keyMap> = {
     Timer: "Enter",
     ResetTime: "t",
     ResetBout: "g",
+    PrioritySelector: "",
+    PriorityLeft: "",
+    PriorityRight: "",
+    ResetPriority: "",
     Period: "p",
     Flip: "f",
   },

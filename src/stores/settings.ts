@@ -15,14 +15,14 @@
  */
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import type { keyMap } from "../scripts/Types.ts";
+import type { map } from "../scripts/Types.ts";
 import { defaultKeymaps } from "../scripts/keyMaps.ts";
 
 export const useSettingsStore = defineStore(
   "settings",
   () => {
     const config = ref<{
-      keymap: keyMap;
+      keymap: map<string>;
       leftColor: string;
       rightColor: string;
       showSubSec: boolean;
@@ -34,8 +34,8 @@ export const useSettingsStore = defineStore(
       showDoubles: boolean;
     }>({
       keymap: Object.assign({}, defaultKeymaps.remoteKeymap1),
-      leftColor: "#ff0000",
-      rightColor: "#0000ff",
+      leftColor: "ff0000",
+      rightColor: "0000ff",
       showSubSec: false,
       lastNameFirst: false,
       shortenFirst: false,

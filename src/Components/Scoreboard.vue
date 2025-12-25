@@ -46,8 +46,10 @@ const short = computed(() => {
     <div id="fencer-display">
       <div
         :style="{
-          backgroundColor: settings.config.leftColor,
-          color: Color(settings.config.leftColor).isLight() ? 'black' : 'white',
+          backgroundColor: '#' + settings.config.leftColor,
+          color: Color('#' + settings.config.leftColor).isLight()
+            ? 'black'
+            : 'white',
         }"
         class="name fencer-1"
       >
@@ -66,8 +68,8 @@ const short = computed(() => {
       </div>
       <div
         :style="{
-          backgroundColor: settings.config.rightColor,
-          color: Color(settings.config.rightColor).isLight()
+          backgroundColor: '#' + settings.config.rightColor,
+          color: Color('#' + settings.config.rightColor).isLight()
             ? 'black'
             : 'white',
         }"
@@ -95,8 +97,14 @@ const short = computed(() => {
             borderColor: match.Lcolor,
             backgroundColor:
               match.status.priority === 'L'
-                ? settings.config.leftColor
+                ? '#' + settings.config.leftColor
                 : 'gray',
+            color:
+              match.status.priority === 'R'
+                ? Color('#' + settings.config.leftColor).isLight()
+                  ? 'black'
+                  : 'white'
+                : 'white',
           }"
           class="scoring fencer-1"
         >
@@ -187,8 +195,14 @@ const short = computed(() => {
             borderColor: match.Rcolor,
             backgroundColor:
               match.status.priority === 'R'
-                ? settings.config.rightColor
+                ? '#' + settings.config.rightColor
                 : 'gray',
+            color:
+              match.status.priority === 'R'
+                ? Color('#' + settings.config.rightColor).isLight()
+                  ? 'black'
+                  : 'white'
+                : 'white',
           }"
           class="scoring fencer-2"
         >

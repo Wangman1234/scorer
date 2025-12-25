@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import Init from "./Components/Init.vue";
-import { type CorrectFencerStatus, type keyMap } from "./scripts/Types.ts";
+import { type CorrectFencerStatus, type map } from "./scripts/Types.ts";
 import { keys, omit } from "underscore";
 import Poule from "./Components/Poule.vue";
 import { defaultKeymaps } from "./scripts/keyMaps.ts";
@@ -37,7 +37,7 @@ const nav = useNavStore();
 // Flags
 const started = ref(false);
 const priorityPicker = ref(false);
-const change = ref<false | keyof keyMap>(false);
+const change = ref<false | keyof map<string>>(false);
 const keymap = ref("remoteKeymap1");
 ref(false);
 
@@ -78,17 +78,20 @@ function changeScore(fencer: CorrectFencerStatus, value: number) {
     if (val >= 0) fencer.score = val;
   }
 }
-function choosePriority(state: "N" | "L" | "R") {
+async function choosePriority(state: "N" | "L" | "R") {
+  priorityPicker.value = false;
   if (state === "N") {
-    if (Math.random() >= 0.5) {
-      match.status.priority = "R";
-    } else {
-      match.status.priority = "L";
+    for (let i = 0; i < 50; i++) {
+      if (Math.random() >= 0.5) {
+        match.status.priority = "R";
+      } else {
+        match.status.priority = "L";
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
     }
   } else {
     match.status.priority = state;
   }
-  priorityPicker.value = false;
 }
 
 // Cyrano
@@ -246,8 +249,9 @@ function click() {
 }
 
 // Key handler
+const repeat = ref(true);
 function keyHandler(e: KeyboardEvent) {
-  let key = e.key;
+  let key = (repeat.value ? "hold" : "") + e.key;
   console.log(key);
   if (started.value) {
     if (key === settings.config.keymap.Menu) {
@@ -288,99 +292,80 @@ function keyHandler(e: KeyboardEvent) {
       !nav.menu &&
       (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E")
     ) {
-      switch (key) {
-        case settings.config.keymap.LeftAdd1:
-          changeScore(match.match[0], 1);
-          break;
-        case settings.config.keymap.RightAdd1:
-          changeScore(match.match[1], 1);
-          break;
-        case settings.config.keymap.LeftAdd2:
-          changeScore(match.match[0], 2);
-          break;
-        case settings.config.keymap.RightAdd2:
-          changeScore(match.match[1], 2);
-          break;
-        case settings.config.keymap.LeftAdd3:
-          changeScore(match.match[0], 3);
-          break;
-        case settings.config.keymap.RightAdd3:
-          changeScore(match.match[1], 3);
-          break;
-        case settings.config.keymap.Double:
-          if (
-            match.status.doubles < settings.settings.maxDoubles ||
-            settings.settings.maxDoubles === 0
-          ) {
-            match.status.doubles++;
-            changeScore(match.match[0], settings.settings.doublesAddPoints);
-            changeScore(match.match[1], settings.settings.doublesAddPoints);
-          }
-          break;
-        case settings.config.keymap.MinusDouble:
-          if (match.status.doubles > 0 || settings.settings.maxDoubles === 0) {
-            match.status.doubles--;
-            changeScore(match.match[0], -settings.settings.doublesAddPoints);
-            changeScore(match.match[1], -settings.settings.doublesAddPoints);
-          }
-          break;
-        case settings.config.keymap.LeftMinus1:
-          changeScore(match.match[0], -1);
-          break;
-        case settings.config.keymap.RightMinus1:
-          changeScore(match.match[1], -1);
-          break;
-        case settings.config.keymap.LeftCard:
-          match.LcardAdd();
-          break;
-        case settings.config.keymap.RightCard:
-          match.RcardAdd();
-          break;
-        case settings.config.keymap.Timer:
-          click();
-          break;
-        case settings.config.keymap.AddMin:
-          timer.addTime(60);
-          break;
-        case settings.config.keymap.AddSec:
-          timer.addTime(1);
-          break;
-        case settings.config.keymap.MinusMin:
-          timer.addTime(-60);
-          break;
-        case settings.config.keymap.MinusSec:
-          timer.addTime(-1);
-          break;
-        case settings.config.keymap.ResetTime:
-          match.status.stopwatch = settings.settings.maxTime;
-          break;
-        case settings.config.keymap.ResetBout:
-          reset();
-          break;
-        case settings.config.keymap.Period:
-          if (match.status.poultab[0] !== "P") {
-            match.status.round =
-              (match.status.round % settings.settings.rounds) + 1;
-          }
-          break;
-        case settings.config.keymap.Flip:
-          let f1 = match.match[0];
-          match.match[0] = match.match[1];
-          match.match[1] = f1;
-          let c1 = match.Lcard;
-          match.Lcard = match.Rcard;
-          match.Rcard = c1;
-          break;
-      }
+      const index =
+        Object.keys(settings.config.keymap).find(
+          (index) => settings.config.keymap[index] === key,
+        ) ?? "";
+      const func = functions[index] ?? function () {};
+      func();
       if (cyrano.value?.sendingData && match.status.state !== "E")
         cyrano.value.forceWrite();
     }
   }
+  repeat.value = false;
 }
+
+const functions: map<() => void> = {
+  Menu: () => {},
+  AddMin: () => timer.addTime(60),
+  AddSec: () => timer.addTime(1),
+  MinusMin: () => timer.addTime(-60),
+  MinusSec: () => timer.addTime(-1),
+  LeftAdd1: () => changeScore(match.match[0], 1),
+  RightAdd1: () => changeScore(match.match[1], 1),
+  LeftAdd2: () => changeScore(match.match[0], 2),
+  RightAdd2: () => changeScore(match.match[1], 2),
+  LeftAdd3: () => changeScore(match.match[0], 3),
+  RightAdd3: () => changeScore(match.match[1], 3),
+  Double: () => {
+    if (
+      match.status.doubles < settings.settings.maxDoubles ||
+      settings.settings.maxDoubles === 0
+    ) {
+      match.status.doubles++;
+      changeScore(match.match[0], settings.settings.doublesAddPoints);
+      changeScore(match.match[1], settings.settings.doublesAddPoints);
+    }
+  },
+  MinusDouble: () => {
+    if (match.status.doubles > 0 || settings.settings.maxDoubles === 0) {
+      match.status.doubles--;
+      changeScore(match.match[0], -settings.settings.doublesAddPoints);
+      changeScore(match.match[1], -settings.settings.doublesAddPoints);
+    }
+  },
+  LeftMinus1: () => changeScore(match.match[0], -1),
+  RightMinus1: () => changeScore(match.match[1], -1),
+  LeftCard: () => match.LcardAdd(),
+  RightCard: () => match.RcardAdd(),
+  Timer: () => click(),
+  ResetTime: () => (match.status.stopwatch = settings.settings.maxTime),
+  ResetBout: () => reset(),
+  PrioritySelector: () => (priorityPicker.value = true),
+  PriorityLeft: () => choosePriority("L"),
+  PriorityRight: () => choosePriority("R"),
+  ResetPriority: () => (match.status.priority = "N"),
+  Period: () => {
+    if (match.status.poultab[0] !== "P") {
+      match.status.round = (match.status.round % settings.settings.rounds) + 1;
+    }
+  },
+  Flip: () => {
+    let f1 = match.match[0];
+    match.match[0] = match.match[1];
+    match.match[1] = f1;
+    let c1 = match.Lcard;
+    match.Lcard = match.Rcard;
+    match.Rcard = c1;
+  },
+};
 
 onMounted(() => {
   match.$reset();
-  window.addEventListener("keydown", keyHandler);
+  window.addEventListener("keydown", (e) => {
+    repeat.value = e.repeat;
+  });
+  window.addEventListener("keyup", keyHandler);
   window.addEventListener("contextmenu", (event) => event.preventDefault());
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) {
@@ -389,8 +374,16 @@ onMounted(() => {
   });
 });
 onUnmounted(() => {
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) {
+      started.value = false;
+    }
+  });
   window.removeEventListener("contextmenu", (event) => event.preventDefault());
-  window.removeEventListener("keydown", keyHandler);
+  window.removeEventListener("keyup", keyHandler);
+  window.removeEventListener("keydown", (e) => {
+    repeat.value = e.repeat;
+  });
   match.$reset();
   stopCyrano();
 });
@@ -411,8 +404,11 @@ onUnmounted(() => {
   <Dialog
     v-model:visible="nav.menu"
     :closeOnEscape="false"
+    :closable="false"
+    :draggable="false"
     :style="{ width: '50rem', height: '50rem' }"
     header="Settings"
+    dismissableMask
     modal
   >
     <Tabs
@@ -847,11 +843,23 @@ onUnmounted(() => {
             <menu>
               <li>
                 <div>Left fencer colour</div>
-                <ColorPicker v-model="settings.config.leftColor" />
+                <div :style="{ display: 'block', alignItems: 'right' }">
+                  <InputText
+                    v-model="settings.config.leftColor"
+                    size="small"
+                  />
+                  <ColorPicker v-model="settings.config.leftColor" />
+                </div>
               </li>
               <li>
                 <div>Right fencer colour</div>
-                <ColorPicker v-model="settings.config.rightColor" />
+                <div :style="{ display: 'block', alignItems: 'right' }">
+                  <InputText
+                    v-model="settings.config.rightColor"
+                    size="small"
+                  />
+                  <ColorPicker v-model="settings.config.rightColor" />
+                </div>
               </li>
               <li>
                 <div>Surnames in front</div>
@@ -1019,6 +1027,15 @@ onUnmounted(() => {
       }}
     </h2>
   </div>
+  <Dialog
+    :contentStyle="{ fontSize: '2rem' }"
+    :showHeader="false"
+    :visible="repeat"
+    modal
+    position="bottom"
+  >
+    Hold
+  </Dialog>
 </template>
 
 <style scoped>
