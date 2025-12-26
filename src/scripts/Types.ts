@@ -201,12 +201,6 @@ export type map<T> = {
   MinusSec: T;
   LeftAdd1: T;
   RightAdd1: T;
-  LeftAdd2: T;
-  RightAdd2: T;
-  LeftAdd3: T;
-  RightAdd3: T;
-  Double: T;
-  MinusDouble: T;
   LeftMinus1: T;
   RightMinus1: T;
   LeftCard: T;
@@ -214,10 +208,6 @@ export type map<T> = {
   Timer: T;
   ResetTime: T;
   ResetBout: T;
-  PrioritySelector: T;
-  PriorityLeft: T;
-  PriorityRight: T;
-  ResetPriority: T;
   Period: T;
   Flip: T;
   [action: string]: T;

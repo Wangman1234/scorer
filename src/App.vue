@@ -37,6 +37,7 @@ const nav = useNavStore();
 // Flags
 const started = ref(false);
 const priorityPicker = ref(false);
+const choices = ref(false);
 const change = ref<false | keyof map<string>>(false);
 const keymap = ref("remoteKeymap1");
 ref(false);
@@ -252,7 +253,7 @@ function click() {
 }
 
 // Key handler
-const repeat = ref(true);
+const repeat = ref(false);
 function keyHandler(e: KeyboardEvent) {
   let key = (repeat.value ? "hold" : "") + e.key;
   console.log(key);
@@ -291,9 +292,12 @@ function keyHandler(e: KeyboardEvent) {
       ) {
         nav.menu = false;
       }
+    } else if (choices.value) {
+      // TODO
     } else if (
-      !nav.menu &&
-      (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E")
+      !cyrano.value ||
+      cyrano.value.sendingData ||
+      match.status.state !== "E"
     ) {
       const index =
         Object.keys(settings.config.keymap).find(
@@ -311,6 +315,9 @@ function keyHandler(e: KeyboardEvent) {
 
 const functions: map<() => void> = {
   Menu: () => {},
+  Choices: () => {
+    choices.value = true;
+  },
   AddMin: () => timer.addTime(60),
   AddSec: () => timer.addTime(1),
   MinusMin: () => timer.addTime(-60),
@@ -321,6 +328,8 @@ const functions: map<() => void> = {
   RightAdd2: () => changeScore(match.match[1], 2),
   LeftAdd3: () => changeScore(match.match[0], 3),
   RightAdd3: () => changeScore(match.match[1], 3),
+  LeftMinus1: () => changeScore(match.match[0], -1),
+  RightMinus1: () => changeScore(match.match[1], -1),
   Double: () => {
     if (
       match.status.doubles < settings.settings.maxDoubles ||
@@ -338,8 +347,6 @@ const functions: map<() => void> = {
       changeScore(match.match[1], -settings.settings.doublesAddPoints);
     }
   },
-  LeftMinus1: () => changeScore(match.match[0], -1),
-  RightMinus1: () => changeScore(match.match[1], -1),
   LeftCard: () => match.LcardAdd(),
   RightCard: () => match.RcardAdd(),
   Timer: () => click(),
@@ -349,6 +356,7 @@ const functions: map<() => void> = {
   PriorityLeft: () => choosePriority("L"),
   PriorityRight: () => choosePriority("R"),
   ResetPriority: () => (match.status.priority = "N"),
+  EndMatch: () => end(),
   Period: () => {
     if (match.status.poultab[0] !== "P") {
       match.status.round = (match.status.round % settings.settings.rounds) + 1;
@@ -363,14 +371,48 @@ const functions: map<() => void> = {
     match.Rcard = c1;
   },
 };
+const names: map<string> = {
+  Menu: "Menu",
+  Choices: "Open all functions dialog",
+  AddMin: "Add 1 minute to timer",
+  AddSec: "Add 1 second to timer",
+  MinusMin: "Subtract 1 minute from timer",
+  MinusSec: "Subtract 1 second from the timer",
+  LeftAdd1: "Add 1 point to FotL",
+  RightAdd1: "Add 1 point to FotR",
+  LeftAdd2: "Add 2 point to FotL",
+  RightAdd2: "Add 2 point to FotR",
+  LeftAdd3: "Add 3 point to FotL",
+  RightAdd3: "Add 3 point to FotR",
+  LeftMinus1: "Subtract 1 point from FotL",
+  RightMinus1: "Subtract 1 point from FotR",
+  Double: "Add 1 double",
+  MinusDouble: "Subtract 1 double",
+  LeftCard: "Card FotL",
+  RightCard: "Card FotR",
+  Timer: "Timer/Next",
+  ResetTime: "Reset time",
+  ResetBout: "Reset bout",
+  PrioritySelector: "Open priority selector",
+  PriorityLeft: "Give FotL priority",
+  PriorityRight: "Give FotR priority",
+  ResetPriority: "Reset priority",
+  EndMatch: "End match",
+  Period: "Next period",
+  Flip: "Flip fencer sides",
+};
 
 onMounted(() => {
   match.$reset();
   window.addEventListener("keydown", (e) => {
     repeat.value = e.repeat;
+    if (nav.menu || choices.value) {
+      if (e.key !== "Tab" && e.key !== "ArrowDown" && e.key !== "ArrowUp") {
+        e.preventDefault();
+      }
+    }
   });
   window.addEventListener("keyup", keyHandler);
-  window.addEventListener("contextmenu", (event) => event.preventDefault());
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) {
       started.value = false;
@@ -383,10 +425,14 @@ onUnmounted(() => {
       started.value = false;
     }
   });
-  window.removeEventListener("contextmenu", (event) => event.preventDefault());
   window.removeEventListener("keyup", keyHandler);
   window.removeEventListener("keydown", (e) => {
     repeat.value = e.repeat;
+    if (nav.menu || choices.value) {
+      if (e.key !== "Tab" && e.key !== "ArrowDown" && e.key !== "ArrowUp") {
+        e.preventDefault();
+      }
+    }
   });
   match.$reset();
   stopCyrano();
@@ -405,6 +451,40 @@ onUnmounted(() => {
     v-if="!started"
   />
   <Scoreboard :cyrano="!!cyrano" />
+  <Dialog
+    v-model:visible="choices"
+    :draggable="false"
+    :style="{ width: '30rem', height: '50rem' }"
+    dismissableMask
+    header="Select"
+    modal
+  >
+    <menu style="width: 100%">
+      <li
+        v-for="(item, index) in functions"
+        :key="index"
+        style="width: 100%"
+      >
+        <Button
+          :style="{
+            display: 'flex',
+            justifyContent: 'space-between',
+            width: '100%',
+          }"
+          variant="text"
+          @click="
+            () => {
+              item();
+              choices = false;
+            }
+          "
+        >
+          <span>{{ names[index] }}</span>
+          <span>{{ settings.config.keymap[index] }}</span>
+        </Button>
+      </li>
+    </menu>
+  </Dialog>
   <Dialog
     v-model:visible="nav.menu"
     :closeOnEscape="false"
@@ -953,17 +1033,17 @@ onUnmounted(() => {
                 />
               </li>
               <li
-                v-for="(item, index) in settings.config.keymap"
+                v-for="index in Object.keys(functions)"
                 :key="index"
               >
-                <div>{{ index }}</div>
+                <div>{{ names[index] }}</div>
                 <Button
                   :class="{ selected: change === index }"
                   class="bind keys"
                   size="small"
                   @click="change = index"
                 >
-                  {{ item }}
+                  {{ settings.config.keymap[index] }}
                 </Button>
               </li>
             </menu>
