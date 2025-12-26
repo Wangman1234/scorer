@@ -38,6 +38,7 @@ const nav = useNavStore();
 const started = ref(false);
 const priorityPicker = ref(false);
 const choices = ref(false);
+const inputTime = ref(false);
 const change = ref<false | keyof map<string>>(false);
 const keymap = ref("remoteKeymap1");
 ref(false);
@@ -293,6 +294,8 @@ function keyHandler(e: KeyboardEvent) {
       }
     } else if (choices.value) {
       // TODO
+    } else if (inputTime.value) {
+      if (key === settings.config.keymap.Timer) inputTime.value = false;
     } else if (
       !cyrano.value ||
       cyrano.value.sendingData ||
@@ -317,10 +320,6 @@ const functions: map<() => void> = {
   Choices: () => {
     choices.value = true;
   },
-  AddMin: () => timer.addTime(60),
-  AddSec: () => timer.addTime(1),
-  MinusMin: () => timer.addTime(-60),
-  MinusSec: () => timer.addTime(-1),
   LeftAdd1: () => changeScore(match.match[0], 1),
   RightAdd1: () => changeScore(match.match[1], 1),
   LeftAdd2: () => changeScore(match.match[0], 2),
@@ -349,6 +348,13 @@ const functions: map<() => void> = {
   LeftCard: () => match.LcardAdd(),
   RightCard: () => match.RcardAdd(),
   Timer: () => click(),
+  SetTime: () => {
+    inputTime.value = true;
+  },
+  AddMin: () => timer.addTime(60),
+  AddSec: () => timer.addTime(1),
+  MinusMin: () => timer.addTime(-60),
+  MinusSec: () => timer.addTime(-1),
   ResetTime: () => (match.status.stopwatch = settings.settings.maxTime),
   ResetBout: () => reset(),
   PrioritySelector: () => (priorityPicker.value = true),
@@ -372,11 +378,7 @@ const functions: map<() => void> = {
 };
 const names: map<string> = {
   Menu: "Menu",
-  Choices: "Open all functions dialog",
-  AddMin: "Add 1 minute to timer",
-  AddSec: "Add 1 second to timer",
-  MinusMin: "Subtract 1 minute from timer",
-  MinusSec: "Subtract 1 second from the timer",
+  Choices: "Open all functions dialog(WIP)",
   LeftAdd1: "Add 1 point to FotL",
   RightAdd1: "Add 1 point to FotR",
   LeftAdd2: "Add 2 point to FotL",
@@ -391,6 +393,11 @@ const names: map<string> = {
   RightCard: "Card FotR",
   Timer: "Timer/Next",
   ResetTime: "Reset time",
+  SetTime: "Manually set time(WIP)",
+  AddMin: "Add 1 minute to timer",
+  AddSec: "Add 1 second to timer",
+  MinusMin: "Subtract 1 minute from timer",
+  MinusSec: "Subtract 1 second from the timer",
   ResetBout: "Reset bout",
   PrioritySelector: "Open priority selector",
   PriorityLeft: "Give FotL priority",
@@ -405,7 +412,7 @@ onMounted(() => {
   match.$reset();
   window.addEventListener("keydown", (e) => {
     repeat.value = e.repeat;
-    if (!(nav.menu || choices.value) || e.key === "Enter") {
+    if (!(nav.menu || choices.value || inputTime.value) || e.key === "Enter") {
       e.preventDefault();
     }
   });
@@ -425,7 +432,7 @@ onUnmounted(() => {
   window.removeEventListener("keyup", keyHandler);
   window.removeEventListener("keydown", (e) => {
     repeat.value = e.repeat;
-    if (!(nav.menu || choices.value) || e.key === "Enter") {
+    if (!(nav.menu || choices.value || inputTime.value) || e.key === "Enter") {
       e.preventDefault();
     }
   });
@@ -479,6 +486,29 @@ onUnmounted(() => {
         </Button>
       </li>
     </menu>
+  </Dialog>
+  <Dialog
+    v-model:visible="inputTime"
+    :closable="false"
+    :draggable="false"
+    :style="{ width: '30rem', height: '10rem' }"
+    autofocus
+    dismissableMask
+    header="Time"
+    modal
+  >
+    <InputNumber
+      v-model="match.status.stopwatch"
+      :max="settings.settings.maxTime"
+      :maxFractionDigits="2"
+      :min="0"
+      :minFractionDigits="2"
+      :step="1"
+      autoFocus
+      showButtons
+      size="small"
+      suffix=" s"
+    />
   </Dialog>
   <Dialog
     v-model:visible="nav.menu"
