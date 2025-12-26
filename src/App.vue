@@ -258,12 +258,11 @@ function keyHandler(e: KeyboardEvent) {
   let key = (repeat.value ? "hold" : "") + e.key;
   console.log(key);
   if (started.value) {
-    if (key === settings.config.keymap.Menu) {
-      nav.menu = !nav.menu;
-    }
     if (change.value != false) {
       settings.config.keymap[change.value] = key;
       change.value = false;
+    } else if (key === settings.config.keymap.Menu) {
+      nav.menu = !nav.menu;
     } else if (priorityPicker.value) {
       switch (key) {
         case settings.config.keymap.LeftAdd1:
@@ -406,10 +405,8 @@ onMounted(() => {
   match.$reset();
   window.addEventListener("keydown", (e) => {
     repeat.value = e.repeat;
-    if (nav.menu || choices.value) {
-      if (e.key !== "Tab" && e.key !== "ArrowDown" && e.key !== "ArrowUp") {
-        e.preventDefault();
-      }
+    if (!(nav.menu || choices.value) || e.key === "Enter") {
+      e.preventDefault();
     }
   });
   window.addEventListener("keyup", keyHandler);
@@ -428,10 +425,8 @@ onUnmounted(() => {
   window.removeEventListener("keyup", keyHandler);
   window.removeEventListener("keydown", (e) => {
     repeat.value = e.repeat;
-    if (nav.menu || choices.value) {
-      if (e.key !== "Tab" && e.key !== "ArrowDown" && e.key !== "ArrowUp") {
-        e.preventDefault();
-      }
+    if (!(nav.menu || choices.value) || e.key === "Enter") {
+      e.preventDefault();
     }
   });
   match.$reset();
