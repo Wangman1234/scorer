@@ -81,13 +81,13 @@ function changeScore(fencer: CorrectFencerStatus, value: number) {
 async function choosePriority(state: "N" | "L" | "R") {
   priorityPicker.value = false;
   if (state === "N") {
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 20; i++) {
       if (Math.random() >= 0.5) {
         match.status.priority = "R";
       } else {
         match.status.priority = "L";
       }
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
   } else {
     match.status.priority = state;
@@ -135,6 +135,7 @@ function reset() {
   match.match[1].reserve = "N";
   match.matchData = [];
   nav.menu = false;
+  match.passivityStart = match.status.stopwatch ?? 0;
   match.Lcard = 0;
   match.Rcard = 0;
 }
@@ -243,7 +244,9 @@ function click() {
           match.status.doubles !== 0)
       ) {
         end();
-      } else timer.startTimer("F");
+      } else {
+        timer.startTimer("F");
+      }
     }
   }
 }
@@ -298,6 +301,7 @@ function keyHandler(e: KeyboardEvent) {
         ) ?? "";
       const func = functions[index] ?? function () {};
       func();
+      match.passivityStart = match.status.stopwatch ?? 0;
       if (cyrano.value?.sendingData && match.status.state !== "E")
         cyrano.value.forceWrite();
     }
@@ -570,6 +574,24 @@ onUnmounted(() => {
                   :min="0"
                   :step="1"
                   showButtons
+                  size="small"
+                />
+              </li>
+              <li>
+                <div>Passivity timer</div>
+                <InputNumber
+                  v-model="settings.settings.passivity"
+                  :min="0"
+                  :step="1"
+                  showButtons
+                  size="small"
+                />
+              </li>
+              <li>
+                <div>Passivity auto halt</div>
+                <Checkbox
+                  v-model="settings.settings.passivityStops"
+                  binary
                   size="small"
                 />
               </li>
@@ -1015,6 +1037,16 @@ onUnmounted(() => {
     v-else-if="matchOver"
   >
     <h1>Match</h1>
+  </div>
+  <div
+    v-else-if="
+      settings.settings.passivity != 0 &&
+      settings.settings.passivityStops &&
+      match.passivity <= 0
+    "
+    class="blurred"
+  >
+    <h1>Passivity</h1>
   </div>
   <div
     class="blurred"

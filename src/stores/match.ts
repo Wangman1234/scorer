@@ -52,9 +52,9 @@ export const useMatchStore = defineStore("match", () => {
       doubles: number;
     }>
   >([]);
+  const passivityStart = ref(settings.settings.maxTime * 1);
   const Lcard = ref(0);
   const Rcard = ref(0);
-
   const match = computed<[CorrectFencerStatus, CorrectFencerStatus]>(() => {
     return (
       matches.value[status.value.match] ?? [
@@ -83,6 +83,9 @@ export const useMatchStore = defineStore("match", () => {
       match.value[1],
       match.value[0],
     );
+  });
+  const passivity = computed(() => {
+    return settings.settings.passivity + stopwatch.value - passivityStart.value;
   });
   const Lcolor = computed(() => {
     return color(Lcard.value);
@@ -159,6 +162,7 @@ export const useMatchStore = defineStore("match", () => {
       doubles: 0,
     };
     matchData.value = [];
+    passivityStart.value = settings.settings.maxTime;
     Lcard.value = 0;
     Rcard.value = 0;
   }
@@ -167,11 +171,13 @@ export const useMatchStore = defineStore("match", () => {
     matches,
     status,
     matchData,
+    passivityStart,
     Lcard,
     Rcard,
     match,
     stopwatch,
     cyranoMatch,
+    passivity,
     Lcolor,
     Rcolor,
     color,

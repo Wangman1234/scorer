@@ -50,6 +50,12 @@ export class Timer {
             this.match.status.stopwatch = 0;
           }
         }
+      } else if (
+        this.settings.settings.passivity != 0 &&
+        this.settings.settings.passivityStops &&
+        this.match.passivity <= 0
+      ) {
+        this.stopTimer("H");
       }
     }, 10);
   }

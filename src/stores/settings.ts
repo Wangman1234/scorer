@@ -55,6 +55,8 @@ export const useSettingsStore = defineStore(
       allowOver: false,
       doublesAddPoints: 0,
       maxDoubles: 0,
+      passivity: 60,
+      passivityStops: false,
     });
     const cyranoOptions = ref<{
       port: number;

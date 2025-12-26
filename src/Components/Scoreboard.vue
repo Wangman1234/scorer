@@ -32,13 +32,6 @@ defineProps<{
 const short = computed(() => {
   return match.stopwatch < 10;
 });
-// const button = computed(() => {
-//   let name = "Timer"
-//   if (matchOver.value) {
-//     name = "Next"
-//   }
-//   return name
-// })
 </script>
 
 <template>
@@ -113,9 +106,22 @@ const short = computed(() => {
       </div>
       <div id="center">
         <div id="nav">
-          <!--          <button :class="{ next:matchOver }" @click="click">{{button}}</button>-->
-          <NextFencer
+          <div
             v-if="
+              settings.settings.passivity != 0 &&
+              match.passivity <= 20 &&
+              match.passivity < match.stopwatch - 0.005
+            "
+            :style="{
+              color: match.passivity <= 10 ? 'red' : 'yellow',
+              borderColor: match.passivity <= 10 ? 'red' : 'yellow',
+            }"
+            style="font-size: 4rem; border-style: solid; border-width: 2px"
+          >
+            {{ match.passivity.toFixed(2) }}
+          </div>
+          <NextFencer
+            v-else-if="
               (match.match[0].score >= (3 / 5) * settings.settings.maxScore ||
                 match.match[1].score >= (3 / 5) * settings.settings.maxScore ||
                 (match.status.doubles >= settings.settings.maxDoubles / 2 &&
