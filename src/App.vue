@@ -66,7 +66,6 @@ watch(keymap, (value) => {
 const timer = new Timer();
 
 // Bout controls
-
 function changeScore(fencer: CorrectFencerStatus, value: number) {
   let val = fencer.score + value;
   if (match.status.priority === "N") {
@@ -489,25 +488,20 @@ onUnmounted(() => {
   </Dialog>
   <Dialog
     v-model:visible="inputTime"
-    :closable="false"
     :draggable="false"
-    :style="{ width: '30rem', height: '10rem' }"
-    autofocus
     dismissableMask
-    header="Time"
+    header="Time(s)"
     modal
   >
-    <InputNumber
+    <input
+      ref="stopwatchRef"
+      autofocus
       v-model="match.status.stopwatch"
+      class="number"
       :max="settings.settings.maxTime"
-      :maxFractionDigits="2"
-      :min="0"
-      :minFractionDigits="2"
-      :step="1"
-      autoFocus
-      showButtons
-      size="small"
-      suffix=" s"
+      min="0"
+      step="0.01"
+      type="number"
     />
   </Dialog>
   <Dialog
@@ -1175,6 +1169,7 @@ onUnmounted(() => {
   </Dialog>
 </template>
 
+<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 .init {
   z-index: 100000;
@@ -1186,6 +1181,24 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   background-color: black;
+}
+.number {
+  background: var(--p-form-field-background);
+  border-color: var(--p-form-field-border-color);
+  color: var(--p-surface-400);
+  padding: var(--p-form-field-lg-padding-y) var(--p-form-field-lg-padding-x);
+  border-radius: var(--p-form-field-border-radius);
+  font-size: 8rem;
+  border-style: solid;
+  border-width: 1px;
+}
+.number:hover {
+  background: var(--p-surface-800);
+  color: var(--p-surface-300);
+}
+.number:active {
+  background-color: var(--p-surface-700);
+  color: var(--p-surface-200);
 }
 .body {
   height: 48rem;
