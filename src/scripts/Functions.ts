@@ -37,7 +37,7 @@ export function toTime(seconds?: number | "") {
   const minsec = seconds - minutes * 60;
   let sec = minsec.toFixed(2);
   if (minsec < 10) {
-    sec = "0" + minsec;
+    sec = "0" + sec;
   }
   return minutes.toString() + ":" + sec;
 }

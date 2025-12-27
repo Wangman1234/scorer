@@ -145,6 +145,11 @@ export const useMatchStore = defineStore("match", () => {
     Rcard.value += 1;
     Rcard.value %= 3;
   }
+  function period() {
+    if (status.value.poultab[0] !== "P") {
+      status.value.round = (status.value.round % settings.settings.rounds) + 1;
+    }
+  }
   function $reset() {
     matches.value = {
       "": [defaultFencerStatus(), defaultFencerStatus()],
@@ -183,6 +188,7 @@ export const useMatchStore = defineStore("match", () => {
     color,
     LcardAdd,
     RcardAdd,
+    period,
     $reset,
   };
 });

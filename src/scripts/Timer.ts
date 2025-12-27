@@ -24,6 +24,7 @@ export class Timer {
 
   startTimer(set: "F" | "P") {
     this.match.status.state = set;
+    if (set === "P") this.match.status.stopwatch = this.settings.settings.rest;
     this.interval = setInterval(() => {
       if (typeof this.match.status.stopwatch === "undefined") {
         throw TypeError("time not set");
@@ -36,16 +37,15 @@ export class Timer {
         clearInterval(this.interval);
         if (
           set === "F" &&
-          this.match.status.round !== this.settings.settings.rounds
+          this.match.status.round !== this.settings.settings.rounds &&
+          this.match.status.priority === "N"
         ) {
-          this.match.status.state = "P";
-          this.match.status.stopwatch = 60;
           this.startTimer("P");
         } else {
           this.match.status.state = "H";
           if (set === "P") {
             this.match.status.stopwatch = this.settings.settings.maxTime;
-            this.match.status.round += 1;
+            this.match.period();
           } else {
             this.match.status.stopwatch = 0;
           }
@@ -68,9 +68,15 @@ export class Timer {
       throw TypeError("time not set");
     }
     this.match.status.stopwatch += time;
+    const maxTime =
+      this.match.status.state === "P"
+        ? this.settings.settings.rest
+        : this.match.status.priority !== "N"
+          ? this.settings.settings.priority
+          : this.settings.settings.maxTime;
     if (this.match.status.stopwatch < 0) {
-      this.match.status.stopwatch += this.settings.settings.maxTime;
+      this.match.status.stopwatch += maxTime;
     }
-    this.match.status.stopwatch %= this.settings.settings.maxTime;
+    this.match.status.stopwatch %= maxTime;
   }
 }

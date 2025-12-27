@@ -47,7 +47,8 @@ ref(false);
 const matchOver = computed(() => {
   return (
     ((match.stopwatch ?? 0) <= 0 &&
-      match.status.round == settings.settings.rounds) ||
+      (match.status.round === settings.settings.rounds ||
+        match.status.priority !== "N")) ||
     ((match.match[0].score >= settings.settings.maxScore ||
       match.match[1].score >= settings.settings.maxScore) &&
       match.status.priority === "N") ||
@@ -94,6 +95,18 @@ async function choosePriority(state: "N" | "L" | "R") {
     match.status.priority = state;
   }
 }
+function push() {
+  Array.prototype.push.call(match.matchData, {
+    stopwatch:
+      (match.status.priority === "N"
+        ? match.status.round.toString() + "-"
+        : "P-") + toTime(match.status.stopwatch),
+    leftFencerStatus: JSON.parse(JSON.stringify(match.match[0])),
+    rightFencerStatus: JSON.parse(JSON.stringify(match.match[1])),
+    doubles: match.status.doubles,
+  });
+  match.matchData = Array.from(match.matchData);
+}
 
 // Cyrano
 const cyrano = ref<Cyrano>();
@@ -118,6 +131,9 @@ function reset() {
   match.status.priority = "N";
   match.status.state = "";
   match.status.doubles = 0;
+  if (match.status.poultab[0] === "P")
+    match.status.round = settings.settings.rounds;
+  else match.status.round = 1;
   match.match[0].score = 0;
   match.match[0].status = "U";
   match.match[0].ycard = false;
@@ -171,6 +187,7 @@ function end() {
     if (settings.settings.allowTies) {
       match.match[0].status = "D";
       match.match[1].status = "D";
+      push();
       return;
     }
   }
@@ -193,7 +210,7 @@ function end() {
     } else {
       match.status.state = "H";
       priorityPicker.value = true;
-      match.status.stopwatch = 60;
+      match.status.stopwatch = settings.settings.priority;
       match.status.doubles = 0;
       return;
     }
@@ -218,19 +235,9 @@ function end() {
       }
     }
   }
+  push();
 }
 function click() {
-  if (match.status.state !== "F") {
-    Array.prototype.push.call(match.matchData, {
-      stopwatch:
-        toTime(match.status.stopwatch) +
-        (match.status.priority === "N" ? "" : "P"),
-      leftFencerStatus: JSON.parse(JSON.stringify(match.match[0])),
-      rightFencerStatus: JSON.parse(JSON.stringify(match.match[1])),
-      doubles: match.status.doubles,
-    });
-    match.matchData = Array.from(match.matchData);
-  }
   if (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E") {
     if (match.status.state === "F") {
       timer.stopTimer("H");
@@ -246,6 +253,7 @@ function click() {
       ) {
         end();
       } else {
+        push();
         timer.startTimer("F");
       }
     }
@@ -354,6 +362,16 @@ const functions: map<() => void> = {
   AddSec: () => timer.addTime(1),
   MinusMin: () => timer.addTime(-60),
   MinusSec: () => timer.addTime(-1),
+  Rest: () => {
+    const P = match.status.state === "P";
+    timer.stopTimer("H");
+    if (P) {
+      match.status.stopwatch = settings.settings.maxTime;
+      match.period();
+    } else {
+      timer.startTimer("P");
+    }
+  },
   ResetTime: () => (match.status.stopwatch = settings.settings.maxTime),
   ResetBout: () => reset(),
   PrioritySelector: () => (priorityPicker.value = true),
@@ -361,11 +379,7 @@ const functions: map<() => void> = {
   PriorityRight: () => choosePriority("R"),
   ResetPriority: () => (match.status.priority = "N"),
   EndMatch: () => end(),
-  Period: () => {
-    if (match.status.poultab[0] !== "P") {
-      match.status.round = (match.status.round % settings.settings.rounds) + 1;
-    }
-  },
+  Period: () => match.period(),
   Flip: () => {
     let f1 = match.match[0];
     match.match[0] = match.match[1];
@@ -644,10 +658,32 @@ onUnmounted(() => {
                 />
               </li>
               <li>
+                <div>Rest timer</div>
+                <InputNumber
+                  v-model="settings.settings.rest"
+                  :min="0"
+                  :step="1"
+                  showButtons
+                  size="small"
+                  suffix=" s"
+                />
+              </li>
+              <li>
                 <div>Allow ties</div>
                 <Checkbox
                   v-model="settings.settings.allowTies"
                   binary
+                />
+              </li>
+              <li>
+                <div>Priority timer</div>
+                <InputNumber
+                  v-model="settings.settings.priority"
+                  :min="0"
+                  :step="1"
+                  showButtons
+                  size="small"
+                  suffix=" s"
                 />
               </li>
               <li>
@@ -684,6 +720,7 @@ onUnmounted(() => {
                   :step="1"
                   showButtons
                   size="small"
+                  suffix=" s"
                 />
               </li>
               <li>
@@ -1055,7 +1092,7 @@ onUnmounted(() => {
                 v-for="index in Object.keys(functions)"
                 :key="index"
               >
-                <div>{{ names[index] }}</div>
+                <div>{{ names[index] ?? index }}</div>
                 <Button
                   :class="{ selected: change === index }"
                   class="bind keys"
