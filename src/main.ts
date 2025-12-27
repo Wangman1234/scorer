@@ -22,15 +22,37 @@ import PrimeVue from "primevue/config";
 import Aura from "@primeuix/themes/aura";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
+import { definePreset } from "@primeuix/themes";
 
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 const app = createApp(App);
 
+const MyPreset = definePreset(Aura, {
+  semantic: {
+    primary: {
+      50: "{teal.50}",
+      100: "{teal.100}",
+      200: "{teal.200}",
+      300: "{teal.300}",
+      400: "{teal.400}",
+      500: "{teal.500}",
+      600: "{teal.600}",
+      700: "{teal.700}",
+      800: "{teal.800}",
+      900: "{teal.900}",
+      950: "{teal.950}",
+    },
+  },
+});
+
 app.use(pinia);
 app.use(PrimeVue, {
   theme: {
-    preset: Aura,
+    preset: MyPreset,
+    options: {
+      darkModeSelector: ".darkmode",
+    },
   },
 });
 app.use(Vue3Marquee);
