@@ -18,6 +18,7 @@
 import { type CorrectFencerStatus, Fencer } from "../scripts/Types.ts";
 import { computed } from "vue";
 import { useSettingsStore } from "@/stores/settings.ts";
+import { $dt } from "@primeuix/themes";
 
 const settings = useSettingsStore();
 
@@ -177,11 +178,7 @@ function gs(matchId: number, id: string) {
             a > b ? 1 : -1,
           )"
         >
-          <th scope="row">{{ index }}</th>
-          <th
-            class="right"
-            scope="row"
-          >
+          <th scope="row">
             {{
               fencerMatchList.fencers[index]?.name.toString(
                 settings.config.lastNameFirst,
@@ -191,6 +188,12 @@ function gs(matchId: number, id: string) {
                 "",
               )
             }}
+          </th>
+          <th
+            class="right"
+            scope="row"
+          >
+            {{ index }}
           </th>
           <td
             v-for="index1 in Object.keys(fencerMatchList.mats).sort((a, b) =>
@@ -205,7 +208,23 @@ function gs(matchId: number, id: string) {
                   fencerMatchList.mats[index1] ?? [0],
                 ).length > 1
                   ? 'var(--p-surface-600)'
-                  : 'transparent',
+                  : (getScore(
+                        getMatch(
+                          fencerMatchList.mats[index] ?? [0],
+                          fencerMatchList.mats[index1] ?? [0],
+                        ),
+                        index,
+                      ) ?? '')[0] === 'V'
+                    ? $dt('green.800').value
+                    : (getScore(
+                          getMatch(
+                            fencerMatchList.mats[index] ?? [0],
+                            fencerMatchList.mats[index1] ?? [0],
+                          ),
+                          index,
+                        ) ?? '')[0] === 'D'
+                      ? $dt('red.800').value
+                      : 'transparent',
             }"
           >
             {{
@@ -265,7 +284,6 @@ th[scope="row"] {
   width: 1.5rem;
 }
 .right {
-  text-align: left;
   border-right: 2px solid var(--p-surface-400);
 }
 .left {
