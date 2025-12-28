@@ -330,6 +330,7 @@ function keyHandler(e: KeyboardEvent) {
       cyrano.value.sendingData ||
       match.status.state !== "E"
     ) {
+      e.preventDefault();
       if (key === " ") key = keymap.value.Timer;
       const index =
         Object.keys(keymap.value).find(
