@@ -21,10 +21,20 @@ export class Timer {
   settings = useSettingsStore();
 
   interval: number = 0;
+  breakTime: number = 0;
 
-  startTimer(set: "F" | "P") {
+  startTimer(set: "F" | "P", brk = false) {
     this.match.status.state = set;
-    if (set === "P") this.match.status.stopwatch = this.settings.settings.rest;
+    if (set === "P") {
+      if (brk) {
+        this.breakTime =
+          this.match.status.stopwatch ?? this.settings.settings.maxTime;
+        this.match.status.stopwatch = this.settings.settings.break;
+      } else {
+        this.breakTime = this.settings.settings.maxTime;
+        this.match.status.stopwatch = this.settings.settings.rest;
+      }
+    }
     this.interval = setInterval(() => {
       if (typeof this.match.status.stopwatch === "undefined") {
         throw TypeError("time not set");
@@ -44,8 +54,11 @@ export class Timer {
         } else {
           this.match.status.state = "H";
           if (set === "P") {
-            this.match.status.stopwatch = this.settings.settings.maxTime;
-            this.match.period();
+            if (brk) this.match.status.stopwatch = this.breakTime;
+            else {
+              this.match.status.stopwatch = this.settings.settings.maxTime;
+              this.match.period();
+            }
           } else {
             this.match.status.stopwatch = 0;
           }

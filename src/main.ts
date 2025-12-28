@@ -23,6 +23,7 @@ import Aura from "@primeuix/themes/aura";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { definePreset } from "@primeuix/themes";
+import "primeicons/primeicons.css";
 
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);

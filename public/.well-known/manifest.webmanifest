@@ -2,7 +2,7 @@
   "id": "/",
   "short_name": "Scorer",
   "name": "Scorer IWA",
-  "version": "0.2.3",
+  "version": "0.2.6",
   "icons": [
     {
       "src": "/images/TorontoHistoricalCombatants.png",

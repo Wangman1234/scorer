@@ -17,6 +17,9 @@
 <script lang="ts" setup>
 import { type CorrectFencerStatus, Fencer } from "../scripts/Types.ts";
 import { computed } from "vue";
+import { useSettingsStore } from "@/stores/settings.ts";
+
+const settings = useSettingsStore();
 
 const props = defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
@@ -142,8 +145,11 @@ function gs(matchId: number, id: string) {
     <table>
       <thead>
         <tr>
-          <th></th>
-          <th></th>
+          <th scope="row"></th>
+          <th
+            class="right"
+            scope="row"
+          ></th>
           <th
             v-for="index1 in Object.keys(fencerMatchList.mats).sort((a, b) =>
               a > b ? 1 : -1,
@@ -153,7 +159,12 @@ function gs(matchId: number, id: string) {
           >
             {{ index1 }}
           </th>
-          <th scope="col">V</th>
+          <th
+            class="left"
+            scope="col"
+          >
+            V
+          </th>
           <th scope="col">HS</th>
           <th scope="col">HR</th>
           <th scope="col">Ind</th>
@@ -167,8 +178,19 @@ function gs(matchId: number, id: string) {
           )"
         >
           <th scope="row">{{ index }}</th>
-          <th scope="row">
-            {{ fencerMatchList.fencers[index]?.name.toString() }}
+          <th
+            class="right"
+            scope="row"
+          >
+            {{
+              fencerMatchList.fencers[index]?.name.toString(
+                settings.config.lastNameFirst,
+                false,
+                false,
+                settings.config.separator,
+                "",
+              )
+            }}
           </th>
           <td
             v-for="index1 in Object.keys(fencerMatchList.mats).sort((a, b) =>
@@ -176,6 +198,15 @@ function gs(matchId: number, id: string) {
             )"
             :id="index + index1"
             :key="index1"
+            :style="{
+              backgroundColor:
+                getMatch(
+                  fencerMatchList.mats[index] ?? [0],
+                  fencerMatchList.mats[index1] ?? [0],
+                ).length > 1
+                  ? 'var(--p-surface-600)'
+                  : 'transparent',
+            }"
           >
             {{
               getScore(
@@ -187,7 +218,7 @@ function gs(matchId: number, id: string) {
               )
             }}
           </td>
-          <td>{{ fencerMatchList.inds[index]?.V }}</td>
+          <td class="left">{{ fencerMatchList.inds[index]?.V }}</td>
           <td>{{ fencerMatchList.inds[index]?.HS }}</td>
           <td>{{ fencerMatchList.inds[index]?.HR }}</td>
           <td>
@@ -203,17 +234,41 @@ function gs(matchId: number, id: string) {
   </div>
 </template>
 
+<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
-table {
-  border-collapse: collapse;
+div {
   width: 100%;
-  padding: 1rem;
+  overflow-x: auto;
+}
+table {
+  overflow-x: auto;
+  white-space: nowrap;
+  border-collapse: collapse;
+}
+tr {
+  height: 1.5rem;
+  border-bottom: 1px solid var(--p-surface-600);
+  border-top: 1px solid var(--p-surface-600);
 }
 th,
 td {
-  padding: 0;
+  background-clip: border-box;
+  padding: 0.25rem;
+  border-left: 1px solid var(--p-surface-600);
+  border-right: 1px solid var(--p-surface-600);
 }
-tbody th {
+td,
+th[scope="col"] {
+  width: 2rem;
+}
+th[scope="row"] {
+  width: 1.5rem;
+}
+.right {
   text-align: left;
+  border-right: 2px solid var(--p-surface-400);
+}
+.left {
+  border-left: 2px solid var(--p-surface-400);
 }
 </style>

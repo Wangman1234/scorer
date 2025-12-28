@@ -15,12 +15,11 @@
   -->
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import Init from "./Components/Init.vue";
 import { type CorrectFencerStatus, type map } from "./scripts/Types.ts";
-import { keys, omit } from "underscore";
+import { omit } from "underscore";
 import Poule from "./Components/Poule.vue";
-import { defaultKeymaps } from "./scripts/keyMaps.ts";
 import { useMatchStore } from "./stores/match.ts";
 import { useSettingsStore } from "./stores/settings.ts";
 import Scoreboard from "@/Components/Scoreboard.vue";
@@ -40,7 +39,6 @@ const priorityPicker = ref(false);
 const choices = ref(false);
 const inputTime = ref(false);
 const change = ref<false | keyof map<string>>(false);
-const keymap = ref("remoteKeymap1");
 ref(false);
 
 // Reactive data
@@ -58,9 +56,6 @@ const matchOver = computed(() => {
 });
 const winner = computed(() => {
   return match.match[0].status === "D" || match.match[1].status === "D";
-});
-watch(keymap, (value) => {
-  settings.config.keymap = Object.assign({}, defaultKeymaps[value]);
 });
 
 // Timer
@@ -261,31 +256,55 @@ function click() {
 }
 
 // Key handler
+const keymap = computed(() => {
+  return (
+    settings.keymaps[settings.config.keymap] ?? {
+      Menu: "",
+      AddMin: "",
+      AddSec: "",
+      MinusMin: "",
+      MinusSec: "",
+      LeftAdd1: "",
+      RightAdd1: "",
+      LeftMinus1: "",
+      RightMinus1: "",
+      LeftCard: "",
+      RightCard: "",
+      Timer: "",
+      ResetTime: "",
+      ResetBout: "",
+      Period: "",
+      Flip: "",
+    }
+  );
+});
 const repeat = ref(false);
 function keyHandler(e: KeyboardEvent) {
   let key = (repeat.value ? "hold" : "") + e.key;
   console.log(key);
   if (started.value) {
     if (change.value != false) {
-      settings.config.keymap[change.value] = key;
+      e.preventDefault();
+      if (key === " ") delete keymap.value[change.value];
+      else keymap.value[change.value] = key;
       change.value = false;
-    } else if (key === settings.config.keymap.Menu) {
+    } else if (key === keymap.value.Menu || key === "Escape") {
       nav.menu = !nav.menu;
     } else if (priorityPicker.value) {
       switch (key) {
-        case settings.config.keymap.LeftAdd1:
+        case keymap.value.LeftAdd1:
           choosePriority("L");
           break;
-        case settings.config.keymap.LeftCard:
+        case keymap.value.LeftCard:
           choosePriority("L");
           break;
-        case settings.config.keymap.RightAdd1:
+        case keymap.value.RightAdd1:
           choosePriority("R");
           break;
-        case settings.config.keymap.RightCard:
+        case keymap.value.RightCard:
           choosePriority("R");
           break;
-        case settings.config.keymap.Timer:
+        case keymap.value.Timer:
           choosePriority("N");
           break;
       }
@@ -294,7 +313,7 @@ function keyHandler(e: KeyboardEvent) {
         (nav.page === "bout" ||
           nav.page === "cyrano" ||
           nav.page === "tournament") &&
-        key === settings.config.keymap.Timer &&
+        key === keymap.value.Timer &&
         (!cyrano.value || cyrano.value.sendingData)
       ) {
         nav.menu = false;
@@ -302,15 +321,19 @@ function keyHandler(e: KeyboardEvent) {
     } else if (choices.value) {
       // TODO
     } else if (inputTime.value) {
-      if (key === settings.config.keymap.Timer) inputTime.value = false;
+      if (key === keymap.value.Timer) {
+        inputTime.value = false;
+        match.passivityStart = match.status.stopwatch ?? 0;
+      }
     } else if (
       !cyrano.value ||
       cyrano.value.sendingData ||
       match.status.state !== "E"
     ) {
+      if (key === " ") key = keymap.value.Timer;
       const index =
-        Object.keys(settings.config.keymap).find(
-          (index) => settings.config.keymap[index] === key,
+        Object.keys(keymap.value).find(
+          (index) => keymap.value[index] === key,
         ) ?? "";
       const func = functions[index] ?? function () {};
       func();
@@ -320,6 +343,102 @@ function keyHandler(e: KeyboardEvent) {
     }
   }
   repeat.value = false;
+}
+
+const newKeymap = ref("custom");
+function newKeymapSubmit() {
+  settings.keymaps[newKeymap.value] = Object.assign({}, keymap.value);
+  settings.config.keymap = newKeymap.value;
+  newKeymap.value = "custom";
+}
+function removeKeymap() {
+  const toRemove = settings.config.keymap;
+  settings.config.keymap = "default remote";
+  delete settings.keymaps[toRemove];
+}
+function resetKeymaps() {
+  settings.config.keymap = "default remote";
+  settings.keymaps = {
+    "default remote": {
+      Menu: "Escape",
+      AddMin: "ArrowUp",
+      AddSec: "w",
+      MinusMin: "ArrowDown",
+      MinusSec: "s",
+      LeftAdd1: "AudioVolumeUp",
+      RightAdd1: "PageUp",
+      LeftMinus1: "AudioVolumeDown",
+      RightMinus1: "PageDown",
+      LeftCard: "ArrowLeft",
+      RightCard: "ArrowRight",
+      Timer: "Enter",
+      ResetTime: "t",
+      ResetBout: "g",
+      Period: "p",
+      Flip: "f",
+    },
+    "default keyboard": {
+      Menu: "Escape",
+      AddMin: "ArrowUp",
+      AddSec: "2",
+      MinusMin: "ArrowDown",
+      MinusSec: "1",
+      LeftAdd1: "ArrowLeft",
+      RightAdd1: "ArrowRight",
+      LeftMinus1: ",",
+      RightMinus1: ".",
+      LeftCard: "j",
+      RightCard: "k",
+      Timer: "Enter",
+      ResetTime: "t",
+      ResetBout: "g",
+      Period: "p",
+      Flip: "f",
+    },
+  };
+}
+function isDefault() {
+  return (
+    JSON.stringify(settings.keymaps) ===
+    JSON.stringify({
+      "default remote": {
+        Menu: "Escape",
+        AddMin: "ArrowUp",
+        AddSec: "w",
+        MinusMin: "ArrowDown",
+        MinusSec: "s",
+        LeftAdd1: "AudioVolumeUp",
+        RightAdd1: "PageUp",
+        LeftMinus1: "AudioVolumeDown",
+        RightMinus1: "PageDown",
+        LeftCard: "ArrowLeft",
+        RightCard: "ArrowRight",
+        Timer: "Enter",
+        ResetTime: "t",
+        ResetBout: "g",
+        Period: "p",
+        Flip: "f",
+      },
+      "default keyboard": {
+        Menu: "Escape",
+        AddMin: "ArrowUp",
+        AddSec: "2",
+        MinusMin: "ArrowDown",
+        MinusSec: "1",
+        LeftAdd1: "ArrowLeft",
+        RightAdd1: "ArrowRight",
+        LeftMinus1: ",",
+        RightMinus1: ".",
+        LeftCard: "j",
+        RightCard: "k",
+        Timer: "Enter",
+        ResetTime: "t",
+        ResetBout: "g",
+        Period: "p",
+        Flip: "f",
+      },
+    })
+  );
 }
 
 const functions: map<() => void> = {
@@ -372,6 +491,15 @@ const functions: map<() => void> = {
       timer.startTimer("P");
     }
   },
+  Break: () => {
+    const P = match.status.state === "P";
+    timer.stopTimer("H");
+    if (P) {
+      match.status.stopwatch = timer.breakTime;
+    } else {
+      timer.startTimer("P", true);
+    }
+  },
   ResetTime: () => (match.status.stopwatch = settings.settings.maxTime),
   ResetBout: () => reset(),
   PrioritySelector: () => (priorityPicker.value = true),
@@ -406,7 +534,9 @@ const names: map<string> = {
   RightCard: "Card FotR",
   Timer: "Timer/Next",
   ResetTime: "Reset time",
-  SetTime: "Manually set time(WIP)",
+  Rest: "Rest and next round",
+  Break: "Break and rest",
+  SetTime: "Manually set time",
   AddMin: "Add 1 minute to timer",
   AddSec: "Add 1 second to timer",
   MinusMin: "Subtract 1 minute from timer",
@@ -425,7 +555,12 @@ onMounted(() => {
   match.$reset();
   window.addEventListener("keydown", (e) => {
     repeat.value = e.repeat;
-    if (!(nav.menu || choices.value || inputTime.value) || e.key === "Enter") {
+    if (
+      !(nav.menu || choices.value || inputTime.value) ||
+      e.key === "Enter" ||
+      e.key === "ContextMenu" ||
+      change.value != false
+    ) {
       e.preventDefault();
     }
   });
@@ -437,7 +572,7 @@ onMounted(() => {
   });
 });
 onUnmounted(() => {
-  document.addEventListener("fullscreenchange", () => {
+  document.removeEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) {
       started.value = false;
     }
@@ -445,7 +580,12 @@ onUnmounted(() => {
   window.removeEventListener("keyup", keyHandler);
   window.removeEventListener("keydown", (e) => {
     repeat.value = e.repeat;
-    if (!(nav.menu || choices.value || inputTime.value) || e.key === "Enter") {
+    if (
+      !(nav.menu || choices.value || inputTime.value) ||
+      e.key === "Enter" ||
+      e.key === "ContextMenu" ||
+      change.value != false
+    ) {
       e.preventDefault();
     }
   });
@@ -495,7 +635,7 @@ onUnmounted(() => {
           "
         >
           <span>{{ names[index] }}</span>
-          <span>{{ settings.config.keymap[index] }}</span>
+          <span>{{ keymap[index] }}</span>
         </Button>
       </li>
     </menu>
@@ -613,7 +753,7 @@ onUnmounted(() => {
                 />
               </li>
               <li>
-                <div>Max time(in seconds), requires restart</div>
+                <div>Max time(in seconds), requires reset</div>
                 <InputNumber
                   v-model="settings.settings.maxTime"
                   :min="0"
@@ -735,7 +875,11 @@ onUnmounted(() => {
             <BoutProgress />
           </div>
           <div class="button">
-            <Button @click="reset">Reset Bout</Button>
+            <Button
+              autofocus
+              @click="reset"
+              >Reset Bout</Button
+            >
           </div>
         </TabPanel>
         <TabPanel
@@ -871,7 +1015,7 @@ onUnmounted(() => {
                         settings.config.lastNameFirst,
                         false,
                         false,
-                        " ",
+                        settings.config.separator,
                         "",
                       )
                     }}
@@ -888,7 +1032,7 @@ onUnmounted(() => {
                         settings.config.lastNameFirst,
                         false,
                         false,
-                        " ",
+                        settings.config.separator,
                         "",
                       )
                     }}
@@ -1082,11 +1226,61 @@ onUnmounted(() => {
             <menu>
               <li>
                 <div>Keymap</div>
-                <Select
-                  v-model="keymap"
-                  :options="keys(defaultKeymaps)"
-                  size="small"
-                />
+                <div>
+                  <InputGroup>
+                    <Select
+                      v-model="settings.config.keymap"
+                      :options="Object.keys(settings.keymaps)"
+                      size="small"
+                    />
+                    <Button
+                      :disabled="
+                        settings.config.keymap.split(' ')[0] === 'default'
+                      "
+                      aria-label="Delete"
+                      icon="pi pi-times"
+                      severity="danger"
+                      size="small"
+                      @click="removeKeymap()"
+                    />
+                    <Button
+                      :disabled="isDefault()"
+                      aria-label="Reset"
+                      icon="pi pi-refresh"
+                      severity="danger"
+                      size="small"
+                      @click="resetKeymaps()"
+                    />
+                  </InputGroup>
+                </div>
+              </li>
+              <li>
+                <div>New Keymap</div>
+                <div>
+                  <InputGroup>
+                    <InputText
+                      v-model="newKeymap"
+                      :invalid="
+                        newKeymap in settings.keymaps ||
+                        newKeymap.split(' ')[0] === 'default'
+                      "
+                      placeholder="New keymap"
+                      size="small"
+                      type="text"
+                    />
+                    <Button
+                      :disabled="
+                        newKeymap in settings.keymaps ||
+                        newKeymap.split(' ')[0] === 'default'
+                      "
+                      aria-label="Submit"
+                      icon="pi pi-check"
+                      severity="primary"
+                      size="small"
+                      @click="newKeymapSubmit()"
+                    />
+                  </InputGroup>
+                </div>
               </li>
               <li
                 v-for="index in Object.keys(functions)"
@@ -1097,9 +1291,17 @@ onUnmounted(() => {
                   :class="{ selected: change === index }"
                   class="bind keys"
                   size="small"
+                  :disabled="settings.config.keymap.split(' ')[0] === 'default'"
+                  :severity="
+                    Object.values(keymap).filter(
+                      (item) => item === keymap[index],
+                    ).length > 1
+                      ? 'danger'
+                      : 'primary'
+                  "
                   @click="change = index"
                 >
-                  {{ settings.config.keymap[index] }}
+                  {{ keymap[index] }}
                 </Button>
               </li>
             </menu>
@@ -1244,7 +1446,7 @@ onUnmounted(() => {
   flex-direction: column;
 }
 .header {
-  border-color: grey;
+  border-color: var(--p-surface-400);
   border-style: solid;
   border-width: 0 0 2px 0;
   padding: 0.5rem;
@@ -1327,6 +1529,7 @@ li {
   display: flex;
   justify-content: space-between;
   padding: 0.1rem 1rem;
+  border-bottom: 1px solid var(--p-surface-600);
 }
 .priority {
   z-index: 1000;

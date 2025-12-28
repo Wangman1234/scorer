@@ -37,49 +37,53 @@ const short = computed(() => {
 <template>
   <div class="container">
     <div id="fencer-display">
-      <div
-        :style="{
-          backgroundColor: '#' + settings.config.leftColor,
-          color: Color('#' + settings.config.leftColor).isLight()
-            ? 'black'
-            : 'white',
-        }"
-        class="name fencer-1"
-      >
-        <h1>
-          {{
-            match.match[0].fencer.name.toString(
-              settings.config.lastNameFirst,
-              settings.config.shortenFirst,
-              settings.config.shortenSecond,
-              settings.config.separator,
-              settings.config.ending,
-            )
-          }}
-        </h1>
-        <h2>{{ match.match[0].fencer.club }}</h2>
+      <div class="display-box">
+        <div
+          :style="{
+            backgroundColor: '#' + settings.config.leftColor,
+            color: Color('#' + settings.config.leftColor).isLight()
+              ? 'black'
+              : 'white',
+          }"
+          class="name fencer-1"
+        >
+          <h1>
+            {{
+              match.match[0].fencer.name.toString(
+                settings.config.lastNameFirst,
+                settings.config.shortenFirst,
+                settings.config.shortenSecond,
+                settings.config.separator,
+                settings.config.ending,
+              )
+            }}
+          </h1>
+          <h2>{{ match.match[0].fencer.club }}</h2>
+        </div>
       </div>
-      <div
-        :style="{
-          backgroundColor: '#' + settings.config.rightColor,
-          color: Color('#' + settings.config.rightColor).isLight()
-            ? 'black'
-            : 'white',
-        }"
-        class="name fencer-2"
-      >
-        <h1>
-          {{
-            match.match[1].fencer.name.toString(
-              settings.config.lastNameFirst,
-              settings.config.shortenFirst,
-              settings.config.shortenSecond,
-              settings.config.separator,
-              settings.config.ending,
-            )
-          }}
-        </h1>
-        <h2>{{ match.match[1].fencer.club }}</h2>
+      <div class="display-box">
+        <div
+          :style="{
+            backgroundColor: '#' + settings.config.rightColor,
+            color: Color('#' + settings.config.rightColor).isLight()
+              ? 'black'
+              : 'white',
+          }"
+          class="name fencer-2"
+        >
+          <h1>
+            {{
+              match.match[1].fencer.name.toString(
+                settings.config.lastNameFirst,
+                settings.config.shortenFirst,
+                settings.config.shortenSecond,
+                settings.config.separator,
+                settings.config.ending,
+              )
+            }}
+          </h1>
+          <h2>{{ match.match[1].fencer.club }}</h2>
+        </div>
       </div>
     </div>
     <div id="scoring-display">
@@ -241,9 +245,20 @@ const short = computed(() => {
 .fencer-2 {
   float: right;
 }
-#fencer-display div {
-  width: 50%;
+#fencer-display {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  grid-template-rows: 100%;
+}
+.display-box {
+  width: 100%;
   padding: 1%;
+}
+.display-box div {
+  width: 100%;
+  height: 100%;
+  border: solid 5px gray;
+  border-radius: 2rem;
 }
 #fencer-display h1 {
   font-size: 5rem;

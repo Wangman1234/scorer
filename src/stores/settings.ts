@@ -16,13 +16,50 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { map } from "../scripts/Types.ts";
-import { defaultKeymaps } from "../scripts/keyMaps.ts";
 
 export const useSettingsStore = defineStore(
   "settings",
   () => {
+    const keymaps = ref<Record<string, map<string>>>({
+      "default remote": {
+        Menu: "Escape",
+        AddMin: "ArrowUp",
+        AddSec: "w",
+        MinusMin: "ArrowDown",
+        MinusSec: "s",
+        LeftAdd1: "AudioVolumeUp",
+        RightAdd1: "PageUp",
+        LeftMinus1: "AudioVolumeDown",
+        RightMinus1: "PageDown",
+        LeftCard: "ArrowLeft",
+        RightCard: "ArrowRight",
+        Timer: "Enter",
+        ResetTime: "t",
+        ResetBout: "g",
+        Period: "p",
+        Flip: "f",
+      },
+      "default keyboard": {
+        Menu: "Escape",
+        AddMin: "ArrowUp",
+        AddSec: "2",
+        MinusMin: "ArrowDown",
+        MinusSec: "1",
+        LeftAdd1: "ArrowLeft",
+        RightAdd1: "ArrowRight",
+        LeftMinus1: ",",
+        RightMinus1: ".",
+        LeftCard: "j",
+        RightCard: "k",
+        Timer: "Enter",
+        ResetTime: "t",
+        ResetBout: "g",
+        Period: "p",
+        Flip: "f",
+      },
+    });
     const config = ref<{
-      keymap: map<string>;
+      keymap: string;
       leftColor: string;
       rightColor: string;
       showSubSec: boolean;
@@ -33,7 +70,7 @@ export const useSettingsStore = defineStore(
       ending: string;
       showDoubles: boolean;
     }>({
-      keymap: Object.assign({}, defaultKeymaps.remoteKeymap1),
+      keymap: "default remote",
       leftColor: "ff0000",
       rightColor: "0000ff",
       showSubSec: false,
@@ -52,13 +89,14 @@ export const useSettingsStore = defineStore(
       maxScore: 5,
       rounds: 1,
       rest: 60,
+      break: 60,
       allowTies: false,
       priority: 60,
       allowOver: false,
       doublesAddPoints: 0,
       maxDoubles: 0,
       passivity: 60,
-      passivityStops: false,
+      passivityStops: true,
     });
     const cyranoOptions = ref<{
       port: number;
@@ -78,7 +116,7 @@ export const useSettingsStore = defineStore(
       interval: 10,
     });
 
-    return { config, settings, cyranoOptions };
+    return { keymaps, config, settings, cyranoOptions };
   },
   { persist: true },
 );
