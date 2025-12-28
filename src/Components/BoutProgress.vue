@@ -18,8 +18,10 @@
 import { useMatchStore } from "@/stores/match.ts";
 import { last } from "@volar/typescript/lib/typescript/core";
 import { toTime } from "@/scripts/Functions.ts";
+import { useSettingsStore } from "@/stores/settings.ts";
 
 const match = useMatchStore();
+const settings = useSettingsStore();
 </script>
 
 <template>
@@ -76,7 +78,15 @@ const match = useMatchStore();
             class="ldiff"
             scope="row"
           >
-            {{ match.match[0].fencer.name.toString() }}
+            {{
+              match.match[0].fencer.name.toString(
+                settings.config.lastNameFirst,
+                false,
+                false,
+                settings.config.separator,
+                "",
+              )
+            }}
           </th>
           <td
             v-for="(item, index) in match.matchData"
@@ -158,7 +168,15 @@ const match = useMatchStore();
             class="ldiff"
             scope="row"
           >
-            {{ match.match[1].fencer.name }}
+            {{
+              match.match[1].fencer.name.toString(
+                settings.config.lastNameFirst,
+                false,
+                false,
+                settings.config.separator,
+                "",
+              )
+            }}
           </th>
           <td
             v-for="(item, index) in match.matchData"
@@ -333,6 +351,7 @@ const match = useMatchStore();
   </div>
 </template>
 
+<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 div {
   width: 100%;
@@ -350,18 +369,18 @@ td,
 th {
   background-clip: border-box;
   padding: 0.25rem 1rem;
-  border-left: 1px solid gray;
-  border-right: 1px solid gray;
+  border-left: 1px solid var(--p-surface-600);
+  border-right: 1px solid var(--p-surface-600);
 }
 tr {
   height: 1.5rem;
-  border-bottom: 1px solid gray;
-  border-top: 1px solid gray;
+  border-bottom: 1px solid var(--p-surface-600);
+  border-top: 1px solid var(--p-surface-600);
 }
 .diff {
   display: none;
 }
 .ldiff {
-  border-right: 2px solid white;
+  border-right: 2px solid var(--p-surface-400);
 }
 </style>
