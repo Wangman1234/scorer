@@ -16,12 +16,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import Init from "./Components/Init.vue";
-import { type CorrectFencerStatus, type map } from "./scripts/Types.ts";
+import Init from "@/Components/Init.vue";
+import { type map } from "@/scripts/Types.ts";
 import { omit } from "underscore";
-import Poule from "./Components/Poule.vue";
-import { useMatchStore } from "./stores/match.ts";
-import { useSettingsStore } from "./stores/settings.ts";
+import Poule from "@/Components/Poule.vue";
+import { useMatchStore } from "@/stores/match.ts";
+import { useSettingsStore } from "@/stores/settings.ts";
 import Scoreboard from "@/Components/Scoreboard.vue";
 import { Timer } from "@/scripts/Timer.ts";
 import { Cyrano } from "@/scripts/Cyrano.ts";
@@ -62,18 +62,29 @@ const winner = computed(() => {
 const timer = new Timer();
 
 // Bout controls
-function changeScore(fencer: CorrectFencerStatus, value: number) {
-  let val = fencer.score + value;
+let interval: [number, number] = [0, 0];
+let changeTimes: [number, number] = [0, 0];
+const black = ref<[boolean, boolean]>([false, false]);
+function changeScore(fencer: 0 | 1, value: number) {
+  let val = match.match[fencer].score + value;
   if (match.status.priority === "N") {
     if (
-      !(value > 0 && fencer.score >= settings.settings.maxScore) &&
-      val >= 0
-    ) {
-      fencer.score = val;
+      (value > 0 && match.match[fencer].score >= settings.settings.maxScore) ||
+      val < 0
+    )
+      return;
+  } else if (val < 0) return;
+  match.match[fencer].score = val;
+  clearInterval(interval[fencer]);
+  changeTimes[fencer] = 0;
+  interval[fencer] = setInterval(() => {
+    black.value[fencer] = !black.value[fencer];
+    changeTimes[fencer]++;
+    if (changeTimes[fencer] >= 10) {
+      clearInterval(interval[fencer]);
+      black.value[fencer] = false;
     }
-  } else {
-    if (val >= 0) fencer.score = val;
-  }
+  }, 200);
 }
 async function choosePriority(state: "N" | "L" | "R") {
   priorityPicker.value = false;
@@ -115,7 +126,7 @@ async function stopCyrano() {
   await new Promise((res) => cyrano.value?.stopCyrano(res));
   delete cyrano.value;
   cyrano.value = undefined;
-  reset();
+  if (!settings.cyranoOptions.replayMode) reset();
   nav.page = "bout";
   nav.menu = true;
 }
@@ -148,8 +159,6 @@ function reset() {
   match.matchData = [];
   nav.menu = false;
   match.passivityStart = match.status.stopwatch ?? 0;
-  match.Lcard = 0;
-  match.Rcard = 0;
 }
 
 async function update() {
@@ -165,7 +174,7 @@ async function update() {
 
 async function finishMatch() {
   match.status.state = "E";
-  if (cyrano.value) {
+  if (cyrano.value && !settings.cyranoOptions.replayMode) {
     await update();
     match.matchData = [];
   } else {
@@ -447,33 +456,65 @@ const functions: map<() => void> = {
   Choices: () => {
     choices.value = true;
   },
-  LeftAdd1: () => changeScore(match.match[0], 1),
-  RightAdd1: () => changeScore(match.match[1], 1),
-  LeftAdd2: () => changeScore(match.match[0], 2),
-  RightAdd2: () => changeScore(match.match[1], 2),
-  LeftAdd3: () => changeScore(match.match[0], 3),
-  RightAdd3: () => changeScore(match.match[1], 3),
-  LeftMinus1: () => changeScore(match.match[0], -1),
-  RightMinus1: () => changeScore(match.match[1], -1),
+  LeftAdd1: () => changeScore(0, 1),
+  RightAdd1: () => changeScore(1, 1),
+  LeftAdd2: () => changeScore(0, 2),
+  RightAdd2: () => changeScore(1, 2),
+  LeftAdd3: () => changeScore(0, 3),
+  RightAdd3: () => changeScore(1, 3),
+  LeftMinus1: () => changeScore(0, -1),
+  RightMinus1: () => changeScore(1, -1),
   Double: () => {
     if (
       match.status.doubles < settings.settings.maxDoubles ||
       settings.settings.maxDoubles === 0
     ) {
       match.status.doubles++;
-      changeScore(match.match[0], settings.settings.doublesAddPoints);
-      changeScore(match.match[1], settings.settings.doublesAddPoints);
+      changeScore(0, settings.settings.doublesAddPoints);
+      changeScore(1, settings.settings.doublesAddPoints);
     }
   },
   MinusDouble: () => {
     if (match.status.doubles > 0 || settings.settings.maxDoubles === 0) {
       match.status.doubles--;
-      changeScore(match.match[0], -settings.settings.doublesAddPoints);
-      changeScore(match.match[1], -settings.settings.doublesAddPoints);
+      changeScore(0, -settings.settings.doublesAddPoints);
+      changeScore(1, -settings.settings.doublesAddPoints);
     }
   },
-  LeftCard: () => match.LcardAdd(),
-  RightCard: () => match.RcardAdd(),
+  LeftCard: () => {
+    if (match.match[0].ycard) {
+      if (match.match[0].rcard === 0) {
+        match.match[0].rcard = 1;
+        return;
+      }
+      match.match[0].rcard = 0;
+    }
+    match.match[0].ycard = !match.match[0].ycard;
+  },
+  RightCard: () => {
+    if (match.match[1].ycard) {
+      if (match.match[1].rcard === 0) {
+        match.match[1].rcard = 1;
+        return;
+      }
+      match.match[1].rcard = 0;
+    }
+    match.match[1].ycard = !match.match[1].ycard;
+  },
+  LeftRCard: () => {
+    match.match[0].rcard++;
+    match.match[0].rcard %= 10;
+  },
+  RightRCard: () => {
+    match.match[1].rcard++;
+    match.match[1].rcard %= 10;
+  },
+  LeftMinusRCard: () => {
+    if (match.match[0].rcard > 0) match.match[0].rcard--;
+  },
+  RightMinusRCard: () => {
+    if (match.match[1].rcard > 0) match.match[1].rcard--;
+  },
   Timer: () => click(),
   SetTime: () => {
     inputTime.value = true;
@@ -513,9 +554,6 @@ const functions: map<() => void> = {
     let f1 = match.match[0];
     match.match[0] = match.match[1];
     match.match[1] = f1;
-    let c1 = match.Lcard;
-    match.Lcard = match.Rcard;
-    match.Rcard = c1;
   },
 };
 const names: map<string> = {
@@ -533,6 +571,10 @@ const names: map<string> = {
   MinusDouble: "Subtract 1 double",
   LeftCard: "Card FotL",
   RightCard: "Card FotR",
+  LeftRCard: "Red card FotL",
+  RightRCard: "Red card FotR",
+  LeftMinusRCard: "Subtract red card from FotL",
+  RightMinusRCard: "Subtract red card from FotR",
   Timer: "Timer/Next",
   ResetTime: "Reset time",
   Rest: "Rest and next round",
@@ -557,10 +599,11 @@ onMounted(() => {
   window.addEventListener("keydown", (e) => {
     repeat.value = e.repeat;
     if (
-      !(nav.menu || choices.value || inputTime.value) ||
-      e.key === "Enter" ||
-      e.key === "ContextMenu" ||
-      change.value != false
+      (!(nav.menu || choices.value || inputTime.value) ||
+        e.key === "Enter" ||
+        e.key === "ContextMenu" ||
+        change.value != false) &&
+      started.value
     ) {
       e.preventDefault();
     }
@@ -582,16 +625,17 @@ onUnmounted(() => {
   window.removeEventListener("keydown", (e) => {
     repeat.value = e.repeat;
     if (
-      !(nav.menu || choices.value || inputTime.value) ||
-      e.key === "Enter" ||
-      e.key === "ContextMenu" ||
-      change.value != false
+      (!(nav.menu || choices.value || inputTime.value) ||
+        e.key === "Enter" ||
+        e.key === "ContextMenu" ||
+        change.value != false) &&
+      started.value
     ) {
       e.preventDefault();
     }
   });
-  match.$reset();
   stopCyrano();
+  match.$reset();
 });
 </script>
 
@@ -606,7 +650,11 @@ onUnmounted(() => {
     "
     v-if="!started"
   />
-  <Scoreboard :cyrano="!!cyrano" />
+  <Scoreboard
+    :cyrano="!!cyrano"
+    :leftChange="black[0]"
+    :rightChange="black[1]"
+  />
   <Dialog
     v-model:visible="choices"
     :draggable="false"
@@ -683,7 +731,7 @@ onUnmounted(() => {
           >Corrections</Tab
         >
         <Tab
-          :disabled="!cyrano"
+          :disabled="!cyrano || settings.cyranoOptions.replayMode"
           value="tournament"
           >Tournament</Tab
         >
@@ -869,7 +917,6 @@ onUnmounted(() => {
                 <Checkbox
                   v-model="settings.settings.passivityStops"
                   binary
-                  size="small"
                 />
               </li>
             </menu>
@@ -1065,6 +1112,7 @@ onUnmounted(() => {
                 <div>Remote Address</div>
                 <InputText
                   v-model="settings.cyranoOptions.remoteAddress"
+                  :disabled="!!cyrano"
                   size="small"
                 />
               </li>
@@ -1073,6 +1121,7 @@ onUnmounted(() => {
                 <InputNumber
                   v-model.number="settings.cyranoOptions.port"
                   :useGrouping="false"
+                  :disabled="!!cyrano"
                   size="small"
                 />
               </li>
@@ -1083,6 +1132,14 @@ onUnmounted(() => {
                   :useGrouping="false"
                   size="small"
                   suffix="×10⁻¹ s"
+                />
+              </li>
+              <li>
+                <div>Replay mode</div>
+                <Checkbox
+                  v-model="settings.cyranoOptions.replayMode"
+                  :disabled="!!cyrano"
+                  binary
                 />
               </li>
               <li>

@@ -27,6 +27,8 @@ const settings = useSettingsStore();
 
 defineProps<{
   cyrano: boolean;
+  leftChange: boolean;
+  rightChange: boolean;
 }>();
 
 const short = computed(() => {
@@ -87,25 +89,32 @@ const short = computed(() => {
       </div>
     </div>
     <div id="scoring-display">
-      <div>
+      <div class="side">
+        <div></div>
         <div
           id="fencer1-score"
           :style="{
-            borderColor: match.Lcolor,
-            backgroundColor:
-              match.status.priority === 'L'
-                ? '#' + settings.config.leftColor
-                : 'gray',
-            color:
-              match.status.priority === 'R'
-                ? Color('#' + settings.config.leftColor).isLight()
-                  ? 'black'
-                  : 'white'
-                : 'white',
+            borderColor: match.status.priority === 'L' ? 'blue' : 'white',
           }"
           class="scoring fencer-1"
         >
           {{ match.match[0].score }}
+        </div>
+        <div class="cards fencer-1">
+          <div>
+            <div
+              v-if="match.match[0].rcard > 0"
+              class="red"
+            >
+              {{ match.match[0].rcard }}
+            </div>
+          </div>
+          <div>
+            <div
+              v-if="match.match[0].ycard"
+              class="yellow"
+            ></div>
+          </div>
         </div>
       </div>
       <div id="center">
@@ -173,17 +182,19 @@ const short = computed(() => {
             </span>
           </div>
         </div>
-        <div
-          v-if="settings.config.showDoubles"
-          id="doubles"
-        >
-          {{ match.status.doubles
-          }}{{
-            settings.settings.maxDoubles > 0
-              ? "/" + settings.settings.maxDoubles.toString()
-              : ""
-          }}
-          Doubles
+        <div>
+          <div
+            v-if="settings.config.showDoubles"
+            id="doubles"
+          >
+            {{ match.status.doubles
+            }}{{
+              settings.settings.maxDoubles > 0
+                ? "/" + settings.settings.maxDoubles.toString()
+                : ""
+            }}
+            Doubles
+          </div>
         </div>
         <div id="rounds">
           <span>{{
@@ -198,25 +209,32 @@ const short = computed(() => {
           </span>
         </div>
       </div>
-      <div :style="{}">
+      <div class="side">
+        <div></div>
         <div
           id="fencer2-score"
           :style="{
-            borderColor: match.Rcolor,
-            backgroundColor:
-              match.status.priority === 'R'
-                ? '#' + settings.config.rightColor
-                : 'gray',
-            color:
-              match.status.priority === 'R'
-                ? Color('#' + settings.config.rightColor).isLight()
-                  ? 'black'
-                  : 'white'
-                : 'white',
+            borderColor: match.status.priority === 'R' ? 'blue' : 'white',
           }"
           class="scoring fencer-2"
         >
           {{ match.match[1].score }}
+        </div>
+        <div class="cards fencer-2">
+          <div>
+            <div
+              v-if="match.match[1].rcard > 0"
+              class="red"
+            >
+              {{ match.match[1].rcard }}
+            </div>
+          </div>
+          <div>
+            <div
+              v-if="match.match[1].ycard"
+              class="yellow"
+            ></div>
+          </div>
         </div>
       </div>
     </div>
@@ -235,15 +253,8 @@ const short = computed(() => {
 }
 .container div {
   height: 100%;
-  font-size: 30px;
   text-align: center;
   align-content: center;
-}
-.fencer-1 {
-  float: left;
-}
-.fencer-2 {
-  float: right;
 }
 #fencer-display {
   display: grid;
@@ -268,22 +279,51 @@ const short = computed(() => {
 }
 #scoring-display {
   display: grid;
-  grid-template-columns: 25% 50% 25%;
+  grid-template-columns: 30% 40% 30%;
   grid-template-rows: 100%;
   height: 100%;
 }
-#scoring-display div {
-  padding: 1% 5%;
+.side {
+  display: grid;
+  grid-template-rows: 20% 60% 20%;
+  width: 100%;
+}
+.cards {
+  height: 2rem;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  padding: 2% 5%;
+}
+.cards.fencer-1 {
+  flex-direction: row;
+}
+.cards.fencer-2 {
+  flex-direction: row-reverse;
+}
+.cards div {
+  padding: 0 1%;
+  height: 100%;
+  aspect-ratio: 10 / 16;
+  box-sizing: content-box;
+  border-radius: 0.5rem;
+}
+.red {
+  background-color: red;
+  color: black;
+  font-size: 4rem;
+}
+.yellow {
+  background-color: yellow;
 }
 div.scoring {
   background-clip: border-box;
   background-color: gray;
   align-self: center;
-  width: 25rem;
-  height: 20rem;
+  width: 100%;
+  height: min(100%, 25rem);
   border: solid 40px;
   border-radius: 20px;
-  corner-shape: squircle;
   font-size: 10rem;
 }
 #center {

@@ -18,7 +18,6 @@
 import { type CorrectFencerStatus, Fencer } from "../scripts/Types.ts";
 import { computed } from "vue";
 import { useSettingsStore } from "@/stores/settings.ts";
-import { $dt } from "@primeuix/themes";
 
 const settings = useSettingsStore();
 
@@ -215,7 +214,7 @@ function gs(matchId: number, id: string) {
                         ),
                         index,
                       ) ?? '')[0] === 'V'
-                    ? $dt('green.800').value
+                    ? 'var(--p-green-800)'
                     : (getScore(
                           getMatch(
                             fencerMatchList.mats[index] ?? [0],
@@ -223,7 +222,7 @@ function gs(matchId: number, id: string) {
                           ),
                           index,
                         ) ?? '')[0] === 'D'
-                      ? $dt('red.800').value
+                      ? 'var(--p-red-800)'
                       : 'transparent',
             }"
           >

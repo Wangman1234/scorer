@@ -15,7 +15,7 @@
  */
 
 import { defineStore } from "pinia";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   type CorrectFencerStatus,
   type CorrectStatus,
@@ -53,8 +53,6 @@ export const useMatchStore = defineStore("match", () => {
     }>
   >([]);
   const passivityStart = ref(settings.settings.maxTime * 1);
-  const Lcard = ref(0);
-  const Rcard = ref(0);
   const match = computed<[CorrectFencerStatus, CorrectFencerStatus]>(() => {
     return (
       matches.value[status.value.match] ?? [
@@ -88,63 +86,20 @@ export const useMatchStore = defineStore("match", () => {
     return settings.settings.passivity + stopwatch.value - passivityStart.value;
   });
   const Lcolor = computed(() => {
-    return color(Lcard.value);
+    return match.value[0].rcard > 0
+      ? "red"
+      : match.value[0].ycard
+        ? "yellow"
+        : "white";
   });
   const Rcolor = computed(() => {
-    return color(Rcard.value);
+    return match.value[1].rcard > 0
+      ? "red"
+      : match.value[1].ycard
+        ? "yellow"
+        : "white";
   });
 
-  watch(Lcard, (value) => {
-    switch (value) {
-      case 0:
-        match.value[0].ycard = false;
-        match.value[0].rcard = 0;
-        break;
-      case 1:
-        match.value[0].ycard = true;
-        match.value[0].rcard = 0;
-        break;
-      case 2:
-        match.value[0].ycard = true;
-        match.value[0].rcard = 1;
-        break;
-    }
-  });
-  watch(Rcard, (value) => {
-    switch (value) {
-      case 0:
-        match.value[1].ycard = false;
-        match.value[1].rcard = 0;
-        break;
-      case 1:
-        match.value[1].ycard = true;
-        match.value[1].rcard = 0;
-        break;
-      case 2:
-        match.value[1].ycard = true;
-        match.value[1].rcard = 1;
-        break;
-    }
-  });
-
-  function color(card: number) {
-    switch (card) {
-      case 0:
-        return "white"; //"transparent"
-      case 1:
-        return "yellow";
-      case 2:
-        return "red";
-    }
-  }
-  function LcardAdd() {
-    Lcard.value += 1;
-    Lcard.value %= 3;
-  }
-  function RcardAdd() {
-    Rcard.value += 1;
-    Rcard.value %= 3;
-  }
   function period() {
     if (status.value.poultab[0] !== "P") {
       status.value.round = (status.value.round % settings.settings.rounds) + 1;
@@ -168,8 +123,6 @@ export const useMatchStore = defineStore("match", () => {
     };
     matchData.value = [];
     passivityStart.value = settings.settings.maxTime;
-    Lcard.value = 0;
-    Rcard.value = 0;
   }
 
   return {
@@ -177,17 +130,12 @@ export const useMatchStore = defineStore("match", () => {
     status,
     matchData,
     passivityStart,
-    Lcard,
-    Rcard,
     match,
     stopwatch,
     cyranoMatch,
     passivity,
     Lcolor,
     Rcolor,
-    color,
-    LcardAdd,
-    RcardAdd,
     period,
     $reset,
   };
