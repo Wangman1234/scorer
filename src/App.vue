@@ -66,25 +66,29 @@ let interval: [number, number] = [0, 0];
 let changeTimes: [number, number] = [0, 0];
 const black = ref<[boolean, boolean]>([false, false]);
 function changeScore(fencer: 0 | 1, value: number) {
-  let val = match.match[fencer].score + value;
-  if (match.status.priority === "N") {
+  if (value !== 0) {
+    let val = match.match[fencer].score + value;
     if (
-      (value > 0 && match.match[fencer].score >= settings.settings.maxScore) ||
-      val < 0
-    )
-      return;
-  } else if (val < 0) return;
-  match.match[fencer].score = val;
-  clearInterval(interval[fencer]);
-  changeTimes[fencer] = 0;
-  interval[fencer] = setInterval(() => {
-    black.value[fencer] = !black.value[fencer];
-    changeTimes[fencer]++;
-    if (changeTimes[fencer] >= 10) {
+      val >= 0 &&
+      (match.status.priority !== "N" ||
+        value <= 0 ||
+        match.match[fencer].score < settings.settings.maxScore)
+    ) {
+      match.match[fencer].score = val;
+
       clearInterval(interval[fencer]);
+      changeTimes[fencer] = 0;
       black.value[fencer] = false;
+      interval[fencer] = setInterval(() => {
+        black.value[fencer] = !black.value[fencer];
+        changeTimes[fencer]++;
+        if (changeTimes[fencer] >= 10) {
+          clearInterval(interval[fencer]);
+          black.value[fencer] = false;
+        }
+      }, 200);
     }
-  }, 200);
+  }
 }
 async function choosePriority(state: "N" | "L" | "R") {
   priorityPicker.value = false;
@@ -315,6 +319,12 @@ function keyHandler(e: KeyboardEvent) {
           break;
         case keymap.value.Timer:
           choosePriority("N");
+          break;
+        case keymap.value.PriorityLeft:
+          choosePriority("L");
+          break;
+        case keymap.value.PriorityRight:
+          choosePriority("R");
           break;
       }
     } else if (nav.menu) {
@@ -1432,7 +1442,7 @@ onUnmounted(() => {
     class="blurred"
     v-else-if="matchOver"
   >
-    <h1>Match</h1>
+    <h1>{{ match.stopwatch <= 0 ? "Time" : "Match" }}</h1>
   </div>
   <div
     v-else-if="
