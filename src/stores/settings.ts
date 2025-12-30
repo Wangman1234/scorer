@@ -101,19 +101,21 @@ export const useSettingsStore = defineStore(
     const cyranoOptions = ref<{
       port: number;
       remoteAddress: string;
-      pointsPerPeriod: number;
-      roundsPerTableMatch: number;
       protocol: "EFP1" | "EFP1.1";
       ret: "INFO" | "NEXT" | "PREV";
       interval: number;
+      replayMode: boolean;
+      pointsPerPeriod: number;
+      roundsPerTableMatch: number;
     }>({
       port: 50100,
       remoteAddress: "192.168.2.11",
-      pointsPerPeriod: 5,
-      roundsPerTableMatch: 3,
       protocol: "EFP1.1",
       ret: "INFO",
       interval: 10,
+      replayMode: false,
+      pointsPerPeriod: 5,
+      roundsPerTableMatch: 3,
     });
 
     return { keymaps, config, settings, cyranoOptions };

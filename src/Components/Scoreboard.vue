@@ -94,6 +94,7 @@ const short = computed(() => {
         <div
           id="fencer1-score"
           :style="{
+            color: leftChange ? 'transparent' : 'white',
             borderColor: match.status.priority === 'L' ? 'blue' : 'white',
           }"
           class="scoring fencer-1"
@@ -214,6 +215,7 @@ const short = computed(() => {
         <div
           id="fencer2-score"
           :style="{
+            color: rightChange ? 'transparent' : 'white',
             borderColor: match.status.priority === 'R' ? 'blue' : 'white',
           }"
           class="scoring fencer-2"

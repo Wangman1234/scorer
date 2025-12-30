@@ -50,7 +50,7 @@ export class Cyrano {
       this.cyranoLog("startCyrano", "Socket not connected");
       return;
     }
-    this.match.$reset();
+    if (!this.settings.cyranoOptions.replayMode) this.match.$reset();
   }
   async startCyrano() {
     const { readable, writable } = await this.socket.opened;
@@ -59,9 +59,19 @@ export class Cyrano {
     this.reader = this.readab.getReader();
     this.writer = this.writeab.getWriter();
     console.log("startCyrano");
-    new Promise((res, rej) => this.runner(res, rej, "NEXT")).catch((reason) => {
-      console.log(reason);
-    });
+    if (this.settings.cyranoOptions.replayMode) {
+      this.sendingData = true;
+      this.cyranoState = "Bout";
+      this.settings.cyranoOptions.protocol = "EFP1.1";
+      new Promise((res, rej) => this.writeRepeat(res, rej)).catch((reason) => {
+        console.log(reason);
+      });
+    } else
+      new Promise((res, rej) => this.runner(res, rej, "NEXT")).catch(
+        (reason) => {
+          console.log(reason);
+        },
+      );
   }
   async stopCyrano(resolve: (value?: any) => void) {
     this.writer?.releaseLock();
@@ -69,10 +79,12 @@ export class Cyrano {
     await this.socket.close();
     this.sendingData = false;
     this.cyranoState = "Closed";
-    this.settings.settings.rounds = 1;
-    this.settings.settings.maxScore = 5;
-    this.match.matches[""] = [defaultFencerStatus(), defaultFencerStatus()];
-    this.match.status.match = "";
+    if (!this.settings.cyranoOptions.replayMode) {
+      this.settings.settings.rounds = 1;
+      this.settings.settings.maxScore = 5;
+      this.match.matches[""] = [defaultFencerStatus(), defaultFencerStatus()];
+      this.match.status.match = "";
+    }
     this.cyranoLog("stopCyrano", "finished");
     resolve();
   }
@@ -251,8 +263,6 @@ export class Cyrano {
             state: "",
             doubles: 0,
           };
-          this.match.Lcard = 0;
-          this.match.Rcard = 0;
           this.cyranoState = "Waiting";
           return "NEXT";
         } else if (cyranoMsg.com === "NAK") {
@@ -281,6 +291,7 @@ export class Cyrano {
     reject: (reason?: any) => void,
   ) {
     if (this.check()) return resolve();
+    else if (this.cyranoState === "Closed") return reject("Cyrano ended");
     try {
       await this.forceWrite();
     } catch (e) {}
@@ -299,7 +310,10 @@ export class Cyrano {
     this.reader = this.readab?.getReader();
   }
   check(): boolean {
-    if (this.match.status.state === "E") {
+    if (
+      this.match.status.state === "E" &&
+      !this.settings.cyranoOptions.replayMode
+    ) {
       this.reader?.releaseLock();
       this.writer?.releaseLock();
       this.writer = this.writeab?.getWriter();
@@ -363,7 +377,9 @@ export class Cyrano {
   ) {
     this.settings.cyranoOptions.ret = com;
     console.log(process, this.match.cyranoMatch);
-    let message = this.match.cyranoMatch.toString();
+    let message = this.match.cyranoMatch.toString(
+      !this.settings.cyranoOptions.replayMode,
+    );
     await this.writer?.ready;
     await this.writer?.write({
       data: this.encoder.encode(message),

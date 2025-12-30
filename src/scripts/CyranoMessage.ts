@@ -191,8 +191,8 @@ export class CyranoMessage {
     }
   }
 
-  toString() {
-    const string1: string = [
+  toString(shorten: boolean = true) {
+    let string1 = [
       "",
       this.protocol,
       this.com,
@@ -212,10 +212,8 @@ export class CyranoMessage {
       this.ref.name.toString(false, false, false, " ", ""),
       reverseCountryList[this.ref.country],
       "",
-    ]
-      .join("|")
-      .replace(/\|*$/, "|");
-    const string2 = [
+    ].join("|");
+    let string2 = [
       "",
       String(this.rightfencer.fencer.id),
       this.rightfencer.fencer.name.toString(false, false, false, " ", ""),
@@ -229,10 +227,8 @@ export class CyranoMessage {
       String(this.rightfencer.medical),
       this.rightfencer.reserve,
       "",
-    ]
-      .join("|")
-      .replace(/\|*$/, "|");
-    const string3 = [
+    ].join("|");
+    let string3 = [
       "",
       String(this.leftfencer.fencer.id),
       this.leftfencer.fencer.name.toString(false, false, false, " ", ""),
@@ -246,9 +242,16 @@ export class CyranoMessage {
       String(this.leftfencer.medical),
       this.leftfencer.reserve,
       "",
-    ]
-      .join("|")
-      .replace(/\|*$/, "|");
+    ].join("|");
+    if (this.protocol === "EFP1.1") {
+      string2 = string2 + "" + "|";
+      string3 = string3 + "" + "|";
+    }
+    if (shorten) {
+      string1 = string1.replace(/\|*$/, "|");
+      string2 = string1.replace(/\|*$/, "|");
+      string3 = string1.replace(/\|*$/, "|");
+    }
     return [string1, string2, string3, "|"].join("%").replace(/(%\|)*$/, "%|");
   }
 }
