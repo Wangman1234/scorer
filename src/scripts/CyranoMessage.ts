@@ -249,8 +249,8 @@ export class CyranoMessage {
     }
     if (shorten) {
       string1 = string1.replace(/\|*$/, "|");
-      string2 = string1.replace(/\|*$/, "|");
-      string3 = string1.replace(/\|*$/, "|");
+      string2 = string2.replace(/\|*$/, "|");
+      string3 = string3.replace(/\|*$/, "|");
     }
     return [string1, string2, string3, "|"].join("%").replace(/(%\|)*$/, "%|");
   }
