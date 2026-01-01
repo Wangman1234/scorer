@@ -66,28 +66,27 @@ let interval: [number, number] = [0, 0];
 let changeTimes: [number, number] = [0, 0];
 const black = ref<[boolean, boolean]>([false, false]);
 function changeScore(fencer: 0 | 1, value: number) {
-  if (value !== 0) {
-    let val = match.match[fencer].score + value;
-    if (
-      val >= 0 &&
-      (match.status.priority !== "N" ||
-        value <= 0 ||
-        match.match[fencer].score < settings.settings.maxScore)
-    ) {
-      match.match[fencer].score = val;
+  if (value === 0) return;
+  let val = match.match[fencer].score + value;
+  if (
+    val >= 0 &&
+    (match.status.priority !== "N" ||
+      value <= 0 ||
+      match.match[fencer].score < settings.settings.maxScore)
+  ) {
+    match.match[fencer].score = val;
 
-      clearInterval(interval[fencer]);
-      changeTimes[fencer] = 0;
-      black.value[fencer] = false;
-      interval[fencer] = setInterval(() => {
-        black.value[fencer] = !black.value[fencer];
-        changeTimes[fencer]++;
-        if (changeTimes[fencer] >= 10) {
-          clearInterval(interval[fencer]);
-          black.value[fencer] = false;
-        }
-      }, 200);
-    }
+    clearInterval(interval[fencer]);
+    changeTimes[fencer] = 0;
+    black.value[fencer] = false;
+    interval[fencer] = setInterval(() => {
+      black.value[fencer] = !black.value[fencer];
+      changeTimes[fencer]++;
+      if (changeTimes[fencer] >= 10) {
+        clearInterval(interval[fencer]);
+        black.value[fencer] = false;
+      }
+    }, 200);
   }
 }
 async function choosePriority(state: "N" | "L" | "R") {
@@ -189,39 +188,33 @@ async function finishMatch() {
 }
 function end() {
   if (
-    settings.settings.maxDoubles <= match.status.doubles &&
-    settings.settings.maxDoubles > 0
+    match.status.doubles >= settings.settings.maxDoubles &&
+    settings.settings.maxDoubles > 0 &&
+    settings.settings.allowTies
   ) {
-    if (settings.settings.allowTies) {
-      match.match[0].status = "D";
-      match.match[1].status = "D";
-      push();
-      return;
-    }
-  }
-  if (match.match[0].score > match.match[1].score) {
+    match.match[0].status = "D";
+    match.match[1].status = "D";
+  } else if (match.match[0].score > match.match[1].score) {
     match.match[0].status = "V";
     match.match[1].status = "D";
   } else if (match.match[0].score < match.match[1].score) {
     match.match[0].status = "D";
     match.match[1].status = "V";
+  } else if (settings.settings.allowTies) {
+    match.match[0].status = "D";
+    match.match[1].status = "D";
+  } else if (match.status.priority === "L") {
+    match.match[0].status = "V";
+    match.match[1].status = "D";
+  } else if (match.status.priority === "R") {
+    match.match[0].status = "D";
+    match.match[1].status = "V";
   } else {
-    if (settings.settings.allowTies) {
-      match.match[0].status = "D";
-      match.match[1].status = "D";
-    } else if (match.status.priority === "L") {
-      match.match[0].status = "V";
-      match.match[1].status = "D";
-    } else if (match.status.priority === "R") {
-      match.match[0].status = "D";
-      match.match[1].status = "V";
-    } else {
-      match.status.state = "H";
-      priorityPicker.value = true;
-      match.status.stopwatch = settings.settings.priority;
-      match.status.doubles = 0;
-      return;
-    }
+    match.status.state = "H";
+    priorityPicker.value = true;
+    match.status.stopwatch = settings.settings.priority;
+    match.status.doubles = 0;
+    return;
   }
   if (!settings.settings.allowOver) {
     if (match.match[0].score > settings.settings.maxScore) {
@@ -236,36 +229,12 @@ function end() {
     ) {
       if (match.match[0].status === "V") {
         match.status.priority = "L";
-      } else if (match.match[1].status === "V") {
-        match.status.priority = "R";
       } else {
-        throw Error("Both fencers can't lose when allowTies === false");
+        match.status.priority = "R";
       }
     }
   }
   push();
-}
-function click() {
-  if (!cyrano.value || cyrano.value.sendingData || match.status.state !== "E") {
-    if (match.status.state === "F") {
-      timer.stopTimer("H");
-    } else if (winner.value) {
-      finishMatch();
-    } else if (matchOver.value) {
-      end();
-    } else if (match.status.state === "H" || match.status.state === "") {
-      if (
-        match.status.priority !== "N" &&
-        (match.match[0].score !== match.match[1].score ||
-          match.status.doubles !== 0)
-      ) {
-        end();
-      } else {
-        push();
-        timer.startTimer("F");
-      }
-    }
-  }
 }
 
 // Key handler
@@ -525,7 +494,28 @@ const functions: map<() => void> = {
   RightMinusRCard: () => {
     if (match.match[1].rcard > 0) match.match[1].rcard--;
   },
-  Timer: () => click(),
+  Timer: () => {
+    if (cyrano.value && cyrano.value.sendingData && match.status.state === "E")
+      return;
+    if (match.status.state === "F") {
+      timer.stopTimer("H");
+    } else if (winner.value) {
+      finishMatch();
+    } else if (matchOver.value) {
+      end();
+    } else if (match.status.state === "H" || match.status.state === "") {
+      if (
+        match.status.priority === "N" ||
+        (match.match[0].score === match.match[1].score &&
+          match.status.doubles === 0)
+      ) {
+        push();
+        timer.startTimer("F");
+      } else {
+        end();
+      }
+    }
+  },
   SetTime: () => {
     inputTime.value = true;
   },

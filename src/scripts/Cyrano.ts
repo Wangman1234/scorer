@@ -129,115 +129,113 @@ export class Cyrano {
     switch (this.cyranoState) {
       case "Waiting":
       case "No Bouts":
-        if (cyranoMsg.com === "DISP" && cyranoMsg.status.poultab !== "") {
-          if (this.knowList === 0) {
-            if (cyranoMsg.status.poultab === "X") {
-              if (this.cyranoState !== "No Bouts") {
-                this.cyranoState = "No Bouts";
-                this.nav.page = "tournament";
-                this.nav.menu = true;
-                return "PREV";
-              } else {
-                // reset()
-              }
-            } else if (
-              cyranoMsg.status.state === "E" ||
-              cyranoMsg.leftfencer.status !== "U" ||
-              cyranoMsg.rightfencer.status !== "U"
-            ) {
-              if (
-                typeof this.match.matches[cyranoMsg.status.match] ===
-                "undefined"
-              ) {
-                this.match.matches[cyranoMsg.status.match] = [
-                  defaultFencerStatus(),
-                  defaultFencerStatus(),
-                ];
-              }
-              const mat = this.match.matches[cyranoMsg.status.match] ?? [
-                defaultFencerStatus(),
-                defaultFencerStatus(),
-              ];
-              if (
-                !(
-                  fencerEqual(mat[0], cyranoMsg.leftfencer) &&
-                  fencerEqual(mat[1], cyranoMsg.rightfencer)
-                )
-              ) {
-                mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
-                mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
-              }
-              return "NEXT";
-            } else {
-              this.set(cyranoMsg);
-              if (
-                !(
-                  fencerEqual(this.match.match[0], cyranoMsg.leftfencer) &&
-                  fencerEqual(this.match.match[1], cyranoMsg.rightfencer)
-                )
-              ) {
-                this.match.$reset();
-                this.cyranoState = "Waiting";
-                this.knowList = 1;
-                return "PREV";
-              }
-              this.match.status.stopwatch = this.settings.settings.maxTime;
-              this.nav.page = "bout";
-              this.nav.menu = true;
-              this.cyranoState = "Bout";
-              this.prevDisp = cyranoMsg;
-              this.bout().then();
-            }
-          } else {
-            if (cyranoMsg.status.poultab === "X") {
-              this.knowList = -1;
-            } else {
-              if (
-                typeof this.match.matches[cyranoMsg.status.match] ===
-                "undefined"
-              ) {
-                this.match.matches[cyranoMsg.status.match] = [
-                  defaultFencerStatus(),
-                  defaultFencerStatus(),
-                ];
-              }
-              const mat = this.match.matches[cyranoMsg.status.match] ?? [
-                defaultFencerStatus(),
-                defaultFencerStatus(),
-              ];
-              if (
-                !(
-                  fencerEqual(mat[0], cyranoMsg.leftfencer) &&
-                  fencerEqual(mat[1], cyranoMsg.rightfencer)
-                )
-              ) {
-                console.log("not equal");
-                console.log(mat[0], mat[1]);
-                mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
-                mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
-              } else if (
-                cyranoMsg.status.match ===
-                Number(min(Object.keys(omit(this.match.matches, ""))))
-              ) {
-                if (cyranoMsg.status.match === this.prev) {
-                  this.knowList = 0;
-                  this.prev = 0;
-                } else {
-                  this.prev = cyranoMsg.status.match;
-                }
-              }
-            }
-            if (this.knowList > 0) {
-              return "NEXT";
-            } else {
-              return "PREV";
-            }
-          }
-        } else if (cyranoMsg.com === "HELLO") {
+        if (cyranoMsg.com === "HELLO") {
           this.settings.settings.compe = cyranoMsg.compe;
           this.settings.settings.piste = cyranoMsg.piste;
           return "NEXT";
         }
+        if (cyranoMsg.com !== "DISP" || cyranoMsg.status.poultab === "") break;
+        // Listing bouts
+        if (this.knowList !== 0) {
+          if (cyranoMsg.status.poultab === "X") {
+            this.knowList = -1;
+            return "PREV";
+          }
+          if (
+            typeof this.match.matches[cyranoMsg.status.match] === "undefined"
+          ) {
+            this.match.matches[cyranoMsg.status.match] = [
+              defaultFencerStatus(),
+              defaultFencerStatus(),
+            ];
+          }
+          const mat = this.match.matches[cyranoMsg.status.match] ?? [
+            defaultFencerStatus(),
+            defaultFencerStatus(),
+          ];
+          if (
+            !(
+              fencerEqual(mat[0], cyranoMsg.leftfencer) &&
+              fencerEqual(mat[1], cyranoMsg.rightfencer)
+            )
+          ) {
+            console.log("not equal");
+            console.log(mat[0], mat[1]);
+            mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
+            mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+          } else if (
+            cyranoMsg.status.match ===
+            Number(min(Object.keys(omit(this.match.matches, ""))))
+          ) {
+            if (cyranoMsg.status.match === this.prev) {
+              this.knowList = 0;
+              this.prev = 0;
+            } else {
+              this.prev = cyranoMsg.status.match;
+            }
+          }
+          if (this.knowList > 0) {
+            return "NEXT";
+          } else {
+            return "PREV";
+          }
+        }
+        // No longer listing bouts
+        if (cyranoMsg.status.poultab === "X") {
+          if (this.cyranoState === "No Bouts") break;
+          this.cyranoState = "No Bouts";
+          this.nav.page = "tournament";
+          this.nav.menu = true;
+          return "PREV";
+        }
+        // Read display ended bout
+        if (
+          cyranoMsg.status.state === "E" ||
+          cyranoMsg.leftfencer.status !== "U" ||
+          cyranoMsg.rightfencer.status !== "U"
+        ) {
+          if (
+            typeof this.match.matches[cyranoMsg.status.match] === "undefined"
+          ) {
+            this.match.matches[cyranoMsg.status.match] = [
+              defaultFencerStatus(),
+              defaultFencerStatus(),
+            ];
+          }
+          const mat = this.match.matches[cyranoMsg.status.match] ?? [
+            defaultFencerStatus(),
+            defaultFencerStatus(),
+          ];
+          if (
+            !(
+              fencerEqual(mat[0], cyranoMsg.leftfencer) &&
+              fencerEqual(mat[1], cyranoMsg.rightfencer)
+            )
+          ) {
+            mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
+            mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+          }
+          return "NEXT";
+        }
+        this.set(cyranoMsg);
+        // MatchList not correct
+        if (
+          !(
+            fencerEqual(this.match.match[0], cyranoMsg.leftfencer) &&
+            fencerEqual(this.match.match[1], cyranoMsg.rightfencer)
+          )
+        ) {
+          this.match.$reset();
+          this.cyranoState = "Waiting";
+          this.knowList = 1;
+          return "PREV";
+        }
+        this.match.status.stopwatch = this.settings.settings.maxTime;
+        this.nav.page = "bout";
+        this.nav.menu = true;
+        this.cyranoState = "Bout";
+        this.prevDisp = cyranoMsg;
+        this.bout().then();
         break;
       case "Bout":
         if (cyranoMsg.com === "HELLO") {
