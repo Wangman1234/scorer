@@ -174,11 +174,8 @@ export class Cyrano {
               this.prev = cyranoMsg.status.match;
             }
           }
-          if (this.knowList > 0) {
-            return "NEXT";
-          } else {
-            return "PREV";
-          }
+          if (this.knowList > 0) return "NEXT";
+          return "PREV";
         }
         // No longer listing bouts
         if (cyranoMsg.status.poultab === "X") {
