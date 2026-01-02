@@ -120,6 +120,21 @@ const Rcolor = computed(() => {
       ? "yellow"
       : "white";
 });
+const matchOver = computed(() => {
+  return (
+    ((stopwatch.value ?? 0) <= 0 &&
+      (status.value.round === settings.settings.rounds ||
+        status.value.priority !== "N")) ||
+    ((match.value[0].score >= settings.settings.maxScore ||
+      match.value[1].score >= settings.settings.maxScore) &&
+      status.value.priority === "N") ||
+    (settings.settings.maxDoubles <= status.value.doubles &&
+      settings.settings.maxDoubles > 0)
+  );
+});
+const winner = computed(() => {
+  return match.value[0].status === "D" || match.value[1].status === "D";
+});
 
 function $reset() {
   matches.value = {
@@ -140,23 +155,6 @@ function $reset() {
   matchData.value = [];
   passivityStart.value = settings.settings.maxTime;
 }
-
-// Reactive data
-const matchOver = computed(() => {
-  return (
-    ((stopwatch.value ?? 0) <= 0 &&
-      (status.value.round === settings.settings.rounds ||
-        status.value.priority !== "N")) ||
-    ((match.value[0].score >= settings.settings.maxScore ||
-      match.value[1].score >= settings.settings.maxScore) &&
-      status.value.priority === "N") ||
-    (settings.settings.maxDoubles <= status.value.doubles &&
-      settings.settings.maxDoubles > 0)
-  );
-});
-const winner = computed(() => {
-  return match.value[0].status === "D" || match.value[1].status === "D";
-});
 
 // Timer
 const timer = new Timer(status, passivity);
