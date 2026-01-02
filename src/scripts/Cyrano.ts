@@ -68,7 +68,7 @@ export class Cyrano {
       this.cyranoLog("startCyrano", "Socket not connected");
       return;
     }
-    if (!this.settings.cyranoOptions.replayMode) this.$reset;
+    if (!this.settings.cyranoOptions.replayMode) this.$reset();
   }
   async startCyrano() {
     const { readable, writable } = await this.socket.opened;
@@ -240,7 +240,7 @@ export class Cyrano {
             fencerEqual(this.match.value[0], cyranoMsg.rightfencer)
           )
         ) {
-          this.$reset;
+          this.$reset();
           this.cyranoState = "Waiting";
           this.knowList = 1;
           return "PREV";
