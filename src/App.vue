@@ -34,7 +34,7 @@ import { defaultFencerStatus, toTime } from "@/scripts/Functions.ts";
 import BoutProgress from "@/Components/BoutProgress.vue";
 import { Country, CountryNameList } from "@/scripts/Country.ts";
 import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
-import Priority from "@/Priority.vue";
+import Priority from "@/Components/Priority.vue";
 
 const settings = useSettingsStore();
 const nav = useNavStore();

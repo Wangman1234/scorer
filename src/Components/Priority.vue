@@ -48,6 +48,7 @@ const emit = defineEmits<{
   </div>
 </template>
 
+<!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 .button button {
   width: 100%;
