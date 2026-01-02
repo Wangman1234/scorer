@@ -22,7 +22,7 @@ import {
   type FencerStatus,
   type Status,
 } from "./Types.ts";
-import { CountryList, reverseCountryList } from "./Country.ts";
+import { Country } from "./Country.ts";
 import { cyrConvert, toSeconds, toTime } from "./Functions.ts";
 
 export class CyranoMessage {
@@ -141,7 +141,7 @@ export class CyranoMessage {
       this.ref = new Fencer(
         section1s[15] ?? "",
         section1s[16] ?? "",
-        CountryList[section1s[17] ?? ""] ?? "",
+        new Country(section1s[17] ?? ""),
         "",
       );
       const section2 = sections[1];
@@ -153,7 +153,7 @@ export class CyranoMessage {
           fencer: new Fencer(
             section2s[1] ?? "",
             section2s[2] ?? "",
-            CountryList[section2s[3] ?? ""] ?? "",
+            new Country(section2s[3] ?? ""),
             "",
           ),
           score: cyrConvert(Number, section2s[4]),
@@ -175,7 +175,7 @@ export class CyranoMessage {
           fencer: new Fencer(
             section3s[1] ?? "",
             section3s[2] ?? "",
-            CountryList[section3s[3] ?? ""] ?? "",
+            new Country(section3s[3] ?? ""),
             "",
           ),
           score: cyrConvert(Number, section3s[4]),
@@ -210,14 +210,14 @@ export class CyranoMessage {
       this.status.state,
       String(this.ref.id),
       this.ref.name.toString(false, false, false, " ", ""),
-      reverseCountryList[this.ref.country],
+      this.ref.country.countryCode,
       "",
     ].join("|");
     let string2 = [
       "",
       String(this.rightfencer.fencer.id),
       this.rightfencer.fencer.name.toString(false, false, false, " ", ""),
-      reverseCountryList[this.rightfencer.fencer.country],
+      this.rightfencer.fencer.country.countryCode,
       String(this.rightfencer.score),
       this.rightfencer.status,
       String(cyrConvert(Number, this.rightfencer.ycard)),
@@ -232,7 +232,7 @@ export class CyranoMessage {
       "",
       String(this.leftfencer.fencer.id),
       this.leftfencer.fencer.name.toString(false, false, false, " ", ""),
-      reverseCountryList[this.leftfencer.fencer.country],
+      this.leftfencer.fencer.country.countryCode,
       String(this.leftfencer.score),
       this.leftfencer.status,
       String(cyrConvert(Number, this.leftfencer.ycard)),

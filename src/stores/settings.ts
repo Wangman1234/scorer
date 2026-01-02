@@ -68,6 +68,7 @@ export const useSettingsStore = defineStore(
       shortenSecond: boolean;
       separator: string;
       ending: string;
+      showFlags: boolean;
       showDoubles: boolean;
     }>({
       keymap: "default remote",
@@ -79,6 +80,7 @@ export const useSettingsStore = defineStore(
       shortenSecond: true,
       separator: " ",
       ending: "",
+      showFlags: false,
       showDoubles: false,
     });
     const settings = ref({

@@ -21,7 +21,7 @@ import {
   Fencer,
   Name,
 } from "../src/scripts/Types";
-import { CountryList } from "../src/scripts/Country";
+import { CountryNameList } from "../src/scripts/Country";
 import { cyrConvert } from "../src/scripts/Functions";
 
 let messages = [
@@ -133,9 +133,14 @@ let cyranos = [
       priority: "",
       state: "W",
     },
-    new Fencer("132", new Name("Smith", "J"), CountryList["GBR"], ""),
+    new Fencer("132", new Name("Smith", "J"), CountryNameList["GBR"], ""),
     {
-      fencer: new Fencer("28", new Name("Martin", "P"), CountryList["FRA"], ""),
+      fencer: new Fencer(
+        "28",
+        new Name("Martin", "P"),
+        CountryNameList["FRA"],
+        "",
+      ),
       score: 8,
       status: "V",
       ycard: false,
@@ -146,7 +151,12 @@ let cyranos = [
       reserve: "N",
     },
     {
-      fencer: new Fencer("32", new Name("Panini", "B"), CountryList["ITA"], ""),
+      fencer: new Fencer(
+        "32",
+        new Name("Panini", "B"),
+        CountryNameList["ITA"],
+        "",
+      ),
       score: 6,
       status: "D",
       ycard: false,
@@ -198,11 +208,16 @@ const c1 = new CyranoMessage(
 );
 console.log(c1);
 console.log(c1.toString());
-c1.leftfencer.fencer = new Fencer("1", "Cada Lon", CountryList["CAN"], "THC");
+c1.leftfencer.fencer = new Fencer(
+  "1",
+  "Cada Lon",
+  CountryNameList["CAN"],
+  "THC",
+);
 c1.rightfencer.fencer = new Fencer(
   "2",
   "Yarel Han",
-  CountryList["CAN"],
+  CountryNameList["CAN"],
   "DWARF",
 );
 console.log(c1.toString());

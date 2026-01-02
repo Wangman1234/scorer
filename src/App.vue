@@ -28,6 +28,7 @@ import { Cyrano } from "@/scripts/Cyrano.ts";
 import { useNavStore } from "@/stores/nav.ts";
 import { toTime } from "@/scripts/Functions.ts";
 import BoutProgress from "@/Components/BoutProgress.vue";
+import { Country, CountryNameList } from "@/scripts/Country.ts";
 
 const settings = useSettingsStore();
 const match = useMatchStore();
@@ -768,6 +769,40 @@ onUnmounted(() => {
                   </InputGroup>
                 </div>
               </li>
+              <li v-if="settings.config.showFlags">
+                <div>Left fencer country</div>
+                <Select
+                  v-model="match.match[0].fencer.country.countryCode"
+                  :options="Object.keys(CountryNameList)"
+                  :style="{ width: '23rem' }"
+                  filter
+                  filter-placeholder="Country code"
+                  optionLabel="name"
+                  placeholder="Unaffiliated"
+                  size="small"
+                >
+                  <template #value="slotProps">
+                    <div class="country-selector">
+                      <div
+                        :class="`fi fi-${new Country(slotProps.value).alphaTwo()}`"
+                      />
+                      <div>
+                        {{ new Country(slotProps.value) }}
+                      </div>
+                    </div>
+                  </template>
+                  <template #option="slotProps">
+                    <div class="country-selector">
+                      <div
+                        :class="`fi fi-${new Country(slotProps.option).alphaTwo()}`"
+                      />
+                      <div>
+                        {{ new Country(slotProps.option) }}
+                      </div>
+                    </div>
+                  </template>
+                </Select>
+              </li>
               <li>
                 <div>Left fencer club</div>
                 <InputText
@@ -792,6 +827,35 @@ onUnmounted(() => {
                     />
                   </InputGroup>
                 </div>
+              </li>
+              <li v-if="settings.config.showFlags">
+                <div>Right fencer country</div>
+                <Select
+                  v-model="match.match[1].fencer.country.countryCode"
+                  :options="Object.keys(CountryNameList)"
+                  :style="{ width: '23rem' }"
+                  filter
+                  optionLabel="name"
+                  placeholder="Unaffiliated"
+                  size="small"
+                >
+                  <template #value="slotProps">
+                    <div class="country-selector">
+                      <div
+                        :class="`fi fi-${new Country(slotProps.value).alphaTwo()}`"
+                      />
+                      <div>{{ new Country(slotProps.value) }}</div>
+                    </div>
+                  </template>
+                  <template #option="slotProps">
+                    <div class="country-selector">
+                      <div
+                        :class="`fi fi-${new Country(slotProps.option).alphaTwo()}`"
+                      />
+                      <div>{{ new Country(slotProps.option) }}</div>
+                    </div>
+                  </template>
+                </Select>
               </li>
               <li>
                 <div>Right fencer club</div>
@@ -1264,6 +1328,13 @@ onUnmounted(() => {
                 />
               </li>
               <li>
+                <div>Show country flags</div>
+                <Checkbox
+                  v-model="settings.config.showFlags"
+                  binary
+                />
+              </li>
+              <li>
                 <div>Always show subsecond</div>
                 <Checkbox
                   v-model="settings.config.showSubSec"
@@ -1523,6 +1594,12 @@ onUnmounted(() => {
 }
 li div {
   align-self: center;
+}
+.country-selector {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
 }
 .table {
   display: flex;

@@ -24,6 +24,7 @@ import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { definePreset } from "@primeuix/themes";
 import "primeicons/primeicons.css";
+import "/node_modules/flag-icons/css/flag-icons.min.css";
 
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);

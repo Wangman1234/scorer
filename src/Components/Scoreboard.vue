@@ -21,6 +21,7 @@ import NextFencer from "./NextFencer.vue";
 import { useMatchStore } from "@/stores/match.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
 import { computed } from "vue";
+import { Country } from "@/scripts/Country.ts";
 
 const match = useMatchStore();
 const settings = useSettingsStore();
@@ -60,7 +61,16 @@ const short = computed(() => {
               )
             }}
           </h1>
-          <h2>{{ match.match[0].fencer.club }}</h2>
+          <h2>
+            {{ match.match[0].fencer.club }}
+            <span
+              v-if="
+                settings.config.showFlags &&
+                match.match[0].fencer.country.countryCode
+              "
+              :class="`fi fi-${new Country(match.match[0].fencer.country.countryCode).alphaTwo()}`"
+            />
+          </h2>
         </div>
       </div>
       <div class="display-box">
@@ -84,7 +94,16 @@ const short = computed(() => {
               )
             }}
           </h1>
-          <h2>{{ match.match[1].fencer.club }}</h2>
+          <h2>
+            {{ match.match[1].fencer.club }}
+            <span
+              v-if="
+                settings.config.showFlags &&
+                match.match[1].fencer.country.countryCode
+              "
+              :class="`fi fi-${new Country(match.match[1].fencer.country.countryCode).alphaTwo()}`"
+            />
+          </h2>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type Country } from "./Country.ts";
+import { Country } from "./Country.ts";
 
 export class Name {
   lastName: string;
@@ -100,7 +100,7 @@ export class Fencer {
   constructor(
     id: string = "",
     name: Name | string | [string, string] = "",
-    country: Country = "",
+    country: Country = new Country(""),
     club: string = "",
   ) {
     if (name instanceof Name) {
