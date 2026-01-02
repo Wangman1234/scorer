@@ -188,6 +188,7 @@ async function finishMatch() {
   }
 }
 function end() {
+  timer.stopTimer("H");
   if (
     match.status.doubles >= settings.settings.maxDoubles &&
     settings.settings.maxDoubles > 0 &&
@@ -211,12 +212,13 @@ function end() {
     match.match[0].status = "D";
     match.match[1].status = "V";
   } else {
-    match.status.state = "H";
+    push();
     priorityPicker.value = true;
     match.status.stopwatch = settings.settings.priority;
     match.status.doubles = 0;
     return;
   }
+  push();
   if (!settings.settings.allowOver) {
     if (match.match[0].score > settings.settings.maxScore) {
       match.match[0].score = settings.settings.maxScore;
@@ -235,7 +237,6 @@ function end() {
       }
     }
   }
-  push();
 }
 
 // Key handler
@@ -276,25 +277,27 @@ function keyHandler(e: KeyboardEvent) {
     } else if (priorityPicker.value) {
       switch (key) {
         case keymap.value.LeftAdd1:
-          choosePriority("L");
-          break;
         case keymap.value.LeftCard:
-          choosePriority("L");
-          break;
-        case keymap.value.RightAdd1:
-          choosePriority("R");
-          break;
-        case keymap.value.RightCard:
-          choosePriority("R");
-          break;
-        case keymap.value.Timer:
-          choosePriority("N");
-          break;
         case keymap.value.PriorityLeft:
           choosePriority("L");
           break;
+        case keymap.value.RightAdd1:
+        case keymap.value.RightCard:
         case keymap.value.PriorityRight:
           choosePriority("R");
+          break;
+        case keymap.value.Timer:
+        case keymap.value.PrioritySelector:
+        case keymap.value.Double:
+          choosePriority("N");
+          break;
+        case keymap.value.MinusDouble:
+        // @ts-expect-error
+        case keymap.value.ResetPriority:
+          match.status.priority = "N";
+        // Falls through
+        case keymap.value.Menu:
+          priorityPicker.value = false;
           break;
       }
     } else if (nav.menu) {
@@ -636,6 +639,7 @@ onUnmounted(() => {
     }
   });
   stopCyrano();
+  timer.stopTimer("H");
   match.$reset();
 });
 </script>
@@ -774,7 +778,7 @@ onUnmounted(() => {
                 <Select
                   v-model="match.match[0].fencer.country.countryCode"
                   :options="Object.keys(CountryNameList)"
-                  :style="{ width: '23rem' }"
+                  :style="{ width: '50%' }"
                   filter
                   filter-placeholder="Country code"
                   optionLabel="name"
@@ -833,7 +837,7 @@ onUnmounted(() => {
                 <Select
                   v-model="match.match[1].fencer.country.countryCode"
                   :options="Object.keys(CountryNameList)"
-                  :style="{ width: '23rem' }"
+                  :style="{ width: '50%' }"
                   filter
                   optionLabel="name"
                   placeholder="Unaffiliated"
@@ -1341,6 +1345,13 @@ onUnmounted(() => {
                   binary
                 />
               </li>
+              <li>
+                <div>Blur background</div>
+                <Checkbox
+                  v-model="settings.config.blurred"
+                  binary
+                />
+              </li>
             </menu>
           </div>
         </TabPanel>
@@ -1438,10 +1449,6 @@ onUnmounted(() => {
         </TabPanel>
       </TabPanels>
     </Tabs>
-    <!--    <div-->
-    <!--      class="blurred background"-->
-    <!--      @click="nav.menu = false"-->
-    <!--    ></div>-->
   </Dialog>
   <div v-if="priorityPicker">
     <div
@@ -1469,11 +1476,13 @@ onUnmounted(() => {
     </div>
     <div
       v-if="priorityPicker"
-      class="blurred"
+      :class="{ blurred: settings.config.blurred }"
+      class="background"
     ></div>
   </div>
   <div
-    class="blurred"
+    :class="{ blurred: settings.config.blurred }"
+    class="background"
     v-if="
       match.status.state === 'E' ||
       ((cyrano?.cyranoState === 'Waiting' ||
@@ -1484,7 +1493,8 @@ onUnmounted(() => {
     <h1>{{ cyrano?.cyranoState }}</h1>
   </div>
   <div
-    class="blurred"
+    :class="{ blurred: settings.config.blurred }"
+    class="background"
     v-else-if="winner"
   >
     <h1>
@@ -1500,7 +1510,8 @@ onUnmounted(() => {
     <h2>{{ match.match[0].score }}-{{ match.match[1].score }}</h2>
   </div>
   <div
-    class="blurred"
+    :class="{ blurred: settings.config.blurred }"
+    class="background"
     v-else-if="matchOver"
   >
     <h1>{{ match.stopwatch <= 0 ? "Time" : "Match" }}</h1>
@@ -1511,12 +1522,14 @@ onUnmounted(() => {
       settings.settings.passivityStops &&
       match.passivity <= 0
     "
-    class="blurred"
+    :class="{ blurred: settings.config.blurred }"
+    class="background"
   >
     <h1>Passivity</h1>
   </div>
   <div
-    class="blurred"
+    :class="{ blurred: settings.config.blurred }"
+    class="background"
     v-if="match.status.state === 'P'"
   >
     <h1>1-min break</h1>
@@ -1616,7 +1629,7 @@ td {
 tr.running {
   border: 1px solid gold;
 }
-.blurred {
+.background {
   z-index: 998;
   float: none;
   position: fixed;
@@ -1629,12 +1642,10 @@ tr.running {
   color: white;
   top: 0;
   left: 0;
-  background-color: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(5px);
-}
-.blurred.background {
   background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+}
+.blurred {
+  backdrop-filter: blur(5px);
 }
 nav {
   background-color: dodgerblue;

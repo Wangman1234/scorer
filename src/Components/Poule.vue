@@ -124,16 +124,16 @@ function gs(matchId: number, id: string) {
     throw new TypeError();
   }
   const fencer1 = match[0];
+  const fencer2 = match[1];
   if (fencer1.fencer.id === id) {
     if (fencer1.status === "U") {
-      if (fencer1.score === 0) return "";
+      if (fencer1.score === 0 && fencer2.score === 0) return "";
       else return fencer1.score.toString();
     } else return fencer1.status + fencer1.score.toString();
   }
-  const fencer2 = match[1];
   if (fencer2.fencer.id === id) {
     if (fencer2.status === "U") {
-      if (fencer2.score === 0) return "";
+      if (fencer1.score === 0 && fencer2.score === 0) return "";
       else return fencer2.score.toString();
     } else return fencer2.status + fencer2.score.toString();
   }
@@ -165,6 +165,7 @@ function gs(matchId: number, id: string) {
           >
             V
           </th>
+          <th scope="col">V/M</th>
           <th scope="col">HS</th>
           <th scope="col">HR</th>
           <th scope="col">Ind</th>
@@ -237,6 +238,12 @@ function gs(matchId: number, id: string) {
             }}
           </td>
           <td class="left">{{ fencerMatchList.inds[index]?.V }}</td>
+          <td>
+            {{
+              (fencerMatchList.inds[index]?.V ?? 0) /
+              (fencerMatchList.mats[index]?.length ?? 1)
+            }}
+          </td>
           <td>{{ fencerMatchList.inds[index]?.HS }}</td>
           <td>{{ fencerMatchList.inds[index]?.HR }}</td>
           <td>

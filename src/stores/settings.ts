@@ -70,6 +70,7 @@ export const useSettingsStore = defineStore(
       ending: string;
       showFlags: boolean;
       showDoubles: boolean;
+      blurred: boolean;
     }>({
       keymap: "default remote",
       leftColor: "ff0000",
@@ -82,6 +83,7 @@ export const useSettingsStore = defineStore(
       ending: "",
       showFlags: false,
       showDoubles: false,
+      blurred: true,
     });
     const settings = ref({
       piste: "1",
