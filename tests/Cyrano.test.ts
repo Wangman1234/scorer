@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { describe, expect, test } from "vitest";
 import { CyranoMessage } from "../src/scripts/CyranoMessage";
 import {
   type CorrectFencerStatus,
@@ -21,8 +22,193 @@ import {
   Fencer,
   Name,
 } from "../src/scripts/Types";
-import { CountryNameList } from "../src/scripts/Country";
+import { Country } from "../src/scripts/Country";
 import { cyrConvert } from "../src/scripts/Functions";
+
+describe("decoding", () => {
+  test("Hello message", () => {
+    expect(new CyranoMessage("|EFP1|HELLO|17|fm-eq|%|")).toStrictEqual(
+      new CyranoMessage("EFP1", "HELLO", "17", "fm-eq"),
+    );
+  });
+  test("Empty info message", () => {
+    expect(
+      new CyranoMessage(
+        "|EFP1.1|INFO||||||||3:00||||W|%||||0|U|0|1|1|0|0|N|%||||0|U|0|1|0|0|0|N|%|",
+      ),
+    ).toStrictEqual(
+      new CyranoMessage(
+        "EFP1.1",
+        "INFO",
+        "",
+        "",
+        "",
+        {
+          doubles: 0,
+          poultab: "",
+          match: "",
+          round: "",
+          time: "",
+          stopwatch: 180,
+          type: "",
+          weapon: "",
+          priority: "",
+          state: "W",
+        },
+        emptyFencer,
+        {
+          fencer: new Fencer(),
+          score: 0,
+          status: "U",
+          ycard: false,
+          rcard: 1,
+          light: true,
+          wlight: false,
+          medical: 0,
+          reserve: "N",
+        },
+        {
+          fencer: new Fencer(),
+          score: 0,
+          status: "U",
+          ycard: false,
+          rcard: 1,
+          light: false,
+          wlight: false,
+          medical: 0,
+          reserve: "N",
+        },
+      ),
+    );
+  });
+  test("Partly filled info message", () => {
+    expect(
+      new CyranoMessage(
+        "|EFP1.1|INFO|17|efj-eq||||||3:00||||W|%||||8|V|0|1|1|0|0|N|%||||6|D|0|1|0|0|0|N|%|",
+      ),
+    ).toStrictEqual(
+      new CyranoMessage(
+        "EFP1.1",
+        "INFO",
+        "17",
+        "efj-eq",
+        "",
+        {
+          doubles: 0,
+          poultab: "",
+          match: "",
+          round: "",
+          time: "",
+          stopwatch: 180,
+          type: "",
+          weapon: "",
+          priority: "",
+          state: "W",
+        },
+        emptyFencer,
+        {
+          fencer: new Fencer(),
+          score: 8,
+          status: "V",
+          ycard: false,
+          rcard: 1,
+          light: true,
+          wlight: false,
+          medical: 0,
+          reserve: "N",
+        },
+        {
+          fencer: new Fencer(),
+          score: 6,
+          status: "D",
+          ycard: false,
+          rcard: 1,
+          light: false,
+          wlight: false,
+          medical: 0,
+          reserve: "N",
+        },
+      ),
+    );
+  });
+  test("Filled info message", () => {
+    expect(
+      new CyranoMessage(
+        "|EFP1.1|INFO|17|efj-eq|1|A32|12|2|10:30|3:00|I|S||W|132|" +
+          "J.Smith|GBR|%|28|P.Martin|FRA|8|V|0|1|1|0|0|N|%|32|B. Panini|ITA|6|D|0|1|0|0|0|N|%|",
+      ),
+    ).toStrictEqual(
+      new CyranoMessage(
+        "EFP1.1",
+        "INFO",
+        "17",
+        "efj-eq",
+        1,
+        {
+          doubles: 0,
+          poultab: "A32",
+          match: 12,
+          round: 2,
+          time: "10:30",
+          stopwatch: 180,
+          type: "I",
+          weapon: "S",
+          priority: "",
+          state: "W",
+        },
+        new Fencer("132", new Name("Smith", "J"), new Country("GBR"), ""),
+        {
+          fencer: new Fencer(
+            "28",
+            new Name("Martin", "P"),
+            new Country("FRA"),
+            "",
+          ),
+          score: 8,
+          status: "V",
+          ycard: false,
+          rcard: 1,
+          light: true,
+          wlight: false,
+          medical: 0,
+          reserve: "N",
+        },
+        {
+          fencer: new Fencer(
+            "32",
+            new Name("Panini", "B"),
+            new Country("ITA"),
+            "",
+          ),
+          score: 6,
+          status: "D",
+          ycard: false,
+          rcard: 1,
+          light: false,
+          wlight: false,
+          medical: 0,
+          reserve: "N",
+        },
+      ),
+    );
+  });
+  test("Completely empty info message", () => {
+    expect(new CyranoMessage("|EFP1.1|INFO||||||||||||W||%|")).toStrictEqual(
+      new CyranoMessage("EFP1.1", "INFO", "", "", "", {
+        doubles: 0,
+        poultab: "",
+        match: "",
+        round: "",
+        time: "",
+        stopwatch: "",
+        type: "",
+        weapon: "",
+        priority: "",
+        state: "W",
+      }),
+    );
+  });
+});
 
 let messages = [
   "|EFP1|HELLO|17|fm-eq|%|",
@@ -133,14 +319,9 @@ let cyranos = [
       priority: "",
       state: "W",
     },
-    new Fencer("132", new Name("Smith", "J"), CountryNameList["GBR"], ""),
+    new Fencer("132", new Name("Smith", "J"), new Country("GBR"), ""),
     {
-      fencer: new Fencer(
-        "28",
-        new Name("Martin", "P"),
-        CountryNameList["FRA"],
-        "",
-      ),
+      fencer: new Fencer("28", new Name("Martin", "P"), new Country("FRA"), ""),
       score: 8,
       status: "V",
       ycard: false,
@@ -151,12 +332,7 @@ let cyranos = [
       reserve: "N",
     },
     {
-      fencer: new Fencer(
-        "32",
-        new Name("Panini", "B"),
-        CountryNameList["ITA"],
-        "",
-      ),
+      fencer: new Fencer("32", new Name("Panini", "B"), new Country("ITA"), ""),
       score: 6,
       status: "D",
       ycard: false,
@@ -184,7 +360,7 @@ let rec: boolean[] = [];
 let send: boolean[] = [];
 for (let msg in messages) {
   console.log(messages[msg]);
-  let cyrano0 = new CyranoMessage(messages[msg]);
+  let cyrano0 = new CyranoMessage(messages[msg] ?? "");
   // console.log(cyrano0)
   // console.log(messages[msg])
   console.log(cyrano0.toString());
@@ -208,16 +384,11 @@ const c1 = new CyranoMessage(
 );
 console.log(c1);
 console.log(c1.toString());
-c1.leftfencer.fencer = new Fencer(
-  "1",
-  "Cada Lon",
-  CountryNameList["CAN"],
-  "THC",
-);
+c1.leftfencer.fencer = new Fencer("1", "Cada Lon", new Country("CAN"), "THC");
 c1.rightfencer.fencer = new Fencer(
   "2",
   "Yarel Han",
-  CountryNameList["CAN"],
+  new Country("CAN"),
   "DWARF",
 );
 console.log(c1.toString());
