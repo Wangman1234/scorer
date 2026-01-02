@@ -31,7 +31,7 @@ defineProps<{
   }>;
   leftFencer: CorrectFencerStatus;
   rightFencer: CorrectFencerStatus;
-  status: CorrectStatus;
+  status: [CorrectStatus];
   Lcolor: string;
   Rcolor: string;
 }>();
@@ -55,9 +55,9 @@ defineProps<{
               ' ' +
               (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((status.priority === 'N'
-                  ? status.round.toString() + '-'
-                  : 'P-') + toTime(status.stopwatch))[0]
+                ((status[0].priority === 'N'
+                  ? status[0].round.toString() + '-'
+                  : 'P-') + toTime(status[0].stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -67,16 +67,19 @@ defineProps<{
           </th>
           <th
             v-if="
-              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
-                toTime(status.stopwatch) !==
+              (status[0].priority === 'N'
+                ? status[0].round.toString() + '-'
+                : 'P-') +
+                toTime(status[0].stopwatch) !==
               last(matchData)?.stopwatch
             "
             class="ldiff"
             scope="col"
           >
             {{
-              (status.priority === "N" ? status.round.toString() + "-" : "P-") +
-              toTime(status.stopwatch)
+              (status[0].priority === "N"
+                ? status[0].round.toString() + "-"
+                : "P-") + toTime(status[0].stopwatch)
             }}
           </th>
           <td></td>
@@ -108,9 +111,9 @@ defineProps<{
               ' ' +
               (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((status.priority === 'N'
-                  ? status.round.toString() + '-'
-                  : 'P-') + toTime(status.stopwatch))[0]
+                ((status[0].priority === 'N'
+                  ? status[0].round.toString() + '-'
+                  : 'P-') + toTime(status[0].stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -138,8 +141,10 @@ defineProps<{
           </td>
           <td
             v-if="
-              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
-                toTime(status.stopwatch) !==
+              (status[0].priority === 'N'
+                ? status[0].round.toString() + '-'
+                : 'P-') +
+                toTime(status[0].stopwatch) !==
               last(matchData)?.stopwatch
             "
             :style="{
@@ -165,7 +170,7 @@ defineProps<{
           </td>
           <td :style="{ backgroundColor: Lcolor, color: 'black' }">
             {{ leftFencer.score
-            }}{{ leftFencer.status === "U" ? "" : leftFencer.status }}
+            }}{{ leftFencer.status[0] === "U" ? "" : leftFencer.status[0] }}
           </td>
         </tr>
         <tr>
@@ -193,9 +198,9 @@ defineProps<{
               ' ' +
               (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((status.priority === 'N'
-                  ? status.round.toString() + '-'
-                  : 'P-') + toTime(status.stopwatch))[0]
+                ((status[0].priority === 'N'
+                  ? status[0].round.toString() + '-'
+                  : 'P-') + toTime(status[0].stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -223,8 +228,10 @@ defineProps<{
           </td>
           <td
             v-if="
-              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
-                toTime(status.stopwatch) !==
+              (status[0].priority === 'N'
+                ? status[0].round.toString() + '-'
+                : 'P-') +
+                toTime(status[0].stopwatch) !==
               last(matchData)?.stopwatch
             "
             :style="{
@@ -250,7 +257,7 @@ defineProps<{
           </td>
           <td :style="{ backgroundColor: Rcolor, color: 'black' }">
             {{ rightFencer.score
-            }}{{ rightFencer.status === "U" ? "" : rightFencer.status }}
+            }}{{ rightFencer.status[0] === "U" ? "" : rightFencer.status[0] }}
           </td>
         </tr>
         <tr>
@@ -270,9 +277,9 @@ defineProps<{
               ' ' +
               (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((status.priority === 'N'
-                  ? status.round.toString() + '-'
-                  : 'P-') + toTime(status.stopwatch))[0]
+                ((status[0].priority === 'N'
+                  ? status[0].round.toString() + '-'
+                  : 'P-') + toTime(status[0].stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -281,16 +288,18 @@ defineProps<{
           </td>
           <td
             v-if="
-              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
-                toTime(status.stopwatch) !==
+              (status[0].priority === 'N'
+                ? status[0].round.toString() + '-'
+                : 'P-') +
+                toTime(status[0].stopwatch) !==
               last(matchData)?.stopwatch
             "
             class="ldiff"
           >
-            {{ status.doubles - (last(matchData)?.doubles ?? 0) ? "D" : "" }}
+            {{ status[0].doubles - (last(matchData)?.doubles ?? 0) ? "D" : "" }}
           </td>
           <td>
-            {{ status.doubles }}
+            {{ status[0].doubles }}
           </td>
         </tr>
       </tbody>
@@ -311,9 +320,9 @@ defineProps<{
               ' ' +
               (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((status.priority === 'N'
-                  ? status.round.toString() + '-'
-                  : 'P-') + toTime(status.stopwatch))[0]
+                ((status[0].priority === 'N'
+                  ? status[0].round.toString() + '-'
+                  : 'P-') + toTime(status[0].stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -323,8 +332,10 @@ defineProps<{
           </th>
           <th
             v-if="
-              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
-                toTime(status.stopwatch) !==
+              (status[0].priority === 'N'
+                ? status[0].round.toString() + '-'
+                : 'P-') +
+                toTime(status[0].stopwatch) !==
               last(matchData)?.stopwatch
             "
             class="ldiff"

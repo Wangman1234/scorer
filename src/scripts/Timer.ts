@@ -15,15 +15,18 @@
  */
 
 import { useSettingsStore } from "@/stores/settings.ts";
-import { type Ref } from "vue";
+import { type MaybeRefOrGetter, toValue } from "vue";
 import type { CorrectStatus } from "@/scripts/Types.ts";
 
 export class Timer {
   settings = useSettingsStore();
 
-  status: Ref<CorrectStatus>;
-  passivity: Ref<number>;
-  constructor(status: Ref<CorrectStatus>, passivity: Ref<number>) {
+  status: MaybeRefOrGetter<[CorrectStatus]>;
+  passivity: MaybeRefOrGetter<number>;
+  constructor(
+    status: MaybeRefOrGetter<[CorrectStatus]>,
+    passivity: MaybeRefOrGetter<number>,
+  ) {
     this.status = status;
     this.passivity = passivity;
   }
@@ -32,75 +35,82 @@ export class Timer {
   breakTime: number = 0;
 
   startTimer(set: "F" | "P", brk = false) {
-    this.status.value.state = set;
+    toValue(this.status)[0].state = set;
     if (set === "P") {
       if (brk) {
         this.breakTime =
-          this.status.value.stopwatch ?? this.settings.settings.maxTime;
-        this.status.value.stopwatch = this.settings.settings.break;
+          toValue(this.status)[0].stopwatch ?? this.settings.settings.maxTime;
+        toValue(this.status)[0].stopwatch = this.settings.settings.break;
       } else {
         this.breakTime = this.settings.settings.maxTime;
-        this.status.value.stopwatch = this.settings.settings.rest;
+        toValue(this.status)[0].stopwatch = this.settings.settings.rest;
       }
     }
     this.interval = setInterval(() => {
-      if (typeof this.status.value.stopwatch === "undefined") {
+      if (typeof toValue(this.status)[0].stopwatch === "undefined") {
         throw TypeError("time not set");
       }
-      this.status.value.stopwatch =
+      toValue(this.status)[0].stopwatch =
         Math.round(
-          (this.status.value.stopwatch - 0.01 + Number.EPSILON) * 100,
+          ((toValue(this.status)[0].stopwatch ?? 0) - 0.01 + Number.EPSILON) *
+            100,
         ) / 100;
-      if (this.status.value.stopwatch <= 0) {
+      if ((toValue(this.status)[0].stopwatch ?? 0) <= 0) {
         clearInterval(this.interval);
         if (
           set === "F" &&
-          this.status.value.round !== this.settings.settings.rounds &&
-          this.status.value.priority === "N"
+          toValue(this.status)[0].round !== this.settings.settings.rounds &&
+          toValue(this.status)[0].priority === "N"
         ) {
           this.startTimer("P");
         } else {
-          this.status.value.state = "H";
+          toValue(this.status)[0].state = "H";
           if (set === "P") {
-            if (brk) this.status.value.stopwatch = this.breakTime;
+            if (brk) toValue(this.status)[0].stopwatch = this.breakTime;
             else {
-              this.status.value.stopwatch = this.settings.settings.maxTime;
-              if (this.status.value.poultab[0] !== "P") {
-                this.status.value.round =
-                  (this.status.value.round % this.settings.settings.rounds) + 1;
+              toValue(this.status)[0].stopwatch =
+                this.settings.settings.maxTime;
+              if (toValue(this.status)[0].poultab[0] !== "P") {
+                toValue(this.status)[0].round =
+                  (toValue(this.status)[0].round %
+                    this.settings.settings.rounds) +
+                  1;
               }
             }
           } else {
-            this.status.value.stopwatch = 0;
+            toValue(this.status)[0].stopwatch = 0;
           }
         }
       } else if (
         this.settings.settings.passivity != 0 &&
         this.settings.settings.passivityStops &&
-        this.passivity.value <= 0
+        toValue(this.passivity) <= 0
       ) {
         this.stopTimer("H");
       }
     }, 10);
   }
   stopTimer(set: "H") {
-    this.status.value.state = set;
+    toValue(this.status)[0].state = set;
     clearInterval(this.interval);
   }
   addTime(time: number) {
-    if (typeof this.status.value.stopwatch === "undefined") {
+    if (typeof toValue(this.status)[0].stopwatch === "undefined") {
       throw TypeError("time not set");
     }
-    this.status.value.stopwatch += time;
+    toValue(this.status)[0].stopwatch =
+      (toValue(this.status)[0].stopwatch ?? 0) + time;
     const maxTime =
-      this.status.value.state === "P"
+      toValue(this.status)[0].state === "P"
         ? this.settings.settings.rest
-        : this.status.value.priority !== "N"
+        : toValue(this.status)[0].priority !== "N"
           ? this.settings.settings.priority
           : this.settings.settings.maxTime;
-    if (this.status.value.stopwatch < 0) {
-      this.status.value.stopwatch += maxTime;
+    if ((toValue(this.status)[0].stopwatch ?? 0) < 0) {
+      toValue(this.status)[0].stopwatch =
+        (toValue(this.status)[0].stopwatch ?? 0) + maxTime;
     }
-    this.status.value.stopwatch %= maxTime;
+    toValue(this.status)[0].stopwatch =
+      (toValue(this.status)[0].stopwatch ?? 0) % maxTime;
   }
 }

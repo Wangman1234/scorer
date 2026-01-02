@@ -33,8 +33,8 @@ import { useNavStore } from "@/stores/nav.ts";
 import { defaultFencerStatus, toTime } from "@/scripts/Functions.ts";
 import BoutProgress from "@/Components/BoutProgress.vue";
 import { Country, CountryNameList } from "@/scripts/Country.ts";
-import Blur from "@/Components/Blur.vue";
 import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
+import Priority from "@/Priority.vue";
 
 const settings = useSettingsStore();
 const nav = useNavStore();
@@ -53,18 +53,20 @@ const matches = ref<
 >({
   "": [defaultFencerStatus(), defaultFencerStatus()],
 });
-const status = ref<CorrectStatus>({
-  poultab: "",
-  match: "",
-  round: 1,
-  time: "",
-  stopwatch: settings.settings.maxTime,
-  type: "",
-  weapon: "F",
-  priority: "N",
-  state: "",
-  doubles: 0,
-});
+const status = ref<[CorrectStatus]>([
+  {
+    poultab: "",
+    match: "",
+    round: 1,
+    time: "",
+    stopwatch: settings.settings.maxTime,
+    type: "",
+    weapon: "F",
+    priority: "N",
+    state: "",
+    doubles: 0,
+  },
+]);
 const matchData = ref<
   Array<{
     stopwatch: string;
@@ -76,17 +78,17 @@ const matchData = ref<
 const passivityStart = ref(settings.settings.maxTime * 1);
 const match = computed<[CorrectFencerStatus, CorrectFencerStatus]>(() => {
   return (
-    matches.value[status.value.match] ?? [
+    matches.value[status.value[0].match] ?? [
       defaultFencerStatus(),
       defaultFencerStatus(),
     ]
   );
 });
 const stopwatch = computed(() => {
-  if (typeof status.value.stopwatch === "undefined") {
+  if (typeof status.value[0].stopwatch === "undefined") {
     return 0;
   } else {
-    return status.value.stopwatch;
+    return status.value[0].stopwatch;
   }
 });
 const cyranoMatch = computed(() => {
@@ -97,7 +99,7 @@ const cyranoMatch = computed(() => {
     settings.settings.piste,
     settings.settings.compe,
     settings.settings.phase,
-    status.value,
+    status.value[0],
     emptyFencer,
     match.value[1],
     match.value[0],
@@ -123,12 +125,12 @@ const Rcolor = computed(() => {
 const matchOver = computed(() => {
   return (
     ((stopwatch.value ?? 0) <= 0 &&
-      (status.value.round === settings.settings.rounds ||
-        status.value.priority !== "N")) ||
+      (status.value[0].round === settings.settings.rounds ||
+        status.value[0].priority !== "N")) ||
     ((match.value[0].score >= settings.settings.maxScore ||
       match.value[1].score >= settings.settings.maxScore) &&
-      status.value.priority === "N") ||
-    (settings.settings.maxDoubles <= status.value.doubles &&
+      status.value[0].priority === "N") ||
+    (settings.settings.maxDoubles <= status.value[0].doubles &&
       settings.settings.maxDoubles > 0)
   );
 });
@@ -140,7 +142,7 @@ function $reset() {
   matches.value = {
     "": [defaultFencerStatus(), defaultFencerStatus()],
   };
-  status.value = {
+  status.value[0] = {
     poultab: "",
     match: "",
     round: 1,
@@ -168,7 +170,7 @@ function changeScore(fencer: 0 | 1, value: number) {
   let val = match.value[fencer].score + value;
   if (
     val >= 0 &&
-    (status.value.priority !== "N" ||
+    (status.value[0].priority !== "N" ||
       value <= 0 ||
       match.value[fencer].score < settings.settings.maxScore)
   ) {
@@ -192,25 +194,25 @@ async function choosePriority(state: "N" | "L" | "R") {
   if (state === "N") {
     for (let i = 0; i < 20; i++) {
       if (Math.random() >= 0.5) {
-        status.value.priority = "R";
+        status.value[0].priority = "R";
       } else {
-        status.value.priority = "L";
+        status.value[0].priority = "L";
       }
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   } else {
-    status.value.priority = state;
+    status.value[0].priority = state;
   }
 }
 function push() {
   Array.prototype.push.call(matchData.value, {
     stopwatch:
-      (status.value.priority === "N"
-        ? status.value.round.toString() + "-"
-        : "P-") + toTime(status.value.stopwatch),
+      (status.value[0].priority === "N"
+        ? status.value[0].round.toString() + "-"
+        : "P-") + toTime(status.value[0].stopwatch),
     leftFencerStatus: JSON.parse(JSON.stringify(match.value[0])),
     rightFencerStatus: JSON.parse(JSON.stringify(match.value[1])),
-    doubles: status.value.doubles,
+    doubles: status.value[0].doubles,
   });
   matchData.value = Array.from(matchData.value);
 }
@@ -235,13 +237,13 @@ async function stopCyrano() {
 // Match controls
 function reset() {
   timer.stopTimer("H");
-  status.value.stopwatch = settings.settings.maxTime;
-  status.value.priority = "N";
-  status.value.state = "";
-  status.value.doubles = 0;
-  if (status.value.poultab[0] === "P")
-    status.value.round = settings.settings.rounds;
-  else status.value.round = 1;
+  status.value[0].stopwatch = settings.settings.maxTime;
+  status.value[0].priority = "N";
+  status.value[0].state = "";
+  status.value[0].doubles = 0;
+  if (status.value[0].poultab[0] === "P")
+    status.value[0].round = settings.settings.rounds;
+  else status.value[0].round = 1;
   match.value[0].score = 0;
   match.value[0].status = "U";
   match.value[0].ycard = false;
@@ -260,13 +262,13 @@ function reset() {
   match.value[1].reserve = "N";
   matchData.value = [];
   nav.menu = false;
-  passivityStart.value = status.value.stopwatch ?? 0;
+  passivityStart.value = status.value[0].stopwatch ?? 0;
 }
 
 async function update() {
   while (cyrano.value?.sendingData) {
     console.log("not ended");
-    console.log(status.value.state);
+    console.log(status.value[0].state);
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   const cs = cyrano.value ?? { cyranoState: "" };
@@ -275,7 +277,7 @@ async function update() {
 }
 
 async function finishMatch() {
-  status.value.state = "E";
+  status.value[0].state = "E";
   if (cyrano.value && !settings.cyranoOptions.replayMode) {
     await update();
     matchData.value = [];
@@ -288,7 +290,7 @@ async function finishMatch() {
 function end() {
   timer.stopTimer("H");
   if (
-    status.value.doubles >= settings.settings.maxDoubles &&
+    status.value[0].doubles >= settings.settings.maxDoubles &&
     settings.settings.maxDoubles > 0 &&
     settings.settings.allowTies
   ) {
@@ -303,17 +305,17 @@ function end() {
   } else if (settings.settings.allowTies) {
     match.value[0].status = "D";
     match.value[1].status = "D";
-  } else if (status.value.priority === "L") {
+  } else if (status.value[0].priority === "L") {
     match.value[0].status = "V";
     match.value[1].status = "D";
-  } else if (status.value.priority === "R") {
+  } else if (status.value[0].priority === "R") {
     match.value[0].status = "D";
     match.value[1].status = "V";
   } else {
     push();
     priorityPicker.value = true;
-    status.value.stopwatch = settings.settings.priority;
-    status.value.doubles = 0;
+    status.value[0].stopwatch = settings.settings.priority;
+    status.value[0].doubles = 0;
     return;
   }
   push();
@@ -329,9 +331,9 @@ function end() {
       match.value[0].score === match.value[1].score
     ) {
       if (match.value[0].status === "V") {
-        status.value.priority = "L";
+        status.value[0].priority = "L";
       } else {
-        status.value.priority = "R";
+        status.value[0].priority = "R";
       }
     }
   }
@@ -392,7 +394,7 @@ function keyHandler(e: KeyboardEvent) {
         case keymap.value.MinusDouble:
         // @ts-expect-error
         case keymap.value.ResetPriority:
-          status.value.priority = "N";
+          status.value[0].priority = "N";
         // Falls through
         case keymap.value.Menu:
           priorityPicker.value = false;
@@ -413,12 +415,12 @@ function keyHandler(e: KeyboardEvent) {
     } else if (inputTime.value) {
       if (key === keymap.value.Timer) {
         inputTime.value = false;
-        passivityStart.value = status.value.stopwatch ?? 0;
+        passivityStart.value = status.value[0].stopwatch ?? 0;
       }
     } else if (
       !cyrano.value ||
       cyrano.value.sendingData ||
-      status.value.state !== "E"
+      status.value[0].state !== "E"
     ) {
       e.preventDefault();
       if (key === " ") key = keymap.value.Timer;
@@ -428,8 +430,8 @@ function keyHandler(e: KeyboardEvent) {
         ) ?? "";
       const func = functions[index] ?? { func: function () {} };
       func.func();
-      passivityStart.value = status.value.stopwatch ?? 0;
-      if (cyrano.value?.sendingData && status.value.state !== "E")
+      passivityStart.value = status.value[0].stopwatch ?? 0;
+      if (cyrano.value?.sendingData && status.value[0].state !== "E")
         cyrano.value.forceWrite();
     }
   }
@@ -558,10 +560,10 @@ const functions: map<{ name?: string; func: () => void }> = {
     name: "Add 1 double",
     func: () => {
       if (
-        status.value.doubles < settings.settings.maxDoubles ||
+        status.value[0].doubles < settings.settings.maxDoubles ||
         settings.settings.maxDoubles === 0
       ) {
-        status.value.doubles++;
+        status.value[0].doubles++;
         changeScore(0, settings.settings.doublesAddPoints);
         changeScore(1, settings.settings.doublesAddPoints);
       }
@@ -570,8 +572,8 @@ const functions: map<{ name?: string; func: () => void }> = {
   MinusDouble: {
     name: "Subtract 1 double",
     func: () => {
-      if (status.value.doubles > 0 || settings.settings.maxDoubles === 0) {
-        status.value.doubles--;
+      if (status.value[0].doubles > 0 || settings.settings.maxDoubles === 0) {
+        status.value[0].doubles--;
         changeScore(0, -settings.settings.doublesAddPoints);
         changeScore(1, -settings.settings.doublesAddPoints);
       }
@@ -635,20 +637,23 @@ const functions: map<{ name?: string; func: () => void }> = {
       if (
         cyrano.value &&
         cyrano.value.sendingData &&
-        status.value.state === "E"
+        status.value[0].state === "E"
       )
         return;
-      if (status.value.state === "F") {
+      if (status.value[0].state === "F") {
         timer.stopTimer("H");
       } else if (winner.value) {
         finishMatch();
       } else if (matchOver.value) {
         end();
-      } else if (status.value.state === "H" || status.value.state === "") {
+      } else if (
+        status.value[0].state === "H" ||
+        status.value[0].state === ""
+      ) {
         if (
-          status.value.priority === "N" ||
+          status.value[0].priority === "N" ||
           (match.value[0].score === match.value[1].score &&
-            status.value.doubles === 0)
+            status.value[0].doubles === 0)
         ) {
           push();
           timer.startTimer("F");
@@ -683,13 +688,13 @@ const functions: map<{ name?: string; func: () => void }> = {
   Rest: {
     name: "Rest and next round",
     func: () => {
-      const P = status.value.state === "P";
+      const P = status.value[0].state === "P";
       timer.stopTimer("H");
       if (P) {
-        status.value.stopwatch = settings.settings.maxTime;
-        if (status.value.poultab[0] !== "P") {
-          status.value.round =
-            (status.value.round % settings.settings.rounds) + 1;
+        status.value[0].stopwatch = settings.settings.maxTime;
+        if (status.value[0].poultab[0] !== "P") {
+          status.value[0].round =
+            (status.value[0].round % settings.settings.rounds) + 1;
         }
       } else {
         timer.startTimer("P");
@@ -699,10 +704,10 @@ const functions: map<{ name?: string; func: () => void }> = {
   Break: {
     name: "Break and rest",
     func: () => {
-      const P = status.value.state === "P";
+      const P = status.value[0].state === "P";
       timer.stopTimer("H");
       if (P) {
-        status.value.stopwatch = timer.breakTime;
+        status.value[0].stopwatch = timer.breakTime;
       } else {
         timer.startTimer("P", true);
       }
@@ -710,7 +715,7 @@ const functions: map<{ name?: string; func: () => void }> = {
   },
   ResetTime: {
     name: "Reset time",
-    func: () => (status.value.stopwatch = settings.settings.maxTime),
+    func: () => (status.value[0].stopwatch = settings.settings.maxTime),
   },
   ResetBout: { name: "Reset bout", func: reset },
   PrioritySelector: {
@@ -724,15 +729,15 @@ const functions: map<{ name?: string; func: () => void }> = {
   },
   ResetPriority: {
     name: "Reset priority",
-    func: () => (status.value.priority = "N"),
+    func: () => (status.value[0].priority = "N"),
   },
   EndMatch: { name: "End match", func: end },
   Period: {
     name: "Next period",
     func: () => {
-      if (status.value.poultab[0] !== "P") {
-        status.value.round =
-          (status.value.round % settings.settings.rounds) + 1;
+      if (status.value[0].poultab[0] !== "P") {
+        status.value[0].round =
+          (status.value[0].round % settings.settings.rounds) + 1;
       }
     },
   },
@@ -860,7 +865,7 @@ onUnmounted(() => {
     <input
       ref="stopwatchRef"
       autofocus
-      v-model="status.stopwatch"
+      v-model="status[0].stopwatch"
       class="number"
       :max="settings.settings.maxTime"
       min="0"
@@ -1039,7 +1044,7 @@ onUnmounted(() => {
               <li>
                 <div>Current time(in seconds)</div>
                 <InputNumber
-                  v-model="status.stopwatch"
+                  v-model="status[0].stopwatch"
                   :max="settings.settings.maxTime"
                   :maxFractionDigits="2"
                   :min="0"
@@ -1145,8 +1150,8 @@ onUnmounted(() => {
               </li>
             </menu>
             <BoutProgress
-              :Lcolor="Lcolor"
-              :Rcolor="Rcolor"
+              :Lcolor
+              :Rcolor
               :leftFencer="match[0]"
               :matchData
               :rightFencer="match[1]"
@@ -1284,7 +1289,7 @@ onUnmounted(() => {
                 <tr
                   v-for="(item, index) in omit(matches, '')"
                   :key="index"
-                  :class="index == status.match ? 'running' : 'not'"
+                  :class="index == status[0].match ? 'running' : 'not'"
                 >
                   <th scope="row">{{ index }}.</th>
                   <td>
@@ -1612,32 +1617,10 @@ onUnmounted(() => {
       </TabPanels>
     </Tabs>
   </Dialog>
-  <div v-if="priorityPicker">
-    <div
-      v-if="priorityPicker"
-      class="priority"
-    >
-      <h2>Choose Priority</h2>
-      <div class="lr">
-        <Button
-          class="half"
-          @click="choosePriority('L')"
-        >
-          Left
-        </Button>
-        <Button
-          class="half"
-          @click="choosePriority('R')"
-        >
-          Right
-        </Button>
-      </div>
-      <div>
-        <Button @click="choosePriority('N')">Random</Button>
-      </div>
-    </div>
-    <Blur v-if="priorityPicker" />
-  </div>
+  <Priority
+    v-if="priorityPicker"
+    @priority="(side) => choosePriority(side)"
+  />
   <Dialog
     :contentStyle="{ fontSize: '2rem' }"
     :showHeader="false"
@@ -1757,33 +1740,6 @@ li {
   justify-content: space-between;
   padding: 0.1rem 1rem;
   border-bottom: 1px solid var(--p-surface-600);
-}
-.priority {
-  z-index: 1000;
-  float: none;
-  position: fixed;
-  display: grid;
-  grid-template-columns: 100%;
-  grid-template-rows: 20% 50% 30%;
-  width: 30vw;
-  height: 40vh;
-  top: 40%;
-  left: 50%;
-  margin-left: -15vw;
-  align-self: flex-end;
-  background-color: darkslategrey;
-}
-.priority div {
-  align-items: center;
-  align-self: center;
-  height: 100%;
-}
-.lr {
-  display: flex;
-}
-.priority button {
-  width: 100%;
-  height: 100%;
 }
 .selected {
   background-color: darkslategray;

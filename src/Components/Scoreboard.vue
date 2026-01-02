@@ -30,7 +30,7 @@ const settings = useSettingsStore();
 const props = defineProps<{
   leftFencer: CorrectFencerStatus;
   rightFencer: CorrectFencerStatus;
-  status: CorrectStatus;
+  status: [CorrectStatus];
   stopwatch: number;
   passivity: number;
   matches: Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>;
@@ -123,7 +123,7 @@ const short = computed(() => {
           id="fencer1-score"
           :style="{
             color: leftChange ? 'transparent' : 'white',
-            borderColor: status.priority === 'L' ? 'blue' : 'white',
+            borderColor: status[0].priority === 'L' ? 'blue' : 'white',
           }"
           class="scoring fencer-1"
         >
@@ -166,20 +166,20 @@ const short = computed(() => {
             v-else-if="
               (leftFencer.score >= (3 / 5) * settings.settings.maxScore ||
                 rightFencer.score >= (3 / 5) * settings.settings.maxScore ||
-                (status.doubles >= settings.settings.maxDoubles / 2 &&
+                (status[0].doubles >= settings.settings.maxDoubles / 2 &&
                   settings.settings.maxDoubles !== 0) ||
-                (Number(status.stopwatch) <= settings.settings.maxTime / 3 &&
-                  status.round == settings.settings.rounds)) &&
+                (Number(status[0].stopwatch) <= settings.settings.maxTime / 3 &&
+                  status[0].round == settings.settings.rounds)) &&
               cyrano &&
               Object.keys(omit(matches, '')).length > 1
             "
-            :match="status.match === '' ? 0 : status.match"
+            :match="status[0].match === '' ? 0 : status[0].match"
             :matches="omit(matches, '')"
           />
         </div>
         <div
           id="timer"
-          :class="status.state"
+          :class="status[0].state"
         >
           <div
             v-if="settings.config.showSubSec"
@@ -215,7 +215,7 @@ const short = computed(() => {
             v-if="settings.config.showDoubles"
             id="doubles"
           >
-            {{ status.doubles
+            {{ status[0].doubles
             }}{{
               settings.settings.maxDoubles > 0
                 ? "/" + settings.settings.maxDoubles.toString()
@@ -225,10 +225,10 @@ const short = computed(() => {
           </div>
         </div>
         <div id="rounds">
-          <span>{{ status.poultab[0] === "P" ? "Match " : "Period " }}</span>
+          <span>{{ status[0].poultab[0] === "P" ? "Match " : "Period " }}</span>
           <span>
-            {{ status.round }}/{{
-              status.poultab[0] === "P"
+            {{ status[0].round }}/{{
+              status[0].poultab[0] === "P"
                 ? Object.keys(omit(matches, "")).length
                 : settings.settings.rounds
             }}
@@ -241,7 +241,7 @@ const short = computed(() => {
           id="fencer2-score"
           :style="{
             color: rightChange ? 'transparent' : 'white',
-            borderColor: status.priority === 'R' ? 'blue' : 'white',
+            borderColor: status[0].priority === 'R' ? 'blue' : 'white',
           }"
           class="scoring fencer-2"
         >
@@ -268,7 +268,7 @@ const short = computed(() => {
   </div>
   <Blur
     v-if="
-      status.state === 'E' ||
+      status[0].state === 'E' ||
       ((cyrano?.cyranoState === 'Waiting' ||
         cyrano?.cyranoState === 'No Bouts') &&
         cyrano)
@@ -280,9 +280,9 @@ const short = computed(() => {
     <template #default>
       Match
       {{
-        leftFencer.status === "V"
+        leftFencer.status[0] === "V"
           ? "Left"
-          : rightFencer.status === "V"
+          : rightFencer.status[0] === "V"
             ? "Right"
             : "Tie"
       }}
@@ -301,7 +301,7 @@ const short = computed(() => {
   >
     Passivity
   </Blur>
-  <Blur v-if="status.state === 'P'">
+  <Blur v-if="status[0].state === 'P'">
     <template #default>1-min break</template>
     <template #sub
       ><span style="color: blue">
