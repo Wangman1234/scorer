@@ -18,22 +18,31 @@
 import Color from "color";
 import { omit } from "underscore";
 import NextFencer from "./NextFencer.vue";
-import { useMatchStore } from "@/stores/match.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
 import { computed } from "vue";
 import { Country } from "@/scripts/Country.ts";
+import Blur from "@/Components/Blur.vue";
+import type { Cyrano } from "@/scripts/Cyrano.ts";
+import type { CorrectFencerStatus, CorrectStatus } from "@/scripts/Types.ts";
 
-const match = useMatchStore();
 const settings = useSettingsStore();
 
-defineProps<{
-  cyrano: boolean;
+const props = defineProps<{
+  leftFencer: CorrectFencerStatus;
+  rightFencer: CorrectFencerStatus;
+  status: CorrectStatus;
+  stopwatch: number;
+  passivity: number;
+  matches: Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>;
+  cyrano?: Cyrano;
+  winner: boolean;
+  matchOver: boolean;
   leftChange: boolean;
   rightChange: boolean;
 }>();
 
 const short = computed(() => {
-  return match.stopwatch < 10;
+  return props.stopwatch < 10;
 });
 </script>
 
@@ -52,7 +61,7 @@ const short = computed(() => {
         >
           <h1>
             {{
-              match.match[0].fencer.name.toString(
+              leftFencer.fencer.name.toString(
                 settings.config.lastNameFirst,
                 settings.config.shortenFirst,
                 settings.config.shortenSecond,
@@ -62,13 +71,13 @@ const short = computed(() => {
             }}
           </h1>
           <h2>
-            {{ match.match[0].fencer.club }}
+            {{ leftFencer.fencer.club }}
             <span
               v-if="
                 settings.config.showFlags &&
-                match.match[0].fencer.country.countryCode
+                leftFencer.fencer.country.countryCode
               "
-              :class="`fi fi-${new Country(match.match[0].fencer.country.countryCode).alphaTwo()}`"
+              :class="`fi fi-${new Country(leftFencer.fencer.country.countryCode).alphaTwo()}`"
             />
           </h2>
         </div>
@@ -85,7 +94,7 @@ const short = computed(() => {
         >
           <h1>
             {{
-              match.match[1].fencer.name.toString(
+              rightFencer.fencer.name.toString(
                 settings.config.lastNameFirst,
                 settings.config.shortenFirst,
                 settings.config.shortenSecond,
@@ -95,13 +104,13 @@ const short = computed(() => {
             }}
           </h1>
           <h2>
-            {{ match.match[1].fencer.club }}
+            {{ rightFencer.fencer.club }}
             <span
               v-if="
                 settings.config.showFlags &&
-                match.match[1].fencer.country.countryCode
+                rightFencer.fencer.country.countryCode
               "
-              :class="`fi fi-${new Country(match.match[1].fencer.country.countryCode).alphaTwo()}`"
+              :class="`fi fi-${new Country(rightFencer.fencer.country.countryCode).alphaTwo()}`"
             />
           </h2>
         </div>
@@ -114,24 +123,24 @@ const short = computed(() => {
           id="fencer1-score"
           :style="{
             color: leftChange ? 'transparent' : 'white',
-            borderColor: match.status.priority === 'L' ? 'blue' : 'white',
+            borderColor: status.priority === 'L' ? 'blue' : 'white',
           }"
           class="scoring fencer-1"
         >
-          {{ match.match[0].score }}
+          {{ leftFencer.score }}
         </div>
         <div class="cards fencer-1">
           <div>
             <div
-              v-if="match.match[0].rcard > 0"
+              v-if="leftFencer.rcard > 0"
               class="red"
             >
-              {{ match.match[0].rcard }}
+              {{ leftFencer.rcard }}
             </div>
           </div>
           <div>
             <div
-              v-if="match.match[0].ycard"
+              v-if="leftFencer.ycard"
               class="yellow"
             ></div>
           </div>
@@ -142,44 +151,43 @@ const short = computed(() => {
           <div
             v-if="
               settings.settings.passivity != 0 &&
-              match.passivity <= 20 &&
-              match.passivity < match.stopwatch - 0.005
+              passivity <= 20 &&
+              passivity < stopwatch - 0.005
             "
             :style="{
-              color: match.passivity <= 10 ? 'red' : 'yellow',
-              borderColor: match.passivity <= 10 ? 'red' : 'yellow',
+              color: passivity <= 10 ? 'red' : 'yellow',
+              borderColor: passivity <= 10 ? 'red' : 'yellow',
             }"
             style="font-size: 4rem; border-style: solid; border-width: 2px"
           >
-            {{ match.passivity.toFixed(2) }}
+            {{ passivity.toFixed(2) }}
           </div>
           <NextFencer
             v-else-if="
-              (match.match[0].score >= (3 / 5) * settings.settings.maxScore ||
-                match.match[1].score >= (3 / 5) * settings.settings.maxScore ||
-                (match.status.doubles >= settings.settings.maxDoubles / 2 &&
+              (leftFencer.score >= (3 / 5) * settings.settings.maxScore ||
+                rightFencer.score >= (3 / 5) * settings.settings.maxScore ||
+                (status.doubles >= settings.settings.maxDoubles / 2 &&
                   settings.settings.maxDoubles !== 0) ||
-                (Number(match.status.stopwatch) <=
-                  settings.settings.maxTime / 3 &&
-                  match.status.round == settings.settings.rounds)) &&
+                (Number(status.stopwatch) <= settings.settings.maxTime / 3 &&
+                  status.round == settings.settings.rounds)) &&
               cyrano &&
-              Object.keys(omit(match.matches, '')).length > 1
+              Object.keys(omit(matches, '')).length > 1
             "
-            :match="match.status.match === '' ? 0 : match.status.match"
-            :matches="omit(match.matches, '')"
+            :match="status.match === '' ? 0 : status.match"
+            :matches="omit(matches, '')"
           />
         </div>
         <div
           id="timer"
-          :class="match.status.state"
+          :class="status.state"
         >
           <div
             v-if="settings.config.showSubSec"
             id="sub"
           >
             <span>
-              {{ Math.floor(match.stopwatch / 60) }}:{{
-                (match.stopwatch - 60 * Math.floor(match.stopwatch / 60))
+              {{ Math.floor(stopwatch / 60) }}:{{
+                (stopwatch - 60 * Math.floor(stopwatch / 60))
                   .toFixed(2)
                   .padStart(5, "0")
               }}
@@ -189,15 +197,15 @@ const short = computed(() => {
             v-else-if="short"
             id="short"
           >
-            <span>{{ match.stopwatch.toFixed(2) }}</span>
+            <span>{{ stopwatch.toFixed(2) }}</span>
           </div>
           <div
             v-else
             id="long"
           >
             <span>
-              {{ Math.floor(match.stopwatch / 60) }}:{{
-                (Math.floor(match.stopwatch) % 60).toString().padStart(2, "0")
+              {{ Math.floor(stopwatch / 60) }}:{{
+                (Math.floor(stopwatch) % 60).toString().padStart(2, "0")
               }}
             </span>
           </div>
@@ -207,7 +215,7 @@ const short = computed(() => {
             v-if="settings.config.showDoubles"
             id="doubles"
           >
-            {{ match.status.doubles
+            {{ status.doubles
             }}{{
               settings.settings.maxDoubles > 0
                 ? "/" + settings.settings.maxDoubles.toString()
@@ -217,13 +225,11 @@ const short = computed(() => {
           </div>
         </div>
         <div id="rounds">
-          <span>{{
-            match.status.poultab[0] === "P" ? "Match " : "Period "
-          }}</span>
+          <span>{{ status.poultab[0] === "P" ? "Match " : "Period " }}</span>
           <span>
-            {{ match.status.round }}/{{
-              match.status.poultab[0] === "P"
-                ? Object.keys(omit(match.matches, "")).length
+            {{ status.round }}/{{
+              status.poultab[0] === "P"
+                ? Object.keys(omit(matches, "")).length
                 : settings.settings.rounds
             }}
           </span>
@@ -235,24 +241,24 @@ const short = computed(() => {
           id="fencer2-score"
           :style="{
             color: rightChange ? 'transparent' : 'white',
-            borderColor: match.status.priority === 'R' ? 'blue' : 'white',
+            borderColor: status.priority === 'R' ? 'blue' : 'white',
           }"
           class="scoring fencer-2"
         >
-          {{ match.match[1].score }}
+          {{ rightFencer.score }}
         </div>
         <div class="cards fencer-2">
           <div>
             <div
-              v-if="match.match[1].rcard > 0"
+              v-if="rightFencer.rcard > 0"
               class="red"
             >
-              {{ match.match[1].rcard }}
+              {{ rightFencer.rcard }}
             </div>
           </div>
           <div>
             <div
-              v-if="match.match[1].ycard"
+              v-if="rightFencer.ycard"
               class="yellow"
             ></div>
           </div>
@@ -260,6 +266,51 @@ const short = computed(() => {
       </div>
     </div>
   </div>
+  <Blur
+    v-if="
+      status.state === 'E' ||
+      ((cyrano?.cyranoState === 'Waiting' ||
+        cyrano?.cyranoState === 'No Bouts') &&
+        cyrano)
+    "
+  >
+    {{ cyrano?.cyranoState }}
+  </Blur>
+  <Blur v-else-if="winner">
+    <template #default>
+      Match
+      {{
+        leftFencer.status === "V"
+          ? "Left"
+          : rightFencer.status === "V"
+            ? "Right"
+            : "Tie"
+      }}
+    </template>
+    <template #sub>{{ leftFencer.score }}-{{ rightFencer.score }}</template>
+  </Blur>
+  <Blur v-else-if="matchOver">
+    {{ stopwatch <= 0 ? "Time" : "Match" }}
+  </Blur>
+  <Blur
+    v-else-if="
+      settings.settings.passivity != 0 &&
+      settings.settings.passivityStops &&
+      passivity <= 0
+    "
+  >
+    Passivity
+  </Blur>
+  <Blur v-if="status.state === 'P'">
+    <template #default>1-min break</template>
+    <template #sub
+      ><span style="color: blue">
+        {{ Math.floor((stopwatch ?? 0) / 60) }}:{{
+          (Math.floor(stopwatch ?? 0) % 60).toString().padStart(2, "0")
+        }}
+      </span>
+    </template>
+  </Blur>
 </template>
 
 <style scoped>

@@ -13,83 +13,94 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useMatchStore } from "@/stores/match.ts";
+
 import { useSettingsStore } from "@/stores/settings.ts";
+import { type Ref } from "vue";
+import type { CorrectStatus } from "@/scripts/Types.ts";
 
 export class Timer {
-  match = useMatchStore();
   settings = useSettingsStore();
+
+  status: Ref<CorrectStatus>;
+  passivity: Ref<number>;
+  constructor(status: Ref<CorrectStatus>, passivity: Ref<number>) {
+    this.status = status;
+    this.passivity = passivity;
+  }
 
   interval: number = 0;
   breakTime: number = 0;
 
   startTimer(set: "F" | "P", brk = false) {
-    this.match.status.state = set;
+    this.status.value.state = set;
     if (set === "P") {
       if (brk) {
         this.breakTime =
-          this.match.status.stopwatch ?? this.settings.settings.maxTime;
-        this.match.status.stopwatch = this.settings.settings.break;
+          this.status.value.stopwatch ?? this.settings.settings.maxTime;
+        this.status.value.stopwatch = this.settings.settings.break;
       } else {
         this.breakTime = this.settings.settings.maxTime;
-        this.match.status.stopwatch = this.settings.settings.rest;
+        this.status.value.stopwatch = this.settings.settings.rest;
       }
     }
     this.interval = setInterval(() => {
-      if (typeof this.match.status.stopwatch === "undefined") {
+      if (typeof this.status.value.stopwatch === "undefined") {
         throw TypeError("time not set");
       }
-      this.match.status.stopwatch =
+      this.status.value.stopwatch =
         Math.round(
-          (this.match.status.stopwatch - 0.01 + Number.EPSILON) * 100,
+          (this.status.value.stopwatch - 0.01 + Number.EPSILON) * 100,
         ) / 100;
-      if (this.match.status.stopwatch <= 0) {
+      if (this.status.value.stopwatch <= 0) {
         clearInterval(this.interval);
         if (
           set === "F" &&
-          this.match.status.round !== this.settings.settings.rounds &&
-          this.match.status.priority === "N"
+          this.status.value.round !== this.settings.settings.rounds &&
+          this.status.value.priority === "N"
         ) {
           this.startTimer("P");
         } else {
-          this.match.status.state = "H";
+          this.status.value.state = "H";
           if (set === "P") {
-            if (brk) this.match.status.stopwatch = this.breakTime;
+            if (brk) this.status.value.stopwatch = this.breakTime;
             else {
-              this.match.status.stopwatch = this.settings.settings.maxTime;
-              this.match.period();
+              this.status.value.stopwatch = this.settings.settings.maxTime;
+              if (this.status.value.poultab[0] !== "P") {
+                this.status.value.round =
+                  (this.status.value.round % this.settings.settings.rounds) + 1;
+              }
             }
           } else {
-            this.match.status.stopwatch = 0;
+            this.status.value.stopwatch = 0;
           }
         }
       } else if (
         this.settings.settings.passivity != 0 &&
         this.settings.settings.passivityStops &&
-        this.match.passivity <= 0
+        this.passivity.value <= 0
       ) {
         this.stopTimer("H");
       }
     }, 10);
   }
   stopTimer(set: "H") {
-    this.match.status.state = set;
+    this.status.value.state = set;
     clearInterval(this.interval);
   }
   addTime(time: number) {
-    if (typeof this.match.status.stopwatch === "undefined") {
+    if (typeof this.status.value.stopwatch === "undefined") {
       throw TypeError("time not set");
     }
-    this.match.status.stopwatch += time;
+    this.status.value.stopwatch += time;
     const maxTime =
-      this.match.status.state === "P"
+      this.status.value.state === "P"
         ? this.settings.settings.rest
-        : this.match.status.priority !== "N"
+        : this.status.value.priority !== "N"
           ? this.settings.settings.priority
           : this.settings.settings.maxTime;
-    if (this.match.status.stopwatch < 0) {
-      this.match.status.stopwatch += maxTime;
+    if (this.status.value.stopwatch < 0) {
+      this.status.value.stopwatch += maxTime;
     }
-    this.match.status.stopwatch %= maxTime;
+    this.status.value.stopwatch %= maxTime;
   }
 }

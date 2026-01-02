@@ -15,13 +15,26 @@
   -->
 
 <script lang="ts" setup>
-import { useMatchStore } from "@/stores/match.ts";
 import { last } from "@volar/typescript/lib/typescript/core";
 import { toTime } from "@/scripts/Functions.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
+import type { CorrectFencerStatus, CorrectStatus } from "@/scripts/Types.ts";
 
-const match = useMatchStore();
 const settings = useSettingsStore();
+
+defineProps<{
+  matchData: Array<{
+    stopwatch: string;
+    leftFencerStatus: CorrectFencerStatus;
+    rightFencerStatus: CorrectFencerStatus;
+    doubles: number;
+  }>;
+  leftFencer: CorrectFencerStatus;
+  rightFencer: CorrectFencerStatus;
+  status: CorrectStatus;
+  Lcolor: string;
+  Rcolor: string;
+}>();
 </script>
 
 <template>
@@ -34,17 +47,17 @@ const settings = useSettingsStore();
             scope="col"
           ></th>
           <th
-            v-for="(item, index) in match.matchData"
+            v-for="(item, index) in matchData"
             :class="
-              (item.stopwatch[0] !== match.matchData[index - 1]?.stopwatch[0]
+              (item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0]
                 ? 'diff'
                 : '') +
               ' ' +
-              (item.stopwatch[0] !== match.matchData[index + 1]?.stopwatch[0] &&
+              (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((match.status.priority === 'N'
-                  ? match.status.round.toString() + '-'
-                  : 'P-') + toTime(match.status.stopwatch))[0]
+                ((status.priority === 'N'
+                  ? status.round.toString() + '-'
+                  : 'P-') + toTime(status.stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -54,19 +67,16 @@ const settings = useSettingsStore();
           </th>
           <th
             v-if="
-              (match.status.priority === 'N'
-                ? match.status.round.toString() + '-'
-                : 'P-') +
-                toTime(match.status.stopwatch) !==
-              last(match.matchData)?.stopwatch
+              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
+                toTime(status.stopwatch) !==
+              last(matchData)?.stopwatch
             "
             class="ldiff"
             scope="col"
           >
             {{
-              (match.status.priority === "N"
-                ? match.status.round.toString() + "-"
-                : "P-") + toTime(match.status.stopwatch)
+              (status.priority === "N" ? status.round.toString() + "-" : "P-") +
+              toTime(status.stopwatch)
             }}
           </th>
           <td></td>
@@ -79,7 +89,7 @@ const settings = useSettingsStore();
             scope="row"
           >
             {{
-              match.match[0].fencer.name.toString(
+              leftFencer.fencer.name.toString(
                 settings.config.lastNameFirst,
                 false,
                 false,
@@ -89,30 +99,29 @@ const settings = useSettingsStore();
             }}
           </th>
           <td
-            v-for="(item, index) in match.matchData"
+            v-for="(item, index) in matchData"
             :key="index"
             :class="
-              (item.stopwatch[0] !== match.matchData[index - 1]?.stopwatch[0]
+              (item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0]
                 ? 'diff'
                 : '') +
               ' ' +
-              (item.stopwatch[0] !== match.matchData[index + 1]?.stopwatch[0] &&
+              (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((match.status.priority === 'N'
-                  ? match.status.round.toString() + '-'
-                  : 'P-') + toTime(match.status.stopwatch))[0]
+                ((status.priority === 'N'
+                  ? status.round.toString() + '-'
+                  : 'P-') + toTime(status.stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
             :style="{
               backgroundColor:
                 Number(item.leftFencerStatus.rcard) -
-                (match.matchData[index - 1]?.leftFencerStatus.rcard ?? 0)
+                (matchData[index - 1]?.leftFencerStatus.rcard ?? 0)
                   ? 'red'
                   : Number(item.leftFencerStatus.ycard) -
                       Number(
-                        match.matchData[index - 1]?.leftFencerStatus.ycard ??
-                          false,
+                        matchData[index - 1]?.leftFencerStatus.ycard ?? false,
                       )
                     ? 'yellow'
                     : 'transparent',
@@ -120,47 +129,43 @@ const settings = useSettingsStore();
           >
             {{
               item.leftFencerStatus.score -
-                (match.matchData[index - 1]?.leftFencerStatus.score ?? 0) ===
+                (matchData[index - 1]?.leftFencerStatus.score ?? 0) ===
               0
                 ? ""
                 : item.leftFencerStatus.score -
-                  (match.matchData[index - 1]?.leftFencerStatus.score ?? 0)
+                  (matchData[index - 1]?.leftFencerStatus.score ?? 0)
             }}
           </td>
           <td
             v-if="
-              (match.status.priority === 'N'
-                ? match.status.round.toString() + '-'
-                : 'P-') +
-                toTime(match.status.stopwatch) !==
-              last(match.matchData)?.stopwatch
+              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
+                toTime(status.stopwatch) !==
+              last(matchData)?.stopwatch
             "
             :style="{
               backgroundColor:
-                Number(match.match[0].rcard) -
-                (last(match.matchData)?.leftFencerStatus.rcard ?? 0)
+                Number(leftFencer.rcard) -
+                (last(matchData)?.leftFencerStatus.rcard ?? 0)
                   ? 'red'
-                  : Number(match.match[0].ycard) -
-                      Number(
-                        last(match.matchData)?.leftFencerStatus.ycard ?? false,
-                      )
+                  : Number(leftFencer.ycard) -
+                      Number(last(matchData)?.leftFencerStatus.ycard ?? false)
                     ? 'yellow'
                     : 'transparent',
             }"
             class="ldiff"
           >
             {{
-              match.match[0].score -
-                (last(match.matchData)?.leftFencerStatus.score ?? 0) ===
+              leftFencer.score -
+                (last(matchData)?.leftFencerStatus.score ?? 0) ===
               0
                 ? ""
-                : match.match[0].score -
-                  (last(match.matchData)?.leftFencerStatus.score ?? 0)
+                : leftFencer.score -
+                  (last(matchData)?.leftFencerStatus.score ?? 0)
             }}
           </td>
-          <td :style="{ backgroundColor: match.Lcolor, color: 'black' }">
-            {{ match.match[0].score
-            }}{{ match.match[0].status === "U" ? "" : match.match[0].status }}
+          <td :style="{ backgroundColor: Lcolor, color: 'black' }">
+            {{ leftFencer.score
+            }}{{ leftFencer.status === "U" ? "" : leftFencer.status }}
           </td>
         </tr>
         <tr>
@@ -169,7 +174,7 @@ const settings = useSettingsStore();
             scope="row"
           >
             {{
-              match.match[1].fencer.name.toString(
+              rightFencer.fencer.name.toString(
                 settings.config.lastNameFirst,
                 false,
                 false,
@@ -179,30 +184,29 @@ const settings = useSettingsStore();
             }}
           </th>
           <td
-            v-for="(item, index) in match.matchData"
+            v-for="(item, index) in matchData"
             :key="index"
             :class="
-              (item.stopwatch[0] !== match.matchData[index - 1]?.stopwatch[0]
+              (item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0]
                 ? 'diff'
                 : '') +
               ' ' +
-              (item.stopwatch[0] !== match.matchData[index + 1]?.stopwatch[0] &&
+              (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((match.status.priority === 'N'
-                  ? match.status.round.toString() + '-'
-                  : 'P-') + toTime(match.status.stopwatch))[0]
+                ((status.priority === 'N'
+                  ? status.round.toString() + '-'
+                  : 'P-') + toTime(status.stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
             :style="{
               backgroundColor:
                 Number(item.rightFencerStatus.rcard) -
-                (match.matchData[index - 1]?.rightFencerStatus.rcard ?? 0)
+                (matchData[index - 1]?.rightFencerStatus.rcard ?? 0)
                   ? 'red'
                   : Number(item.rightFencerStatus.ycard) -
                       Number(
-                        match.matchData[index - 1]?.rightFencerStatus.ycard ??
-                          false,
+                        matchData[index - 1]?.rightFencerStatus.ycard ?? false,
                       )
                     ? 'yellow'
                     : 'transparent',
@@ -210,47 +214,43 @@ const settings = useSettingsStore();
           >
             {{
               item.rightFencerStatus.score -
-                (match.matchData[index - 1]?.rightFencerStatus.score ?? 0) ===
+                (matchData[index - 1]?.rightFencerStatus.score ?? 0) ===
               0
                 ? ""
                 : item.rightFencerStatus.score -
-                  (match.matchData[index - 1]?.rightFencerStatus.score ?? 0)
+                  (matchData[index - 1]?.rightFencerStatus.score ?? 0)
             }}
           </td>
           <td
             v-if="
-              (match.status.priority === 'N'
-                ? match.status.round.toString() + '-'
-                : 'P-') +
-                toTime(match.status.stopwatch) !==
-              last(match.matchData)?.stopwatch
+              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
+                toTime(status.stopwatch) !==
+              last(matchData)?.stopwatch
             "
             :style="{
               backgroundColor:
-                Number(match.match[1].rcard) -
-                (last(match.matchData)?.rightFencerStatus.rcard ?? 0)
+                Number(rightFencer.rcard) -
+                (last(matchData)?.rightFencerStatus.rcard ?? 0)
                   ? 'red'
-                  : Number(match.match[1].ycard) -
-                      Number(
-                        last(match.matchData)?.rightFencerStatus.ycard ?? false,
-                      )
+                  : Number(rightFencer.ycard) -
+                      Number(last(matchData)?.rightFencerStatus.ycard ?? false)
                     ? 'yellow'
                     : 'transparent',
             }"
             class="ldiff"
           >
             {{
-              match.match[1].score -
-                (last(match.matchData)?.rightFencerStatus.score ?? 0) ===
+              rightFencer.score -
+                (last(matchData)?.rightFencerStatus.score ?? 0) ===
               0
                 ? ""
-                : match.match[1].score -
-                  (last(match.matchData)?.rightFencerStatus.score ?? 0)
+                : rightFencer.score -
+                  (last(matchData)?.rightFencerStatus.score ?? 0)
             }}
           </td>
-          <td :style="{ backgroundColor: match.Rcolor, color: 'black' }">
-            {{ match.match[1].score
-            }}{{ match.match[1].status === "U" ? "" : match.match[1].status }}
+          <td :style="{ backgroundColor: Rcolor, color: 'black' }">
+            {{ rightFencer.score
+            }}{{ rightFencer.status === "U" ? "" : rightFencer.status }}
           </td>
         </tr>
         <tr>
@@ -261,46 +261,36 @@ const settings = useSettingsStore();
             Double
           </th>
           <td
-            v-for="(item, index) in match.matchData"
+            v-for="(item, index) in matchData"
             :key="index"
             :class="
-              (item.stopwatch[0] !== match.matchData[index - 1]?.stopwatch[0]
+              (item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0]
                 ? 'diff'
                 : '') +
               ' ' +
-              (item.stopwatch[0] !== match.matchData[index + 1]?.stopwatch[0] &&
+              (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((match.status.priority === 'N'
-                  ? match.status.round.toString() + '-'
-                  : 'P-') + toTime(match.status.stopwatch))[0]
+                ((status.priority === 'N'
+                  ? status.round.toString() + '-'
+                  : 'P-') + toTime(status.stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
           >
-            {{
-              item.doubles - (match.matchData[index - 1]?.doubles ?? 0)
-                ? "D"
-                : ""
-            }}
+            {{ item.doubles - (matchData[index - 1]?.doubles ?? 0) ? "D" : "" }}
           </td>
           <td
             v-if="
-              (match.status.priority === 'N'
-                ? match.status.round.toString() + '-'
-                : 'P-') +
-                toTime(match.status.stopwatch) !==
-              last(match.matchData)?.stopwatch
+              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
+                toTime(status.stopwatch) !==
+              last(matchData)?.stopwatch
             "
             class="ldiff"
           >
-            {{
-              match.status.doubles - (last(match.matchData)?.doubles ?? 0)
-                ? "D"
-                : ""
-            }}
+            {{ status.doubles - (last(matchData)?.doubles ?? 0) ? "D" : "" }}
           </td>
           <td>
-            {{ match.status.doubles }}
+            {{ status.doubles }}
           </td>
         </tr>
       </tbody>
@@ -313,17 +303,17 @@ const settings = useSettingsStore();
             Exchange
           </th>
           <th
-            v-for="(item, index) in match.matchData"
+            v-for="(item, index) in matchData"
             :class="
-              (item.stopwatch[0] !== match.matchData[index - 1]?.stopwatch[0]
+              (item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0]
                 ? 'diff'
                 : '') +
               ' ' +
-              (item.stopwatch[0] !== match.matchData[index + 1]?.stopwatch[0] &&
+              (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
               item.stopwatch[0] !==
-                ((match.status.priority === 'N'
-                  ? match.status.round.toString() + '-'
-                  : 'P-') + toTime(match.status.stopwatch))[0]
+                ((status.priority === 'N'
+                  ? status.round.toString() + '-'
+                  : 'P-') + toTime(status.stopwatch))[0]
                 ? 'ldiff'
                 : '')
             "
@@ -333,11 +323,9 @@ const settings = useSettingsStore();
           </th>
           <th
             v-if="
-              (match.status.priority === 'N'
-                ? match.status.round.toString() + '-'
-                : 'P-') +
-                toTime(match.status.stopwatch) !==
-              last(match.matchData)?.stopwatch
+              (status.priority === 'N' ? status.round.toString() + '-' : 'P-') +
+                toTime(status.stopwatch) !==
+              last(matchData)?.stopwatch
             "
             class="ldiff"
             scope="col"
@@ -356,9 +344,6 @@ const settings = useSettingsStore();
 div {
   width: 100%;
   overflow-x: auto;
-}
-.block {
-  height: 1.5rem;
 }
 table {
   overflow-x: auto;

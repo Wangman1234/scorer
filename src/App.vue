@@ -17,21 +17,26 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import Init from "@/Components/Init.vue";
-import { type map } from "@/scripts/Types.ts";
+import {
+  type CorrectFencerStatus,
+  type CorrectStatus,
+  emptyFencer,
+  type map,
+} from "@/scripts/Types.ts";
 import { omit } from "underscore";
 import Poule from "@/Components/Poule.vue";
-import { useMatchStore } from "@/stores/match.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
 import Scoreboard from "@/Components/Scoreboard.vue";
 import { Timer } from "@/scripts/Timer.ts";
 import { Cyrano } from "@/scripts/Cyrano.ts";
 import { useNavStore } from "@/stores/nav.ts";
-import { toTime } from "@/scripts/Functions.ts";
+import { defaultFencerStatus, toTime } from "@/scripts/Functions.ts";
 import BoutProgress from "@/Components/BoutProgress.vue";
 import { Country, CountryNameList } from "@/scripts/Country.ts";
+import Blur from "@/Components/Blur.vue";
+import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 
 const settings = useSettingsStore();
-const match = useMatchStore();
 const nav = useNavStore();
 
 // Flags
@@ -42,25 +47,119 @@ const inputTime = ref(false);
 const change = ref<false | keyof map<string>>(false);
 ref(false);
 
+// Match
+const matches = ref<
+  Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>
+>({
+  "": [defaultFencerStatus(), defaultFencerStatus()],
+});
+const status = ref<CorrectStatus>({
+  poultab: "",
+  match: "",
+  round: 1,
+  time: "",
+  stopwatch: settings.settings.maxTime,
+  type: "",
+  weapon: "F",
+  priority: "N",
+  state: "",
+  doubles: 0,
+});
+const matchData = ref<
+  Array<{
+    stopwatch: string;
+    leftFencerStatus: CorrectFencerStatus;
+    rightFencerStatus: CorrectFencerStatus;
+    doubles: number;
+  }>
+>([]);
+const passivityStart = ref(settings.settings.maxTime * 1);
+const match = computed<[CorrectFencerStatus, CorrectFencerStatus]>(() => {
+  return (
+    matches.value[status.value.match] ?? [
+      defaultFencerStatus(),
+      defaultFencerStatus(),
+    ]
+  );
+});
+const stopwatch = computed(() => {
+  if (typeof status.value.stopwatch === "undefined") {
+    return 0;
+  } else {
+    return status.value.stopwatch;
+  }
+});
+const cyranoMatch = computed(() => {
+  console.log("cyrano changed");
+  return new CyranoMessage(
+    settings.cyranoOptions.protocol,
+    settings.cyranoOptions.ret,
+    settings.settings.piste,
+    settings.settings.compe,
+    settings.settings.phase,
+    status.value,
+    emptyFencer,
+    match.value[1],
+    match.value[0],
+  );
+});
+const passivity = computed(() => {
+  return settings.settings.passivity + stopwatch.value - passivityStart.value;
+});
+const Lcolor = computed(() => {
+  return match.value[0].rcard > 0
+    ? "red"
+    : match.value[0].ycard
+      ? "yellow"
+      : "white";
+});
+const Rcolor = computed(() => {
+  return match.value[1].rcard > 0
+    ? "red"
+    : match.value[1].ycard
+      ? "yellow"
+      : "white";
+});
+
+function $reset() {
+  matches.value = {
+    "": [defaultFencerStatus(), defaultFencerStatus()],
+  };
+  status.value = {
+    poultab: "",
+    match: "",
+    round: 1,
+    time: "",
+    stopwatch: settings.settings.maxTime,
+    type: "",
+    weapon: "F",
+    priority: "N",
+    state: "",
+    doubles: 0,
+  };
+  matchData.value = [];
+  passivityStart.value = settings.settings.maxTime;
+}
+
 // Reactive data
 const matchOver = computed(() => {
   return (
-    ((match.stopwatch ?? 0) <= 0 &&
-      (match.status.round === settings.settings.rounds ||
-        match.status.priority !== "N")) ||
-    ((match.match[0].score >= settings.settings.maxScore ||
-      match.match[1].score >= settings.settings.maxScore) &&
-      match.status.priority === "N") ||
-    (settings.settings.maxDoubles <= match.status.doubles &&
+    ((stopwatch.value ?? 0) <= 0 &&
+      (status.value.round === settings.settings.rounds ||
+        status.value.priority !== "N")) ||
+    ((match.value[0].score >= settings.settings.maxScore ||
+      match.value[1].score >= settings.settings.maxScore) &&
+      status.value.priority === "N") ||
+    (settings.settings.maxDoubles <= status.value.doubles &&
       settings.settings.maxDoubles > 0)
   );
 });
 const winner = computed(() => {
-  return match.match[0].status === "D" || match.match[1].status === "D";
+  return match.value[0].status === "D" || match.value[1].status === "D";
 });
 
 // Timer
-const timer = new Timer();
+const timer = new Timer(status, passivity);
 
 // Bout controls
 let interval: [number, number] = [0, 0];
@@ -68,14 +167,14 @@ let changeTimes: [number, number] = [0, 0];
 const black = ref<[boolean, boolean]>([false, false]);
 function changeScore(fencer: 0 | 1, value: number) {
   if (value === 0) return;
-  let val = match.match[fencer].score + value;
+  let val = match.value[fencer].score + value;
   if (
     val >= 0 &&
-    (match.status.priority !== "N" ||
+    (status.value.priority !== "N" ||
       value <= 0 ||
-      match.match[fencer].score < settings.settings.maxScore)
+      match.value[fencer].score < settings.settings.maxScore)
   ) {
-    match.match[fencer].score = val;
+    match.value[fencer].score = val;
 
     clearInterval(interval[fencer]);
     changeTimes[fencer] = 0;
@@ -95,33 +194,33 @@ async function choosePriority(state: "N" | "L" | "R") {
   if (state === "N") {
     for (let i = 0; i < 20; i++) {
       if (Math.random() >= 0.5) {
-        match.status.priority = "R";
+        status.value.priority = "R";
       } else {
-        match.status.priority = "L";
+        status.value.priority = "L";
       }
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   } else {
-    match.status.priority = state;
+    status.value.priority = state;
   }
 }
 function push() {
-  Array.prototype.push.call(match.matchData, {
+  Array.prototype.push.call(matchData.value, {
     stopwatch:
-      (match.status.priority === "N"
-        ? match.status.round.toString() + "-"
-        : "P-") + toTime(match.status.stopwatch),
-    leftFencerStatus: JSON.parse(JSON.stringify(match.match[0])),
-    rightFencerStatus: JSON.parse(JSON.stringify(match.match[1])),
-    doubles: match.status.doubles,
+      (status.value.priority === "N"
+        ? status.value.round.toString() + "-"
+        : "P-") + toTime(status.value.stopwatch),
+    leftFencerStatus: JSON.parse(JSON.stringify(match.value[0])),
+    rightFencerStatus: JSON.parse(JSON.stringify(match.value[1])),
+    doubles: status.value.doubles,
   });
-  match.matchData = Array.from(match.matchData);
+  matchData.value = Array.from(matchData.value);
 }
 
 // Cyrano
 const cyrano = ref<Cyrano>();
 async function startCyrano() {
-  cyrano.value = new Cyrano();
+  cyrano.value = new Cyrano(matches, status, match, cyranoMatch, $reset);
   await cyrano.value.startCyrano();
   console.log("cyrano started");
 }
@@ -137,38 +236,39 @@ async function stopCyrano() {
 
 // Match controls
 function reset() {
-  match.status.stopwatch = settings.settings.maxTime;
-  match.status.priority = "N";
-  match.status.state = "";
-  match.status.doubles = 0;
-  if (match.status.poultab[0] === "P")
-    match.status.round = settings.settings.rounds;
-  else match.status.round = 1;
-  match.match[0].score = 0;
-  match.match[0].status = "U";
-  match.match[0].ycard = false;
-  match.match[0].rcard = 0;
-  match.match[0].light = false;
-  match.match[0].wlight = false;
-  match.match[0].medical = 0;
-  match.match[0].reserve = "N";
-  match.match[1].score = 0;
-  match.match[1].status = "U";
-  match.match[1].ycard = false;
-  match.match[1].rcard = 0;
-  match.match[1].light = false;
-  match.match[1].wlight = false;
-  match.match[1].medical = 0;
-  match.match[1].reserve = "N";
-  match.matchData = [];
+  timer.stopTimer("H");
+  status.value.stopwatch = settings.settings.maxTime;
+  status.value.priority = "N";
+  status.value.state = "";
+  status.value.doubles = 0;
+  if (status.value.poultab[0] === "P")
+    status.value.round = settings.settings.rounds;
+  else status.value.round = 1;
+  match.value[0].score = 0;
+  match.value[0].status = "U";
+  match.value[0].ycard = false;
+  match.value[0].rcard = 0;
+  match.value[0].light = false;
+  match.value[0].wlight = false;
+  match.value[0].medical = 0;
+  match.value[0].reserve = "N";
+  match.value[1].score = 0;
+  match.value[1].status = "U";
+  match.value[1].ycard = false;
+  match.value[1].rcard = 0;
+  match.value[1].light = false;
+  match.value[1].wlight = false;
+  match.value[1].medical = 0;
+  match.value[1].reserve = "N";
+  matchData.value = [];
   nav.menu = false;
-  match.passivityStart = match.status.stopwatch ?? 0;
+  passivityStart.value = status.value.stopwatch ?? 0;
 }
 
 async function update() {
   while (cyrano.value?.sendingData) {
     console.log("not ended");
-    console.log(match.status.state);
+    console.log(status.value.state);
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   const cs = cyrano.value ?? { cyranoState: "" };
@@ -177,10 +277,10 @@ async function update() {
 }
 
 async function finishMatch() {
-  match.status.state = "E";
+  status.value.state = "E";
   if (cyrano.value && !settings.cyranoOptions.replayMode) {
     await update();
-    match.matchData = [];
+    matchData.value = [];
   } else {
     nav.page = "bout";
     nav.menu = true;
@@ -190,50 +290,50 @@ async function finishMatch() {
 function end() {
   timer.stopTimer("H");
   if (
-    match.status.doubles >= settings.settings.maxDoubles &&
+    status.value.doubles >= settings.settings.maxDoubles &&
     settings.settings.maxDoubles > 0 &&
     settings.settings.allowTies
   ) {
-    match.match[0].status = "D";
-    match.match[1].status = "D";
-  } else if (match.match[0].score > match.match[1].score) {
-    match.match[0].status = "V";
-    match.match[1].status = "D";
-  } else if (match.match[0].score < match.match[1].score) {
-    match.match[0].status = "D";
-    match.match[1].status = "V";
+    match.value[0].status = "D";
+    match.value[1].status = "D";
+  } else if (match.value[0].score > match.value[1].score) {
+    match.value[0].status = "V";
+    match.value[1].status = "D";
+  } else if (match.value[0].score < match.value[1].score) {
+    match.value[0].status = "D";
+    match.value[1].status = "V";
   } else if (settings.settings.allowTies) {
-    match.match[0].status = "D";
-    match.match[1].status = "D";
-  } else if (match.status.priority === "L") {
-    match.match[0].status = "V";
-    match.match[1].status = "D";
-  } else if (match.status.priority === "R") {
-    match.match[0].status = "D";
-    match.match[1].status = "V";
+    match.value[0].status = "D";
+    match.value[1].status = "D";
+  } else if (status.value.priority === "L") {
+    match.value[0].status = "V";
+    match.value[1].status = "D";
+  } else if (status.value.priority === "R") {
+    match.value[0].status = "D";
+    match.value[1].status = "V";
   } else {
     push();
     priorityPicker.value = true;
-    match.status.stopwatch = settings.settings.priority;
-    match.status.doubles = 0;
+    status.value.stopwatch = settings.settings.priority;
+    status.value.doubles = 0;
     return;
   }
   push();
   if (!settings.settings.allowOver) {
-    if (match.match[0].score > settings.settings.maxScore) {
-      match.match[0].score = settings.settings.maxScore;
+    if (match.value[0].score > settings.settings.maxScore) {
+      match.value[0].score = settings.settings.maxScore;
     }
-    if (match.match[1].score > settings.settings.maxScore) {
-      match.match[1].score = settings.settings.maxScore;
+    if (match.value[1].score > settings.settings.maxScore) {
+      match.value[1].score = settings.settings.maxScore;
     }
     if (
       !settings.settings.allowTies &&
-      match.match[0].score === match.match[1].score
+      match.value[0].score === match.value[1].score
     ) {
-      if (match.match[0].status === "V") {
-        match.status.priority = "L";
+      if (match.value[0].status === "V") {
+        status.value.priority = "L";
       } else {
-        match.status.priority = "R";
+        status.value.priority = "R";
       }
     }
   }
@@ -294,7 +394,7 @@ function keyHandler(e: KeyboardEvent) {
         case keymap.value.MinusDouble:
         // @ts-expect-error
         case keymap.value.ResetPriority:
-          match.status.priority = "N";
+          status.value.priority = "N";
         // Falls through
         case keymap.value.Menu:
           priorityPicker.value = false;
@@ -315,12 +415,12 @@ function keyHandler(e: KeyboardEvent) {
     } else if (inputTime.value) {
       if (key === keymap.value.Timer) {
         inputTime.value = false;
-        match.passivityStart = match.status.stopwatch ?? 0;
+        passivityStart.value = status.value.stopwatch ?? 0;
       }
     } else if (
       !cyrano.value ||
       cyrano.value.sendingData ||
-      match.status.state !== "E"
+      status.value.state !== "E"
     ) {
       e.preventDefault();
       if (key === " ") key = keymap.value.Timer;
@@ -328,10 +428,10 @@ function keyHandler(e: KeyboardEvent) {
         Object.keys(keymap.value).find(
           (index) => keymap.value[index] === key,
         ) ?? "";
-      const func = functions[index] ?? function () {};
-      func();
-      match.passivityStart = match.status.stopwatch ?? 0;
-      if (cyrano.value?.sendingData && match.status.state !== "E")
+      const func = functions[index] ?? { func: function () {} };
+      func.func();
+      passivityStart.value = status.value.stopwatch ?? 0;
+      if (cyrano.value?.sendingData && status.value.state !== "E")
         cyrano.value.forceWrite();
     }
   }
@@ -434,172 +534,222 @@ function isDefault() {
   );
 }
 
-const functions: map<() => void> = {
-  Menu: () => {},
-  Choices: () => {
-    choices.value = true;
+const functions: map<{ name?: string; func: () => void }> = {
+  Menu: { func: () => {} },
+  Choices: {
+    name: "Open all functions dialog(WIP)",
+    func: () => {
+      choices.value = true;
+    },
   },
-  LeftAdd1: () => changeScore(0, 1),
-  RightAdd1: () => changeScore(1, 1),
-  LeftAdd2: () => changeScore(0, 2),
-  RightAdd2: () => changeScore(1, 2),
-  LeftAdd3: () => changeScore(0, 3),
-  RightAdd3: () => changeScore(1, 3),
-  LeftMinus1: () => changeScore(0, -1),
-  RightMinus1: () => changeScore(1, -1),
-  Double: () => {
-    if (
-      match.status.doubles < settings.settings.maxDoubles ||
-      settings.settings.maxDoubles === 0
-    ) {
-      match.status.doubles++;
-      changeScore(0, settings.settings.doublesAddPoints);
-      changeScore(1, settings.settings.doublesAddPoints);
-    }
+  LeftAdd1: { name: "Add 1 point to FotL", func: () => changeScore(0, 1) },
+  RightAdd1: { name: "Add 1 point to FotR", func: () => changeScore(1, 1) },
+  LeftAdd2: { name: "Add 2 point to FotL", func: () => changeScore(0, 2) },
+  RightAdd2: { name: "Add 2 point to FotR", func: () => changeScore(1, 2) },
+  LeftAdd3: { name: "Add 3 point to FotL", func: () => changeScore(0, 3) },
+  RightAdd3: { name: "Add 3 point to FotR", func: () => changeScore(1, 3) },
+  LeftMinus1: {
+    name: "Subtract 1 point to FotL",
+    func: () => changeScore(0, -1),
   },
-  MinusDouble: () => {
-    if (match.status.doubles > 0 || settings.settings.maxDoubles === 0) {
-      match.status.doubles--;
-      changeScore(0, -settings.settings.doublesAddPoints);
-      changeScore(1, -settings.settings.doublesAddPoints);
-    }
+  RightMinus1: {
+    name: "Subtract 1 point to FotR",
+    func: () => changeScore(1, -1),
   },
-  LeftCard: () => {
-    if (match.match[0].ycard) {
-      if (match.match[0].rcard === 0) {
-        match.match[0].rcard = 1;
-        return;
-      }
-      match.match[0].rcard = 0;
-    }
-    match.match[0].ycard = !match.match[0].ycard;
-  },
-  RightCard: () => {
-    if (match.match[1].ycard) {
-      if (match.match[1].rcard === 0) {
-        match.match[1].rcard = 1;
-        return;
-      }
-      match.match[1].rcard = 0;
-    }
-    match.match[1].ycard = !match.match[1].ycard;
-  },
-  LeftRCard: () => {
-    match.match[0].rcard++;
-    match.match[0].rcard %= 10;
-  },
-  RightRCard: () => {
-    match.match[1].rcard++;
-    match.match[1].rcard %= 10;
-  },
-  LeftMinusRCard: () => {
-    if (match.match[0].rcard > 0) match.match[0].rcard--;
-  },
-  RightMinusRCard: () => {
-    if (match.match[1].rcard > 0) match.match[1].rcard--;
-  },
-  Timer: () => {
-    if (cyrano.value && cyrano.value.sendingData && match.status.state === "E")
-      return;
-    if (match.status.state === "F") {
-      timer.stopTimer("H");
-    } else if (winner.value) {
-      finishMatch();
-    } else if (matchOver.value) {
-      end();
-    } else if (match.status.state === "H" || match.status.state === "") {
+  Double: {
+    name: "Add 1 double",
+    func: () => {
       if (
-        match.status.priority === "N" ||
-        (match.match[0].score === match.match[1].score &&
-          match.status.doubles === 0)
+        status.value.doubles < settings.settings.maxDoubles ||
+        settings.settings.maxDoubles === 0
       ) {
-        push();
-        timer.startTimer("F");
-      } else {
-        end();
+        status.value.doubles++;
+        changeScore(0, settings.settings.doublesAddPoints);
+        changeScore(1, settings.settings.doublesAddPoints);
       }
-    }
+    },
   },
-  SetTime: () => {
-    inputTime.value = true;
+  MinusDouble: {
+    name: "Subtract 1 double",
+    func: () => {
+      if (status.value.doubles > 0 || settings.settings.maxDoubles === 0) {
+        status.value.doubles--;
+        changeScore(0, -settings.settings.doublesAddPoints);
+        changeScore(1, -settings.settings.doublesAddPoints);
+      }
+    },
   },
-  AddMin: () => timer.addTime(60),
-  AddSec: () => timer.addTime(1),
-  MinusMin: () => timer.addTime(-60),
-  MinusSec: () => timer.addTime(-1),
-  Rest: () => {
-    const P = match.status.state === "P";
-    timer.stopTimer("H");
-    if (P) {
-      match.status.stopwatch = settings.settings.maxTime;
-      match.period();
-    } else {
-      timer.startTimer("P");
-    }
+  LeftCard: {
+    name: "Card FotL",
+    func: () => {
+      if (match.value[0].ycard) {
+        if (match.value[0].rcard === 0) {
+          match.value[0].rcard = 1;
+          return;
+        }
+        match.value[0].rcard = 0;
+      }
+      match.value[0].ycard = !match.value[0].ycard;
+    },
   },
-  Break: () => {
-    const P = match.status.state === "P";
-    timer.stopTimer("H");
-    if (P) {
-      match.status.stopwatch = timer.breakTime;
-    } else {
-      timer.startTimer("P", true);
-    }
+  RightCard: {
+    name: "Card FotR",
+    func: () => {
+      if (match.value[1].ycard) {
+        if (match.value[1].rcard === 0) {
+          match.value[1].rcard = 1;
+          return;
+        }
+        match.value[1].rcard = 0;
+      }
+      match.value[1].ycard = !match.value[1].ycard;
+    },
   },
-  ResetTime: () => (match.status.stopwatch = settings.settings.maxTime),
-  ResetBout: () => reset(),
-  PrioritySelector: () => (priorityPicker.value = true),
-  PriorityLeft: () => choosePriority("L"),
-  PriorityRight: () => choosePriority("R"),
-  ResetPriority: () => (match.status.priority = "N"),
-  EndMatch: () => end(),
-  Period: () => match.period(),
-  Flip: () => {
-    let f1 = match.match[0];
-    match.match[0] = match.match[1];
-    match.match[1] = f1;
+  LeftRCard: {
+    name: "Red card FotL",
+    func: () => {
+      match.value[0].rcard++;
+      match.value[0].rcard %= 10;
+    },
   },
-};
-const names: map<string> = {
-  Menu: "Menu",
-  Choices: "Open all functions dialog(WIP)",
-  LeftAdd1: "Add 1 point to FotL",
-  RightAdd1: "Add 1 point to FotR",
-  LeftAdd2: "Add 2 point to FotL",
-  RightAdd2: "Add 2 point to FotR",
-  LeftAdd3: "Add 3 point to FotL",
-  RightAdd3: "Add 3 point to FotR",
-  LeftMinus1: "Subtract 1 point from FotL",
-  RightMinus1: "Subtract 1 point from FotR",
-  Double: "Add 1 double",
-  MinusDouble: "Subtract 1 double",
-  LeftCard: "Card FotL",
-  RightCard: "Card FotR",
-  LeftRCard: "Red card FotL",
-  RightRCard: "Red card FotR",
-  LeftMinusRCard: "Subtract red card from FotL",
-  RightMinusRCard: "Subtract red card from FotR",
-  Timer: "Timer/Next",
-  ResetTime: "Reset time",
-  Rest: "Rest and next round",
-  Break: "Break and rest",
-  SetTime: "Manually set time",
-  AddMin: "Add 1 minute to timer",
-  AddSec: "Add 1 second to timer",
-  MinusMin: "Subtract 1 minute from timer",
-  MinusSec: "Subtract 1 second from the timer",
-  ResetBout: "Reset bout",
-  PrioritySelector: "Open priority selector",
-  PriorityLeft: "Give FotL priority",
-  PriorityRight: "Give FotR priority",
-  ResetPriority: "Reset priority",
-  EndMatch: "End match",
-  Period: "Next period",
-  Flip: "Flip fencer sides",
+  RightRCard: {
+    name: "Red card FotR",
+    func: () => {
+      match.value[1].rcard++;
+      match.value[1].rcard %= 10;
+    },
+  },
+  LeftMinusRCard: {
+    name: "Remove 1 red card from FotL",
+    func: () => {
+      if (match.value[0].rcard > 0) match.value[0].rcard--;
+    },
+  },
+  RightMinusRCard: {
+    name: "Remove 1 red card from FotR",
+    func: () => {
+      if (match.value[1].rcard > 0) match.value[1].rcard--;
+    },
+  },
+  Timer: {
+    name: "Timer/Next",
+    func: () => {
+      if (
+        cyrano.value &&
+        cyrano.value.sendingData &&
+        status.value.state === "E"
+      )
+        return;
+      if (status.value.state === "F") {
+        timer.stopTimer("H");
+      } else if (winner.value) {
+        finishMatch();
+      } else if (matchOver.value) {
+        end();
+      } else if (status.value.state === "H" || status.value.state === "") {
+        if (
+          status.value.priority === "N" ||
+          (match.value[0].score === match.value[1].score &&
+            status.value.doubles === 0)
+        ) {
+          push();
+          timer.startTimer("F");
+        } else {
+          end();
+        }
+      }
+    },
+  },
+  SetTime: {
+    name: "Manually set time",
+    func: () => {
+      inputTime.value = true;
+    },
+  },
+  AddMin: {
+    name: "Add 1 min to time",
+    func: () => timer.addTime(60),
+  },
+  AddSec: {
+    name: "Add 1 sec from time",
+    func: () => timer.addTime(1),
+  },
+  MinusMin: {
+    name: "Subtract 1 min from time",
+    func: () => timer.addTime(-60),
+  },
+  MinusSec: {
+    name: "Subtract 1 sec from time",
+    func: () => timer.addTime(-1),
+  },
+  Rest: {
+    name: "Rest and next round",
+    func: () => {
+      const P = status.value.state === "P";
+      timer.stopTimer("H");
+      if (P) {
+        status.value.stopwatch = settings.settings.maxTime;
+        if (status.value.poultab[0] !== "P") {
+          status.value.round =
+            (status.value.round % settings.settings.rounds) + 1;
+        }
+      } else {
+        timer.startTimer("P");
+      }
+    },
+  },
+  Break: {
+    name: "Break and rest",
+    func: () => {
+      const P = status.value.state === "P";
+      timer.stopTimer("H");
+      if (P) {
+        status.value.stopwatch = timer.breakTime;
+      } else {
+        timer.startTimer("P", true);
+      }
+    },
+  },
+  ResetTime: {
+    name: "Reset time",
+    func: () => (status.value.stopwatch = settings.settings.maxTime),
+  },
+  ResetBout: { name: "Reset bout", func: reset },
+  PrioritySelector: {
+    name: "Open priority selector",
+    func: () => (priorityPicker.value = true),
+  },
+  PriorityLeft: { name: "Give FotL priority", func: () => choosePriority("L") },
+  PriorityRight: {
+    name: "Give FotR priority",
+    func: () => choosePriority("R"),
+  },
+  ResetPriority: {
+    name: "Reset priority",
+    func: () => (status.value.priority = "N"),
+  },
+  EndMatch: { name: "End match", func: end },
+  Period: {
+    name: "Next period",
+    func: () => {
+      if (status.value.poultab[0] !== "P") {
+        status.value.round =
+          (status.value.round % settings.settings.rounds) + 1;
+      }
+    },
+  },
+  Flip: {
+    name: "Flip fencer sides",
+    func: () => {
+      let f1 = match.value[0];
+      match.value[0] = match.value[1];
+      match.value[1] = f1;
+    },
+  },
 };
 
 onMounted(() => {
-  match.$reset();
+  $reset();
   window.addEventListener("keydown", (e) => {
     repeat.value = e.repeat;
     if (
@@ -640,7 +790,7 @@ onUnmounted(() => {
   });
   stopCyrano();
   timer.stopTimer("H");
-  match.$reset();
+  $reset();
 });
 </script>
 
@@ -656,7 +806,15 @@ onUnmounted(() => {
     v-if="!started"
   />
   <Scoreboard
-    :cyrano="!!cyrano"
+    :cyrano
+    :leftFencer="match[0]"
+    :matchOver
+    :matches
+    :passivity
+    :rightFencer="match[1]"
+    :status
+    :stopwatch
+    :winner
     :leftChange="black[0]"
     :rightChange="black[1]"
   />
@@ -683,12 +841,12 @@ onUnmounted(() => {
           variant="text"
           @click="
             () => {
-              item();
+              item.func();
               choices = false;
             }
           "
         >
-          <span>{{ names[index] }}</span>
+          <span>{{ item.name }}</span>
           <span>{{ keymap[index] }}</span>
         </Button>
       </li>
@@ -704,7 +862,7 @@ onUnmounted(() => {
     <input
       ref="stopwatchRef"
       autofocus
-      v-model="match.status.stopwatch"
+      v-model="status.stopwatch"
       class="number"
       :max="settings.settings.maxTime"
       min="0"
@@ -761,12 +919,12 @@ onUnmounted(() => {
                 <div>
                   <InputGroup>
                     <InputText
-                      v-model="match.match[0].fencer.name.firstName"
+                      v-model="match[0].fencer.name.firstName"
                       placeholder="Firstname"
                       size="small"
                     />
                     <InputText
-                      v-model="match.match[0].fencer.name.lastName"
+                      v-model="match[0].fencer.name.lastName"
                       placeholder="Surname"
                       size="small"
                     />
@@ -776,7 +934,7 @@ onUnmounted(() => {
               <li v-if="settings.config.showFlags">
                 <div>Left fencer country</div>
                 <Select
-                  v-model="match.match[0].fencer.country.countryCode"
+                  v-model="match[0].fencer.country.countryCode"
                   :options="Object.keys(CountryNameList)"
                   :style="{ width: '50%' }"
                   filter
@@ -810,7 +968,7 @@ onUnmounted(() => {
               <li>
                 <div>Left fencer club</div>
                 <InputText
-                  v-model="match.match[0].fencer.club"
+                  v-model="match[0].fencer.club"
                   placeholder="Club"
                   size="small"
                 />
@@ -820,12 +978,12 @@ onUnmounted(() => {
                 <div>
                   <InputGroup>
                     <InputText
-                      v-model="match.match[1].fencer.name.firstName"
+                      v-model="match[1].fencer.name.firstName"
                       placeholder="Firstname"
                       size="small"
                     />
                     <InputText
-                      v-model="match.match[1].fencer.name.lastName"
+                      v-model="match[1].fencer.name.lastName"
                       placeholder="Surname"
                       size="small"
                     />
@@ -835,7 +993,7 @@ onUnmounted(() => {
               <li v-if="settings.config.showFlags">
                 <div>Right fencer country</div>
                 <Select
-                  v-model="match.match[1].fencer.country.countryCode"
+                  v-model="match[1].fencer.country.countryCode"
                   :options="Object.keys(CountryNameList)"
                   :style="{ width: '50%' }"
                   filter
@@ -864,7 +1022,7 @@ onUnmounted(() => {
               <li>
                 <div>Right fencer club</div>
                 <InputText
-                  v-model="match.match[1].fencer.club"
+                  v-model="match[1].fencer.club"
                   placeholder="Club"
                   size="small"
                 />
@@ -883,7 +1041,7 @@ onUnmounted(() => {
               <li>
                 <div>Current time(in seconds)</div>
                 <InputNumber
-                  v-model="match.status.stopwatch"
+                  v-model="status.stopwatch"
                   :max="settings.settings.maxTime"
                   :maxFractionDigits="2"
                   :min="0"
@@ -988,7 +1146,14 @@ onUnmounted(() => {
                 />
               </li>
             </menu>
-            <BoutProgress />
+            <BoutProgress
+              :Lcolor="Lcolor"
+              :Rcolor="Rcolor"
+              :leftFencer="match[0]"
+              :matchData
+              :rightFencer="match[1]"
+              :status
+            />
           </div>
           <div class="button">
             <Button
@@ -1012,7 +1177,7 @@ onUnmounted(() => {
               last DISP message: <code>{{ cyrano?.prevDisp.toString() }}</code>
             </div>
             <div>
-              sending: <code>{{ match.cyranoMatch.toString() }}</code>
+              sending: <code>{{ cyranoMatch.toString() }}</code>
             </div>
           </div>
           <div class="scrollable">
@@ -1029,9 +1194,9 @@ onUnmounted(() => {
                 <div>phase</div>
                 <input v-model.number="settings.settings.phase" />
               </li>
-              <li v-for="(_item, index) in match.status">
+              <li v-for="(_item, index) in status">
                 <div>{{ index }}</div>
-                <input v-model="match.status[index]" />
+                <input v-model="status[index]" />
               </li>
             </menu>
             <div class="table">
@@ -1039,56 +1204,56 @@ onUnmounted(() => {
                 <li><h4>Left Fencer</h4></li>
                 <li>
                   <div>id</div>
-                  <input v-model="match.match[0].fencer.id" />
+                  <input v-model="match[0].fencer.id" />
                 </li>
                 <li>
                   <div>name</div>
                   <div>
                     <input
-                      v-model.number="match.match[0].fencer.name.firstName"
+                      v-model.number="match[0].fencer.name.firstName"
                       placeholder="first name"
                     />
                     <input
-                      v-model.number="match.match[0].fencer.name.lastName"
+                      v-model.number="match[0].fencer.name.lastName"
                       placeholder="surname"
                     />
                   </div>
                 </li>
                 <li>
                   <div>country</div>
-                  <input v-model="match.match[0].fencer.country" />
+                  <input v-model="match[0].fencer.country" />
                 </li>
-                <li v-for="(_item, index) in omit(match.match[0], 'fencer')">
+                <li v-for="(_item, index) in omit(match[0], 'fencer')">
                   <div>{{ index }}</div>
-                  <input v-model="match.match[0][index]" />
+                  <input v-model="match[0][index]" />
                 </li>
               </menu>
               <menu>
                 <li><h4>Right Fencer</h4></li>
                 <li>
                   <div>id</div>
-                  <input v-model="match.match[1].fencer.id" />
+                  <input v-model="match[1].fencer.id" />
                 </li>
                 <li>
                   <div>name</div>
                   <div>
                     <input
-                      v-model.number="match.match[1].fencer.name.firstName"
+                      v-model.number="match[1].fencer.name.firstName"
                       placeholder="first name"
                     />
                     <input
-                      v-model.number="match.match[1].fencer.name.lastName"
+                      v-model.number="match[1].fencer.name.lastName"
                       placeholder="surname"
                     />
                   </div>
                 </li>
                 <li>
                   <div>country</div>
-                  <input v-model="match.match[1].fencer.country" />
+                  <input v-model="match[1].fencer.country" />
                 </li>
-                <li v-for="(_item, index) in omit(match.match[1], 'fencer')">
+                <li v-for="(_item, index) in omit(match[1], 'fencer')">
                   <div>{{ index }}</div>
-                  <input v-model="match.match[1][index]" />
+                  <input v-model="match[1][index]" />
                 </li>
               </menu>
             </div>
@@ -1107,7 +1272,7 @@ onUnmounted(() => {
             <h4 v-else>Tournament not Running</h4>
           </div>
           <div class="scrollable">
-            <Poule :matches="omit(match.matches, '')" />
+            <Poule :matches="omit(matches, '')" />
             <table>
               <thead>
                 <tr>
@@ -1119,9 +1284,9 @@ onUnmounted(() => {
               </thead>
               <tbody>
                 <tr
-                  v-for="(item, index) in omit(match.matches, '')"
+                  v-for="(item, index) in omit(matches, '')"
                   :key="index"
-                  :class="index == match.status.match ? 'running' : 'not'"
+                  :class="index == status.match ? 'running' : 'not'"
                 >
                   <th scope="row">{{ index }}.</th>
                   <td>
@@ -1423,19 +1588,18 @@ onUnmounted(() => {
                 </div>
               </li>
               <li
-                v-for="index in Object.keys(functions)"
+                v-for="(item, index) in functions"
                 :key="index"
               >
-                <div>{{ names[index] ?? index }}</div>
+                <div>{{ item.name ?? index }}</div>
                 <Button
                   :class="{ selected: change === index }"
                   class="bind keys"
                   size="small"
                   :disabled="settings.config.keymap.split(' ')[0] === 'default'"
                   :severity="
-                    Object.values(keymap).filter(
-                      (item) => item === keymap[index],
-                    ).length > 1
+                    Object.values(keymap).filter((it) => it === keymap[index])
+                      .length > 1
                       ? 'danger'
                       : 'primary'
                   "
@@ -1474,70 +1638,7 @@ onUnmounted(() => {
         <Button @click="choosePriority('N')">Random</Button>
       </div>
     </div>
-    <div
-      v-if="priorityPicker"
-      :class="{ blurred: settings.config.blurred }"
-      class="background"
-    ></div>
-  </div>
-  <div
-    :class="{ blurred: settings.config.blurred }"
-    class="background"
-    v-if="
-      match.status.state === 'E' ||
-      ((cyrano?.cyranoState === 'Waiting' ||
-        cyrano?.cyranoState === 'No Bouts') &&
-        cyrano)
-    "
-  >
-    <h1>{{ cyrano?.cyranoState }}</h1>
-  </div>
-  <div
-    :class="{ blurred: settings.config.blurred }"
-    class="background"
-    v-else-if="winner"
-  >
-    <h1>
-      Match
-      {{
-        match.match[0].status === "V"
-          ? "Left"
-          : match.match[1].status === "V"
-            ? "Right"
-            : "Tie"
-      }}
-    </h1>
-    <h2>{{ match.match[0].score }}-{{ match.match[1].score }}</h2>
-  </div>
-  <div
-    :class="{ blurred: settings.config.blurred }"
-    class="background"
-    v-else-if="matchOver"
-  >
-    <h1>{{ match.stopwatch <= 0 ? "Time" : "Match" }}</h1>
-  </div>
-  <div
-    v-else-if="
-      settings.settings.passivity != 0 &&
-      settings.settings.passivityStops &&
-      match.passivity <= 0
-    "
-    :class="{ blurred: settings.config.blurred }"
-    class="background"
-  >
-    <h1>Passivity</h1>
-  </div>
-  <div
-    :class="{ blurred: settings.config.blurred }"
-    class="background"
-    v-if="match.status.state === 'P'"
-  >
-    <h1>1-min break</h1>
-    <h2 style="color: blue">
-      {{ Math.floor((match.stopwatch ?? 0) / 60) }}:{{
-        (Math.floor(match.stopwatch ?? 0) % 60).toString().padStart(2, "0")
-      }}
-    </h2>
+    <Blur v-if="priorityPicker" />
   </div>
   <Dialog
     :contentStyle="{ fontSize: '2rem' }"
@@ -1629,24 +1730,6 @@ td {
 tr.running {
   border: 1px solid gold;
 }
-.background {
-  z-index: 998;
-  float: none;
-  position: fixed;
-  display: block;
-  width: 100vw;
-  height: 100vh;
-  align-self: center;
-  align-items: center;
-  align-content: center;
-  color: white;
-  top: 0;
-  left: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-.blurred {
-  backdrop-filter: blur(5px);
-}
 nav {
   background-color: dodgerblue;
   height: 2rem;
@@ -1706,14 +1789,5 @@ li {
 }
 .selected {
   background-color: darkslategray;
-}
-.blurred * {
-  color: white;
-}
-.blurred h1 {
-  font-size: 15em;
-}
-.blurred h2 {
-  font-size: 10em;
 }
 </style>
