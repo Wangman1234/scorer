@@ -31,7 +31,7 @@ export class Timer {
     this.passivity = passivity;
   }
 
-  interval: number = 0;
+  interval: NodeJS.Timeout | number = 0;
   breakTime: number = 0;
 
   startTimer(set: "F" | "P", brk = false) {

@@ -15,7 +15,7 @@
   -->
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import Init from "@/Components/Init.vue";
 import {
   type CorrectFencerStatus,
@@ -162,7 +162,7 @@ function $reset() {
 const timer = new Timer(status, passivity);
 
 // Bout controls
-let interval: [number, number] = [0, 0];
+let interval: [NodeJS.Timeout | number, NodeJS.Timeout | number] = [0, 0];
 let changeTimes: [number, number] = [0, 0];
 const black = ref<[boolean, boolean]>([false, false]);
 function changeScore(fencer: 0 | 1, value: number) {
@@ -233,6 +233,24 @@ async function stopCyrano() {
   nav.page = "bout";
   nav.menu = true;
 }
+const seconds = computed(() => {
+  return Math.floor(stopwatch.value);
+});
+const passivityHalted = computed(
+  () =>
+    (settings.settings.passivity != 0 &&
+      settings.settings.passivityStops &&
+      passivity.value <= 0) ||
+    stopwatch.value <= 0,
+);
+watch(seconds, () => {
+  if (cyrano.value?.sendingData && status.value[0].state !== "E")
+    cyrano.value.forceWrite();
+});
+watch(passivityHalted, (value) => {
+  if (value && cyrano.value?.sendingData && status.value[0].state !== "E")
+    cyrano.value.forceWrite();
+});
 
 // Match controls
 function reset() {
@@ -648,6 +666,7 @@ const functions: map<{ name?: string; func: () => void }> = {
         end();
       } else if (
         status.value[0].state === "H" ||
+        status.value[0].state === "W" ||
         status.value[0].state === ""
       ) {
         if (

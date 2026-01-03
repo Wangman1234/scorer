@@ -70,7 +70,10 @@ export class Cyrano {
       this.cyranoLog("startCyrano", "Socket not connected");
       return;
     }
-    if (!this.settings.cyranoOptions.replayMode) this.$reset();
+    if (!this.settings.cyranoOptions.replayMode) {
+      this.$reset();
+      toValue(this.status)[0].state = "W";
+    }
   }
   async startCyrano() {
     const { readable, writable } = await this.socket.opened;
@@ -130,7 +133,6 @@ export class Cyrano {
       msg = this.tester(reject, cyranoMsg);
       console.log(msg);
     } catch (error) {
-      console.log(error);
       if (this.cyranoState === "Closed") {
         return reject("Cyrano ended");
       }
@@ -286,7 +288,7 @@ export class Cyrano {
             type: "",
             weapon: "F",
             priority: "N",
-            state: "",
+            state: "W",
             doubles: 0,
           };
           this.cyranoState = "Waiting";
@@ -319,7 +321,12 @@ export class Cyrano {
     if (this.check()) return resolve();
     else if (this.cyranoState === "Closed") return reject("Cyrano ended");
     try {
-      await this.forceWrite();
+      if (
+        toValue(this.status)[0].state === "H" ||
+        toValue(this.status)[0].state === "W" ||
+        toValue(this.status)[0].state === ""
+      )
+        await this.forceWrite();
     } catch (e) {}
     for (let i = 0; i < this.settings.cyranoOptions.interval; i++) {
       if (this.check()) return resolve();
