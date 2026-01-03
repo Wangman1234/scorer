@@ -19,18 +19,19 @@ import "./style.css";
 import App from "./App.vue";
 import Vue3Marquee from "vue3-marquee";
 import PrimeVue from "primevue/config";
-import Aura from "@primeuix/themes/aura";
+import Nora from "@primeuix/themes/nora";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import { definePreset } from "@primeuix/themes";
 import "primeicons/primeicons.css";
 import "/node_modules/flag-icons/css/flag-icons.min.css";
+import Ripple from "primevue/ripple";
 
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 const app = createApp(App);
 
-const MyPreset = definePreset(Aura, {
+const MyPreset = definePreset(Nora, {
   semantic: {
     primary: {
       50: "{teal.50}",
@@ -56,6 +57,8 @@ app.use(PrimeVue, {
       darkModeSelector: ".darkmode",
     },
   },
+  ripple: true,
 });
+app.directive("ripple", Ripple);
 app.use(Vue3Marquee);
 app.mount("#app");

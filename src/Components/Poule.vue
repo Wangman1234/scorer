@@ -264,6 +264,8 @@ function gs(matchId: number, id: string) {
 div {
   width: 100%;
   overflow-x: auto;
+  justify-items: center;
+  margin-bottom: 1rem;
 }
 table {
   overflow-x: auto;

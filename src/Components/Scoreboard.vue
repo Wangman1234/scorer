@@ -15,7 +15,7 @@
   -->
 
 <script lang="ts" setup>
-import Color from "color";
+import tinycolor from "tinycolor2";
 import { omit } from "underscore";
 import NextFencer from "./NextFencer.vue";
 import { useSettingsStore } from "@/stores/settings.ts";
@@ -52,10 +52,14 @@ const short = computed(() => {
       <div class="display-box">
         <div
           :style="{
-            backgroundColor: '#' + settings.config.leftColor,
-            color: Color('#' + settings.config.leftColor).isLight()
-              ? 'black'
-              : 'white',
+            backgroundColor: settings.config.leftColor,
+            color: tinycolor
+              .mostReadable(settings.config.leftColor, ['white', 'black'], {
+                includeFallbackColors: true,
+                level: 'AA',
+                size: 'large',
+              })
+              .toHexString(),
           }"
           class="name fencer-1"
         >
@@ -85,10 +89,14 @@ const short = computed(() => {
       <div class="display-box">
         <div
           :style="{
-            backgroundColor: '#' + settings.config.rightColor,
-            color: Color('#' + settings.config.rightColor).isLight()
-              ? 'black'
-              : 'white',
+            backgroundColor: settings.config.rightColor,
+            color: tinycolor
+              .mostReadable(settings.config.rightColor, ['white', 'black'], {
+                includeFallbackColors: true,
+                level: 'AA',
+                size: 'large',
+              })
+              .toHexString(),
           }"
           class="name fencer-2"
         >

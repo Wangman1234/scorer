@@ -22,6 +22,7 @@ import {
   type CorrectStatus,
   emptyFencer,
   type map,
+  Name,
 } from "@/scripts/Types.ts";
 import { omit } from "underscore";
 import Poule from "@/Components/Poule.vue";
@@ -885,7 +886,6 @@ onUnmounted(() => {
       ref="stopwatchRef"
       autofocus
       v-model="status[0].stopwatch"
-      class="number"
       :max="settings.settings.maxTime"
       min="0"
       step="0.01"
@@ -917,8 +917,8 @@ onUnmounted(() => {
           >Corrections</Tab
         >
         <Tab
-          :disabled="!cyrano || settings.cyranoOptions.replayMode"
           value="tournament"
+          :disabled="!cyrano || settings.cyranoOptions.replayMode"
           >Tournament</Tab
         >
         <Tab value="cyrano">Cyrano</Tab>
@@ -1108,10 +1108,7 @@ onUnmounted(() => {
               </li>
               <li>
                 <div>Allow ties</div>
-                <Checkbox
-                  v-model="settings.settings.allowTies"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.settings.allowTies" />
               </li>
               <li>
                 <div>Priority timer</div>
@@ -1126,10 +1123,7 @@ onUnmounted(() => {
               </li>
               <li>
                 <div>Allow point overflow</div>
-                <Checkbox
-                  v-model="settings.settings.allowOver"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.settings.allowOver" />
               </li>
               <li>
                 <div>Doubles add points</div>
@@ -1163,10 +1157,7 @@ onUnmounted(() => {
               </li>
               <li>
                 <div>Passivity auto halt</div>
-                <Checkbox
-                  v-model="settings.settings.passivityStops"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.settings.passivityStops" />
               </li>
             </menu>
             <BoutProgress
@@ -1392,10 +1383,9 @@ onUnmounted(() => {
               </li>
               <li>
                 <div>Replay mode</div>
-                <Checkbox
+                <ToggleSwitch
                   v-model="settings.cyranoOptions.replayMode"
                   :disabled="!!cyrano"
-                  binary
                 />
               </li>
               <li>
@@ -1423,10 +1413,7 @@ onUnmounted(() => {
                   Allow point overflow(if true, ensure max points + max overflow
                   = max points in FT)
                 </div>
-                <Checkbox
-                  v-model="settings.settings.allowOver"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.settings.allowOver" />
               </li>
             </menu>
             <div>
@@ -1458,42 +1445,52 @@ onUnmounted(() => {
           <div class="scrollable">
             <menu>
               <li>
-                <div>Left fencer colour</div>
-                <div :style="{ display: 'block', alignItems: 'right' }">
-                  <InputText
-                    v-model="settings.config.leftColor"
-                    size="small"
-                  />
-                  <ColorPicker v-model="settings.config.leftColor" />
-                </div>
+                <label for="l-color">Left fencer colour</label>
+                <input
+                  id="l-color"
+                  v-model="settings.config.leftColor"
+                  class="color"
+                  list="presetColors"
+                  type="color"
+                />
               </li>
               <li>
-                <div>Right fencer colour</div>
-                <div :style="{ display: 'block', alignItems: 'right' }">
-                  <InputText
-                    v-model="settings.config.rightColor"
-                    size="small"
-                  />
-                  <ColorPicker v-model="settings.config.rightColor" />
+                <label for="r-color">Right fencer colour</label>
+                <input
+                  id="r-color"
+                  v-model="settings.config.rightColor"
+                  class="color"
+                  list="presetColors"
+                  type="color"
+                />
+              </li>
+              <li>
+                <div><strong>Example Name</strong></div>
+                <div>
+                  <strong>
+                    {{
+                      new Name("Smith", "John").toString(
+                        settings.config.lastNameFirst,
+                        settings.config.shortenFirst,
+                        settings.config.shortenSecond,
+                        settings.config.separator,
+                        settings.config.ending,
+                      )
+                    }}
+                  </strong>
                 </div>
               </li>
               <li>
                 <div>Surnames in front</div>
-                <Checkbox
-                  v-model="settings.config.lastNameFirst"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.config.lastNameFirst" />
               </li>
               <li>
                 <div>Shorten the first part of the name</div>
-                <Checkbox
-                  v-model="settings.config.shortenFirst"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.config.shortenFirst" />
               </li>
               <li>
                 <div>Shorten the second part of the name</div>
-                <Checkbox
+                <ToggleSwitch
                   v-model="settings.config.shortenSecond"
                   binary
                 />
@@ -1513,34 +1510,35 @@ onUnmounted(() => {
                 />
               </li>
               <li>
+                <div><strong>Match display</strong></div>
+              </li>
+              <li>
                 <div>Show doubles</div>
-                <Checkbox
-                  v-model="settings.config.showDoubles"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.config.showDoubles" />
               </li>
               <li>
                 <div>Show country flags</div>
-                <Checkbox
-                  v-model="settings.config.showFlags"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.config.showFlags" />
               </li>
               <li>
                 <div>Always show subsecond</div>
-                <Checkbox
-                  v-model="settings.config.showSubSec"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.config.showSubSec" />
               </li>
               <li>
                 <div>Blur background</div>
-                <Checkbox
-                  v-model="settings.config.blurred"
-                  binary
-                />
+                <ToggleSwitch v-model="settings.config.blurred" />
               </li>
             </menu>
+            <datalist id="presetColors">
+              <option>#ff0000</option>
+              <option>#ff7f00</option>
+              <option>#ffff00</option>
+              <option>#00ff00</option>
+              <option>#00ffff</option>
+              <option>#0000ff</option>
+              <option>#ff00ff</option>
+              <option>#8300ca</option>
+            </datalist>
           </div>
         </TabPanel>
         <TabPanel
@@ -1615,21 +1613,34 @@ onUnmounted(() => {
                 :key="index"
               >
                 <div>{{ item.name ?? index }}</div>
-                <Button
-                  :class="{ selected: change === index }"
+                <ToggleButton
+                  :dt="{
+                    colorScheme: {
+                      dark: {
+                        root: {
+                          focusRing: {
+                            width: '0',
+                            style: 'none',
+                            color: 'transparent',
+                            offset: '0',
+                            shadow: '0',
+                          },
+                        },
+                      },
+                    },
+                  }"
+                  :invalid="
+                    Object.values(keymap).filter((it) => it === keymap[index])
+                      .length > 1
+                  "
                   class="bind keys"
                   size="small"
                   :disabled="settings.config.keymap.split(' ')[0] === 'default'"
-                  :severity="
-                    Object.values(keymap).filter((it) => it === keymap[index])
-                      .length > 1
-                      ? 'danger'
-                      : 'primary'
-                  "
-                  @click="change = index"
+                  :modelValue="change === index"
+                  @update:modelValue="change = index"
                 >
                   {{ keymap[index] }}
-                </Button>
+                </ToggleButton>
               </li>
             </menu>
           </div>
@@ -1665,7 +1676,7 @@ onUnmounted(() => {
   left: 0;
   background-color: black;
 }
-.number {
+input[type="number"] {
   background: var(--p-form-field-background);
   border-color: var(--p-form-field-border-color);
   color: var(--p-surface-400);
@@ -1675,13 +1686,18 @@ onUnmounted(() => {
   border-style: solid;
   border-width: 1px;
 }
-.number:hover {
+input[type="number"]:hover {
   background: var(--p-surface-800);
   color: var(--p-surface-300);
 }
-.number:active {
+input[type="number"]:active {
   background-color: var(--p-surface-700);
   color: var(--p-surface-200);
+}
+input:focus {
+  border-width: var(--p-focus-ring-width);
+  border-style: var(--p-focus-ring-style);
+  border-color: var(--p-focus-ring-color);
 }
 .body {
   height: 100%;
@@ -1706,6 +1722,21 @@ onUnmounted(() => {
   width: 100%;
   height: 4rem;
   border-width: 2px 0 0 0;
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"] {
+  border-style: solid;
+  border-color: var(--p-form-field-border-color);
+  border-radius: var(--p-form-field-border-radius);
+  background-clip: border-box;
+  padding: 0;
+}
+input[type="color"]:active {
+  border-width: var(--p-focus-ring-width);
+  border-style: var(--p-focus-ring-style);
+  border-color: var(--p-focus-ring-color);
 }
 li div {
   align-self: center;
@@ -1757,11 +1788,9 @@ menu {
 }
 li {
   display: flex;
+  height: 2rem;
   justify-content: space-between;
   padding: 0.1rem 1rem;
   border-bottom: 1px solid var(--p-surface-600);
-}
-.selected {
-  background-color: darkslategray;
 }
 </style>

@@ -73,8 +73,8 @@ export const useSettingsStore = defineStore(
       blurred: boolean;
     }>({
       keymap: "default remote",
-      leftColor: "ff0000",
-      rightColor: "0000ff",
+      leftColor: "#ff0000",
+      rightColor: "#0000ff",
       showSubSec: false,
       lastNameFirst: false,
       shortenFirst: false,
