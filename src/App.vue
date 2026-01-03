@@ -877,6 +877,7 @@ onUnmounted(() => {
     v-model:visible="nav.menu"
     :closeOnEscape="false"
     :closable="false"
+    :maximizable="true"
     :draggable="false"
     :style="{ width: '50rem', height: '50rem' }"
     header="Settings"
@@ -917,29 +918,12 @@ onUnmounted(() => {
           </div>
           <div class="scrollable">
             <menu>
-              <li>
-                <div>Left fencer name</div>
-                <div>
-                  <InputGroup>
-                    <InputText
-                      v-model="match[0].fencer.name.firstName"
-                      placeholder="Firstname"
-                      size="small"
-                    />
-                    <InputText
-                      v-model="match[0].fencer.name.lastName"
-                      placeholder="Surname"
-                      size="small"
-                    />
-                  </InputGroup>
-                </div>
-              </li>
               <li v-if="settings.config.showFlags">
                 <div>Left fencer country</div>
                 <Select
                   v-model="match[0].fencer.country.countryCode"
                   :options="Object.keys(CountryNameList)"
-                  :style="{ width: '50%' }"
+                  :style="{ width: '25rem' }"
                   filter
                   filter-placeholder="Country code"
                   optionLabel="name"
@@ -969,6 +953,23 @@ onUnmounted(() => {
                 </Select>
               </li>
               <li>
+                <div>Left fencer name</div>
+                <div>
+                  <InputGroup>
+                    <InputText
+                      v-model="match[0].fencer.name.firstName"
+                      placeholder="Firstname"
+                      size="small"
+                    />
+                    <InputText
+                      v-model="match[0].fencer.name.lastName"
+                      placeholder="Surname"
+                      size="small"
+                    />
+                  </InputGroup>
+                </div>
+              </li>
+              <li>
                 <div>Left fencer club</div>
                 <InputText
                   v-model="match[0].fencer.club"
@@ -976,29 +977,12 @@ onUnmounted(() => {
                   size="small"
                 />
               </li>
-              <li>
-                <div>Right fencer name</div>
-                <div>
-                  <InputGroup>
-                    <InputText
-                      v-model="match[1].fencer.name.firstName"
-                      placeholder="Firstname"
-                      size="small"
-                    />
-                    <InputText
-                      v-model="match[1].fencer.name.lastName"
-                      placeholder="Surname"
-                      size="small"
-                    />
-                  </InputGroup>
-                </div>
-              </li>
               <li v-if="settings.config.showFlags">
                 <div>Right fencer country</div>
                 <Select
                   v-model="match[1].fencer.country.countryCode"
                   :options="Object.keys(CountryNameList)"
-                  :style="{ width: '50%' }"
+                  :style="{ width: '25rem' }"
                   filter
                   optionLabel="name"
                   placeholder="Unaffiliated"
@@ -1021,6 +1005,23 @@ onUnmounted(() => {
                     </div>
                   </template>
                 </Select>
+              </li>
+              <li>
+                <div>Right fencer name</div>
+                <div>
+                  <InputGroup>
+                    <InputText
+                      v-model="match[1].fencer.name.firstName"
+                      placeholder="Firstname"
+                      size="small"
+                    />
+                    <InputText
+                      v-model="match[1].fencer.name.lastName"
+                      placeholder="Surname"
+                      size="small"
+                    />
+                  </InputGroup>
+                </div>
               </li>
               <li>
                 <div>Right fencer club</div>
@@ -1664,7 +1665,7 @@ onUnmounted(() => {
   color: var(--p-surface-200);
 }
 .body {
-  height: 48rem;
+  height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
