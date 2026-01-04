@@ -130,7 +130,7 @@ export class Cyrano {
       }
       console.log(cyranoMsg);
       this.settings.cyranoOptions.protocol = cyranoMsg.protocol;
-      msg = this.tester(reject, cyranoMsg);
+      msg = this.tester(reject, cyranoMsg, msg);
       console.log(msg);
     } catch (error) {
       if (this.cyranoState === "Closed") {
@@ -150,6 +150,7 @@ export class Cyrano {
   tester(
     _reject: (reason?: any) => void,
     cyranoMsg: CyranoMessage,
+    prev: "NEXT" | "PREV" | "INFO" | "",
   ): "NEXT" | "PREV" | "INFO" | "" {
     if (this.nak) return "";
     switch (this.cyranoState) {
@@ -158,8 +159,7 @@ export class Cyrano {
         if (cyranoMsg.com === "HELLO") {
           this.settings.settings.compe = cyranoMsg.compe;
           this.settings.settings.piste = cyranoMsg.piste;
-          if (this.knowList < 0) {
-            this.knowList += 0.5;
+          if (prev === "NEXT" || prev === "PREV") {
             return "";
           }
           return "NEXT";
@@ -193,14 +193,16 @@ export class Cyrano {
             console.log(mat[0], mat[1]);
             mat[0] = cyranoMsg.leftfencer as CorrectFencerStatus;
             mat[1] = cyranoMsg.rightfencer as CorrectFencerStatus;
+            if (this.knowList < 0) this.knowList = -2;
           } else if (
             cyranoMsg.status.match ===
             Number(min(Object.keys(omit(toValue(this.matches), ""))))
           ) {
             if (cyranoMsg.status.match === this.prev) {
-              this.knowList = 0;
+              if (this.knowList === -2) this.knowList = 1;
+              else this.knowList = 0;
               this.prev = 0;
-              console.log("knowList 0");
+              console.log("knowList", this.knowList);
             } else {
               this.prev = cyranoMsg.status.match;
             }

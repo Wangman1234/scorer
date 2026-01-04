@@ -166,14 +166,15 @@ const timer = new Timer(status, passivity);
 let interval: [NodeJS.Timeout | number, NodeJS.Timeout | number] = [0, 0];
 let changeTimes: [number, number] = [0, 0];
 const black = ref<[boolean, boolean]>([false, false]);
-function changeScore(fencer: 0 | 1, value: number) {
+function changeScore(fencer: 0 | 1, value: number, double: boolean = false) {
   if (value === 0) return;
   let val = match.value[fencer].score + value;
   if (
-    val >= 0 &&
-    (status.value[0].priority !== "N" ||
-      value <= 0 ||
-      match.value[fencer].score < settings.settings.maxScore)
+    (val >= 0 &&
+      (status.value[0].priority !== "N" ||
+        value <= 0 ||
+        match.value[fencer].score < settings.settings.maxScore)) ||
+    double
   ) {
     match.value[fencer].score = val;
 
@@ -583,18 +584,18 @@ const functions: map<{ name?: string; func: () => void }> = {
         settings.settings.maxDoubles === 0
       ) {
         status.value[0].doubles++;
-        changeScore(0, settings.settings.doublesAddPoints);
-        changeScore(1, settings.settings.doublesAddPoints);
+        changeScore(0, settings.settings.doublesAddPoints, true);
+        changeScore(1, settings.settings.doublesAddPoints, true);
       }
     },
   },
   MinusDouble: {
     name: "Subtract 1 double",
     func: () => {
-      if (status.value[0].doubles > 0 || settings.settings.maxDoubles === 0) {
+      if (status.value[0].doubles > 0) {
         status.value[0].doubles--;
-        changeScore(0, -settings.settings.doublesAddPoints);
-        changeScore(1, -settings.settings.doublesAddPoints);
+        changeScore(0, -settings.settings.doublesAddPoints, true);
+        changeScore(1, -settings.settings.doublesAddPoints, true);
       }
     },
   },
@@ -1208,14 +1209,14 @@ onUnmounted(() => {
                 <div>phase</div>
                 <input v-model.number="settings.settings.phase" />
               </li>
-              <li v-for="(_item, index) in status">
+              <li v-for="(_item, index) in status[0]">
                 <div>{{ index }}</div>
-                <input v-model="status[index]" />
+                <input v-model="status[0][index]" />
               </li>
             </menu>
             <div class="table">
               <menu>
-                <li><h4>Left Fencer</h4></li>
+                <li><strong>Left Fencer</strong></li>
                 <li>
                   <div>id</div>
                   <input v-model="match[0].fencer.id" />
@@ -1243,7 +1244,7 @@ onUnmounted(() => {
                 </li>
               </menu>
               <menu>
-                <li><h4>Right Fencer</h4></li>
+                <li><strong>Right Fencer</strong></li>
                 <li>
                   <div>id</div>
                   <input v-model="match[1].fencer.id" />

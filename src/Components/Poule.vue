@@ -49,7 +49,7 @@ const fencerMatchList = computed<{
   for (const matchId in props.matches) {
     let match = props.matches[matchId];
     if (typeof match === "undefined") {
-      throw new TypeError();
+      break;
     }
     if (match[0].fencer.id in mats) {
       mats[match[0].fencer.id]?.push(Number(matchId));
@@ -121,7 +121,7 @@ function getScore(members: number[], id: string) {
 function gs(matchId: number, id: string) {
   const match = props.matches[matchId];
   if (typeof match === "undefined") {
-    throw new TypeError();
+    return "";
   }
   const fencer1 = match[0];
   const fencer2 = match[1];
@@ -240,8 +240,10 @@ function gs(matchId: number, id: string) {
           <td class="left">{{ fencerMatchList.inds[index]?.V }}</td>
           <td>
             {{
-              (fencerMatchList.inds[index]?.V ?? 0) /
-              (fencerMatchList.mats[index]?.length ?? 1)
+              (
+                (fencerMatchList.inds[index]?.V ?? 0) /
+                (fencerMatchList.mats[index]?.length ?? 1)
+              ).toFixed(2)
             }}
           </td>
           <td>{{ fencerMatchList.inds[index]?.HS }}</td>
