@@ -40,6 +40,9 @@ const props = defineProps<{
   leftChange: boolean;
   rightChange: boolean;
 }>();
+defineEmits<{
+  index: [func: string];
+}>();
 
 const short = computed(() => {
   return props.stopwatch < 10;
@@ -61,7 +64,8 @@ const short = computed(() => {
               })
               .toHexString(),
           }"
-          class="name fencer-1"
+          class="name fencer-1 clickable"
+          @click.stop="$emit('index', 'PriorityLeft')"
         >
           <h1>
             {{
@@ -98,7 +102,8 @@ const short = computed(() => {
               })
               .toHexString(),
           }"
-          class="name fencer-2"
+          class="name fencer-2 clickable"
+          @click.stop="$emit('index', 'PriorityRight')"
         >
           <h1>
             {{
@@ -133,12 +138,19 @@ const short = computed(() => {
             color: leftChange ? 'transparent' : 'white',
             borderColor: status[0].priority === 'L' ? 'blue' : 'white',
           }"
-          class="scoring fencer-1"
+          class="scoring fencer-1 clickable"
+          @click.stop="$emit('index', 'LeftAdd1')"
         >
           {{ leftFencer.score }}
         </div>
-        <div class="cards fencer-1">
-          <div>
+        <div
+          class="cards fencer-1 clickable"
+          @click.stop="$emit('index', 'LeftCard')"
+        >
+          <div
+            class="clickable"
+            @click.stop="$emit('index', 'LeftRCard')"
+          >
             <div
               v-if="leftFencer.rcard > 0"
               class="red"
@@ -188,6 +200,8 @@ const short = computed(() => {
         <div
           id="timer"
           :class="status[0].state"
+          class="clickable"
+          @click.stop="$emit('index', 'Timer')"
         >
           <div
             v-if="settings.config.showSubSec"
@@ -222,6 +236,8 @@ const short = computed(() => {
           <div
             v-if="settings.config.showDoubles"
             id="doubles"
+            class="clickable"
+            @click.stop="$emit('index', 'Double')"
           >
             {{ status[0].doubles
             }}{{
@@ -232,7 +248,11 @@ const short = computed(() => {
             Doubles
           </div>
         </div>
-        <div id="rounds">
+        <div
+          id="rounds"
+          class="clickable"
+          @click.stop="$emit('index', 'Period')"
+        >
           <span>{{ status[0].poultab[0] === "P" ? "Match " : "Period " }}</span>
           <span>
             {{ status[0].round }}/{{
@@ -251,12 +271,19 @@ const short = computed(() => {
             color: rightChange ? 'transparent' : 'white',
             borderColor: status[0].priority === 'R' ? 'blue' : 'white',
           }"
-          class="scoring fencer-2"
+          class="scoring fencer-2 clickable"
+          @click.stop="$emit('index', 'RightAdd1')"
         >
           {{ rightFencer.score }}
         </div>
-        <div class="cards fencer-2">
-          <div>
+        <div
+          class="cards fencer-2 clickable"
+          @click.stop="$emit('index', 'RightCard')"
+        >
+          <div
+            class="clickable"
+            @click.stop="$emit('index', 'RightRCard')"
+          >
             <div
               v-if="rightFencer.rcard > 0"
               class="red"
@@ -284,7 +311,11 @@ const short = computed(() => {
   >
     {{ cyrano?.cyranoState }}
   </Blur>
-  <Blur v-else-if="winner">
+  <Blur
+    v-else-if="winner"
+    class="clickable"
+    @click.stop="$emit('index', 'Timer')"
+  >
     <template #default>
       Match
       {{
@@ -297,7 +328,11 @@ const short = computed(() => {
     </template>
     <template #sub>{{ leftFencer.score }}-{{ rightFencer.score }}</template>
   </Blur>
-  <Blur v-else-if="matchOver">
+  <Blur
+    v-else-if="matchOver"
+    class="clickable"
+    @click.stop="$emit('index', 'Timer')"
+  >
     {{ stopwatch <= 0 ? "Time" : "Match" }}
   </Blur>
   <Blur
@@ -306,6 +341,8 @@ const short = computed(() => {
       settings.settings.passivityStops &&
       passivity <= 0
     "
+    class="clickable"
+    @click.stop="$emit('index', 'Timer')"
   >
     Passivity
   </Blur>
@@ -335,6 +372,9 @@ const short = computed(() => {
   height: 100%;
   text-align: center;
   align-content: center;
+}
+.clickable:hover {
+  cursor: pointer;
 }
 #fencer-display {
   display: grid;
@@ -398,13 +438,14 @@ const short = computed(() => {
 }
 div.scoring {
   background-clip: border-box;
-  background-color: gray;
+  background-color: #505050;
   align-self: center;
   width: 100%;
   height: min(100%, 25rem);
-  border: solid 40px;
-  border-radius: 20px;
-  font-size: 10rem;
+  border: solid 4vh;
+  border-radius: 4vh;
+  font-size: 20vh;
+  vertical-align: middle;
 }
 #center {
   display: grid;

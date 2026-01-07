@@ -448,14 +448,18 @@ function keyHandler(e: KeyboardEvent) {
         Object.keys(keymap.value).find(
           (index) => keymap.value[index] === key,
         ) ?? "";
-      const func = functions[index] ?? { func: function () {} };
-      func.func();
-      passivityStart.value = status.value[0].stopwatch ?? 0;
-      if (cyrano.value?.sendingData && status.value[0].state !== "E")
-        cyrano.value.forceWrite();
+      doFunc(index);
     }
   }
   repeat.value = false;
+}
+
+function doFunc(index: string) {
+  const func = functions[index] ?? { func: function () {} };
+  func.func();
+  passivityStart.value = status.value[0].stopwatch ?? 0;
+  if (cyrano.value?.sendingData && status.value[0].state !== "E")
+    cyrano.value.forceWrite();
 }
 
 const newKeymap = ref("custom");
@@ -841,6 +845,7 @@ onUnmounted(() => {
     :winner
     :leftChange="black[0]"
     :rightChange="black[1]"
+    @index="(index) => doFunc(index)"
   />
   <Dialog
     v-model:visible="choices"
