@@ -1395,6 +1395,17 @@ onUnmounted(() => {
                 />
               </li>
               <li>
+                <div>Max time per period</div>
+                <InputNumber
+                  v-model="settings.settings.maxTime"
+                  :min="0"
+                  :step="1"
+                  showButtons
+                  size="small"
+                  suffix=" s"
+                />
+              </li>
+              <li>
                 <div>Points per Period</div>
                 <InputNumber
                   v-model.number="settings.cyranoOptions.pointsPerPeriod"

@@ -364,7 +364,6 @@ export class Cyrano {
     this.settings.settings.compe = cyr.compe;
     this.settings.settings.phase = cyr.phase === "" ? 0 : cyr.phase;
     toValue(this.status)[0] = cyr.status as CorrectStatus;
-    this.settings.settings.maxTime = 180;
     switch (toValue(this.status)[0].poultab[0]) {
       case "P":
         this.settings.settings.rounds = toValue(this.status)[0].round;
