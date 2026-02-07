@@ -431,7 +431,12 @@ function keyHandler(e: KeyboardEvent) {
         nav.menu = false;
       }
     } else if (choices.value) {
-      // TODO
+      switch (key) {
+        case keymap.value.Menu:
+        case keymap.value.Choices:
+        case keymap.value.Timer:
+          choices.value = false;
+      }
     } else if (inputTime.value) {
       if (key === keymap.value.Timer) {
         inputTime.value = false;
@@ -855,31 +860,31 @@ onUnmounted(() => {
     header="Select"
     modal
   >
-    <menu style="width: 100%">
-      <li
-        v-for="(item, index) in functions"
-        :key="index"
-        style="width: 100%"
-      >
-        <Button
+    <Menu
+      :model="Object.values(functions)"
+      autofocus
+    >
+      <template #item="{ item, props }">
+        <a
           :style="{
             display: 'flex',
             justifyContent: 'space-between',
             width: '100%',
           }"
-          variant="text"
-          @click="
-            () => {
-              item.func();
-              choices = false;
-            }
-          "
+          v-bind="props.action"
+          @click="item.func"
         >
           <span>{{ item.name }}</span>
-          <span>{{ keymap[index] }}</span>
-        </Button>
-      </li>
-    </menu>
+          <span>{{
+            keymap[
+              Object.keys(functions)[
+                Object.values(functions).findIndex((x) => x.name == item.name)
+              ] as keyof typeof keymap
+            ]
+          }}</span>
+        </a>
+      </template>
+    </Menu>
   </Dialog>
   <Dialog
     v-model:visible="inputTime"
@@ -1176,11 +1181,7 @@ onUnmounted(() => {
             />
           </div>
           <div class="button">
-            <Button
-              autofocus
-              @click="reset"
-              >Reset Bout</Button
-            >
+            <Button @click="reset">Reset Bout</Button>
           </div>
         </TabPanel>
         <TabPanel
@@ -1692,6 +1693,10 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   background-color: black;
+}
+select,
+::picker(select) {
+  appearance: base-select;
 }
 input[type="number"] {
   background: var(--p-form-field-background);
