@@ -459,8 +459,8 @@ function keyHandler(e: KeyboardEvent) {
   repeat.value = false;
 }
 
-function doFunc(index: string) {
-  const func = functions[index] ?? { func: function () {} };
+function doFunc(index?: string) {
+  const func = functions[index ?? ""] ?? { func: function () {} };
   func.func();
   passivityStart.value = status.value[0].stopwatch ?? 0;
   if (cyrano.value?.sendingData && status.value[0].state !== "E")
@@ -872,7 +872,15 @@ onUnmounted(() => {
             width: '100%',
           }"
           v-bind="props.action"
-          @click="item.func"
+          @click="
+            () => {
+              doFunc(
+                Object.keys(functions)[
+                  Object.values(functions).findIndex((x) => x.name == item.name)
+                ],
+              );
+            }
+          "
         >
           <span>{{ item.name }}</span>
           <span>{{
