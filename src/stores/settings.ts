@@ -60,6 +60,7 @@ export const useSettingsStore = defineStore(
     });
     const config = ref<{
       keymap: string;
+      timerEndsMatch: boolean;
       leftColor: string;
       rightColor: string;
       showSubSec: boolean;
@@ -73,6 +74,7 @@ export const useSettingsStore = defineStore(
       blurred: boolean;
     }>({
       keymap: "default remote",
+      timerEndsMatch: true,
       leftColor: "#ff0000",
       rightColor: "#0000ff",
       showSubSec: false,

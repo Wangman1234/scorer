@@ -674,7 +674,7 @@ const functions: map<{ name?: string; func: () => void }> = {
       } else if (winner.value) {
         finishMatch();
       } else if (matchOver.value) {
-        end();
+        if (settings.config.timerEndsMatch) end();
       } else if (
         status.value[0].state === "H" ||
         status.value[0].state === "W" ||
@@ -1624,6 +1624,12 @@ onUnmounted(() => {
                       @click="newKeymapSubmit()"
                     />
                   </InputGroup>
+                </div>
+              </li>
+              <li>
+                <div>Timer Key Ends Match</div>
+                <div>
+                  <ToggleSwitch v-model="settings.config.timerEndsMatch" />
                 </div>
               </li>
               <li
