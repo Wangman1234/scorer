@@ -774,9 +774,9 @@ const functions: map<{ name?: string; func: () => void }> = {
   Flip: {
     name: "Flip fencer sides",
     func: () => {
-      let f1 = match.value[0];
-      match.value[0] = match.value[1];
-      match.value[1] = f1;
+      let f1 = match.value[0].fencer;
+      match.value[0].fencer = match.value[1].fencer;
+      match.value[1].fencer = f1;
     },
   },
 };
