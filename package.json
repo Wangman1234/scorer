@@ -17,8 +17,8 @@
     "@primevue/auto-import-resolver": "^4.5.4",
     "@testing-library/vue": "^8.1.0",
     "@types/node": "^24.10.2",
-    "@types/underscore": "^1.13.0",
     "@types/tinycolor2": "^1.4.6",
+    "@types/underscore": "^1.13.0",
     "@vitejs/plugin-vue": "^6.0.2",
     "@vue/tsconfig": "^0.8.1",
     "dotenv": "^17.2.3",
@@ -34,12 +34,12 @@
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.2",
-    "tinycolor2": "^1.6.0",
     "flag-icons": "^7.5.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
+    "tinycolor2": "^1.6.0",
     "underscore": "^1.13.7",
     "vue": "^3.5.25",
     "vue3-marquee": "^4.2.2"

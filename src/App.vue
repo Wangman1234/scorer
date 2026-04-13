@@ -159,6 +159,34 @@ function $reset() {
   passivityStart.value = settings.settings.maxTime;
 }
 
+function download() {
+  const text = JSON.stringify(settings);
+  const filename = "settings.json";
+  let element = document.createElement("a");
+  element.setAttribute(
+    "href",
+    "data:application/json;charset=utf-8," + encodeURIComponent(text),
+  );
+  element.setAttribute("download", filename);
+
+  element.style.display = "none";
+  document.body.appendChild(element);
+
+  element.click();
+  document.body.removeChild(element);
+}
+function restore(event: { files: any[] }) {
+  const file = event.files[0];
+  const reader = new FileReader();
+
+  reader.onload = async (e) => {
+    const data = JSON.parse(e.target?.result as string);
+    settings.$state = data;
+  };
+
+  reader.readAsText(file);
+}
+
 // Timer
 const timer = new Timer(status, passivity);
 
@@ -943,6 +971,7 @@ onUnmounted(() => {
         <Tab value="cyrano">Cyrano</Tab>
         <Tab value="display">Display</Tab>
         <Tab value="controls">Controls</Tab>
+        <Tab value="restore">Restore</Tab>
       </TabList>
       <TabPanels>
         <TabPanel
@@ -1673,6 +1702,36 @@ onUnmounted(() => {
                 >
                   {{ keymap[index] }}
                 </ToggleButton>
+              </li>
+            </menu>
+          </div>
+        </TabPanel>
+        <TabPanel
+          class="body"
+          value="restore"
+        >
+          <div class="header">
+            <h3>Restore and Export Settings</h3>
+          </div>
+          <div class="scrollable">
+            <menu>
+              <li>
+                <div>Export Current Settings</div>
+                <Button @click="download">Export</Button>
+              </li>
+              <li>
+                <div>Restore Settings</div>
+                <FileUpload
+                  :auto="true"
+                  :chooseButtonProps="{ size: 'small' }"
+                  :maxFileSize="1000000"
+                  accept=".json"
+                  chooseLabel="Restore"
+                  customUpload
+                  mode="basic"
+                  name="restore"
+                  @select="restore"
+                />
               </li>
             </menu>
           </div>
