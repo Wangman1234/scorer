@@ -160,7 +160,12 @@ function $reset() {
 }
 
 function download() {
-  const text = JSON.stringify(settings);
+  const text = JSON.stringify({
+    keymaps: settings.keymaps,
+    config: settings.config,
+    settings: settings.settings,
+    cyranoOptions: settings.cyranoOptions,
+  });
   const filename = "settings.json";
   let element = document.createElement("a");
   element.setAttribute(
