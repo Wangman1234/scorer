@@ -19,6 +19,7 @@ import Poule from "@/Components/Poule.vue";
 import type { CorrectFencerStatus } from "@/scripts/Types.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
 import tinycolor from "tinycolor2";
+import { Country } from "@/scripts/Country.ts";
 
 defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
@@ -77,6 +78,7 @@ const settings = useSettingsStore();
           <th scope="row">{{ index }}.</th>
           <td>
             {{ item[0].fencer.id }}
+            -
             {{
               item[0].fencer.name.toString(
                 settings.config.lastNameFirst,
@@ -86,14 +88,49 @@ const settings = useSettingsStore();
                 "",
               )
             }}
+            <span
+              v-if="
+                settings.config.showFlags && item[0].fencer.country.countryCode
+              "
+              :class="`fi fi-${new Country(item[0].fencer.country.countryCode).alphaTwo()}`"
+            />
           </td>
-          <td class="score">{{ item[0].status }}</td>
-          <td class="score">{{ item[0].score }}</td>
+          <td
+            :style="{
+              backgroundColor:
+                item[0].status === 'V'
+                  ? 'var(--p-green-800)'
+                  : item[0].status === 'D'
+                    ? 'var(--p-red-800)'
+                    : 'transparent',
+            }"
+            class="score"
+          >
+            {{ item[0].status }}
+          </td>
+          <td class="score">
+            {{ item[0].score }}
+          </td>
           <td>vs.</td>
-          <td class="score">{{ item[1].score }}</td>
-          <td class="score">{{ item[1].status }}</td>
+          <td class="score">
+            {{ item[1].score }}
+          </td>
+          <td
+            :style="{
+              backgroundColor:
+                item[1].status === 'V'
+                  ? 'var(--p-green-800)'
+                  : item[1].status === 'D'
+                    ? 'var(--p-red-800)'
+                    : 'transparent',
+            }"
+            class="score"
+          >
+            {{ item[1].status }}
+          </td>
           <td>
             {{ item[1].fencer.id }}
+            -
             {{
               item[1].fencer.name.toString(
                 settings.config.lastNameFirst,
@@ -103,6 +140,12 @@ const settings = useSettingsStore();
                 "",
               )
             }}
+            <span
+              v-if="
+                settings.config.showFlags && item[1].fencer.country.countryCode
+              "
+              :class="`fi fi-${new Country(item[1].fencer.country.countryCode).alphaTwo()}`"
+            />
           </td>
         </tr>
       </tbody>

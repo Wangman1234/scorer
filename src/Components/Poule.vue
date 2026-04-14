@@ -18,6 +18,7 @@
 import { type CorrectFencerStatus, Fencer } from "../scripts/Types.ts";
 import { computed } from "vue";
 import { useSettingsStore } from "@/stores/settings.ts";
+import { Country } from "@/scripts/Country.ts";
 
 const settings = useSettingsStore();
 
@@ -145,11 +146,15 @@ function gs(matchId: number, id: string) {
     <table>
       <thead>
         <tr>
-          <th scope="row"></th>
+          <th scope="row">
+            <b><i>Unofficial</i></b>
+          </th>
           <th
             class="right"
             scope="row"
-          ></th>
+          >
+            id
+          </th>
           <th
             v-for="index1 in Object.keys(fencerMatchList.mats).sort((a, b) =>
               a > b ? 1 : -1,
@@ -188,6 +193,13 @@ function gs(matchId: number, id: string) {
                 "",
               )
             }}
+            <span
+              v-if="
+                settings.config.showFlags &&
+                fencerMatchList.fencers[index]?.country.countryCode
+              "
+              :class="`fi fi-${new Country(fencerMatchList.fencers[index]?.country.countryCode).alphaTwo()}`"
+            />
           </th>
           <th
             class="right"

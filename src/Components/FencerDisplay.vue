@@ -63,6 +63,7 @@ defineProps<{
               settings.config.showFlags && leftFencer.fencer.country.countryCode
             "
             :class="`fi fi-${new Country(leftFencer.fencer.country.countryCode).alphaTwo()}`"
+            :style="{ fontSize: '5rem' }"
           />
         </h2>
       </div>
@@ -101,6 +102,7 @@ defineProps<{
               rightFencer.fencer.country.countryCode
             "
             :class="`fi fi-${new Country(rightFencer.fencer.country.countryCode).alphaTwo()}`"
+            :style="{ fontSize: '5rem' }"
           />
         </h2>
       </div>
