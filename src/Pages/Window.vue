@@ -97,16 +97,20 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="el">
-    <Tournament
+    <div
+      class="container"
       v-if="tournamentWindow"
-      :match="match"
-      :matches="matches"
-    />
+    >
+      <Tournament
+        :match="match"
+        :matches="matches"
+      />
+    </div>
   </div>
 </template>
 
 <style scoped>
-div {
+div.container {
   padding: 2rem;
 }
 </style>

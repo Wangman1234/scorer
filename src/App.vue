@@ -633,6 +633,19 @@ const functions: map<{ name?: string; func: () => void }> = {
       }
     },
   },
+  Double1: {
+    name: "Add 1 double plus 1 point",
+    func: () => {
+      if (
+        status.value[0].doubles < settings.settings.maxDoubles ||
+        settings.settings.maxDoubles === 0
+      ) {
+        status.value[0].doubles++;
+        changeScore(0, settings.settings.doublesAddPoints + 1, true);
+        changeScore(1, settings.settings.doublesAddPoints + 1, true);
+      }
+    },
+  },
   MinusDouble: {
     name: "Subtract 1 double",
     func: () => {
@@ -640,6 +653,16 @@ const functions: map<{ name?: string; func: () => void }> = {
         status.value[0].doubles--;
         changeScore(0, -settings.settings.doublesAddPoints, true);
         changeScore(1, -settings.settings.doublesAddPoints, true);
+      }
+    },
+  },
+  MinusDouble1: {
+    name: "Subtract 1 double and 1 point",
+    func: () => {
+      if (status.value[0].doubles > 0) {
+        status.value[0].doubles--;
+        changeScore(0, -settings.settings.doublesAddPoints - 1, true);
+        changeScore(1, -settings.settings.doublesAddPoints - 1, true);
       }
     },
   },
