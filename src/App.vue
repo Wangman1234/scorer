@@ -25,7 +25,6 @@ import {
   Name,
 } from "@/scripts/Types.ts";
 import { omit } from "underscore";
-import Poule from "@/Components/Poule.vue";
 import { useSettingsStore } from "@/stores/settings.ts";
 import Scoreboard from "@/Components/Scoreboard.vue";
 import { Timer } from "@/scripts/Timer.ts";
@@ -36,6 +35,8 @@ import BoutProgress from "@/Components/BoutProgress.vue";
 import { Country, CountryNameList } from "@/scripts/Country.ts";
 import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 import Priority from "@/Components/Priority.vue";
+import Tournament from "@/Components/Tournament.vue";
+import Window from "@/Pages/Window.vue";
 
 const settings = useSettingsStore();
 const nav = useNavStore();
@@ -45,6 +46,7 @@ const started = ref(false);
 const priorityPicker = ref(false);
 const choices = ref(false);
 const inputTime = ref(false);
+const tournamentWindow = ref(false);
 const change = ref<false | keyof map<string>>(false);
 ref(false);
 
@@ -1335,56 +1337,16 @@ onUnmounted(() => {
             <h4 v-else>Tournament not Running</h4>
           </div>
           <div class="scrollable">
-            <Poule :matches="omit(matches, '')" />
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Bout</th>
-                  <th scope="col">Left fencer</th>
-                  <th colspan="5"></th>
-                  <th scope="col">Right fencer</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(item, index) in omit(matches, '')"
-                  :key="index"
-                  :class="index == status[0].match ? 'running' : 'not'"
-                >
-                  <th scope="row">{{ index }}.</th>
-                  <td>
-                    {{ item[0].fencer.id }}
-                    {{
-                      item[0].fencer.name.toString(
-                        settings.config.lastNameFirst,
-                        false,
-                        false,
-                        settings.config.separator,
-                        "",
-                      )
-                    }}
-                  </td>
-                  <td class="score">{{ item[0].status }}</td>
-                  <td class="score">{{ item[0].score }}</td>
-                  <td>vs.</td>
-                  <td class="score">{{ item[1].score }}</td>
-                  <td class="score">{{ item[1].status }}</td>
-                  <td>
-                    {{ item[1].fencer.id }}
-                    {{
-                      item[1].fencer.name.toString(
-                        settings.config.lastNameFirst,
-                        false,
-                        false,
-                        settings.config.separator,
-                        "",
-                      )
-                    }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <Tournament
+              :match="status[0].match"
+              :matches="omit(matches, '')"
+            />
             <h4 v-if="cyrano?.cyranoState === 'No Bouts'">No more bouts</h4>
+          </div>
+          <div class="button">
+            <Button @click="tournamentWindow = !tournamentWindow"
+              >Open in New Window({{ tournamentWindow }})</Button
+            >
           </div>
         </TabPanel>
         <TabPanel
@@ -1757,6 +1719,12 @@ onUnmounted(() => {
   >
     Hold
   </Dialog>
+  <Window
+    :match="status[0].match"
+    :matches="omit(matches, '')"
+    :tournamentWindow
+    @close="tournamentWindow = false"
+  />
 </template>
 
 <!--suppress CssUnresolvedCustomProperty -->
@@ -1850,17 +1818,6 @@ li div {
 .table {
   display: flex;
   flex-direction: row;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0 0.5rem;
-}
-tr.running {
-  border: 1px solid gold;
 }
 nav {
   background-color: dodgerblue;
