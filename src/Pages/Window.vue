@@ -17,13 +17,42 @@
 <script lang="ts" setup>
 import Tournament from "@/Components/Tournament.vue";
 import type { CorrectFencerStatus } from "@/scripts/Types.ts";
-import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch,
+} from "vue";
+import FencerDisplay from "@/Components/FencerDisplay.vue";
 
-const { tournamentWindow } = defineProps<{
+const { match, matches, tournamentWindow } = defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
   match: number | "";
   tournamentWindow: boolean;
 }>();
+const current = computed(() => {
+  if (match === "") {
+    return undefined;
+  } else {
+    return matches[match];
+  }
+});
+const nextMatch = computed(() => {
+  if (match === "") {
+    return undefined;
+  } else {
+    return matches[match + 1];
+  }
+});
+const onDeck = computed(() => {
+  if (match === "") {
+    return undefined;
+  } else {
+    return matches[match + 2];
+  }
+});
 
 const emit = defineEmits(["close"]);
 
@@ -105,6 +134,33 @@ onBeforeUnmount(() => {
         :match="match"
         :matches="matches"
       />
+      <div v-if="!!current">
+        <h1>Current:</h1>
+        <div class="disp">
+          <FencerDisplay
+            :left-fencer="current[0]"
+            :right-fencer="current[1]"
+          />
+        </div>
+      </div>
+      <div v-if="!!nextMatch">
+        <h1>Up Next:</h1>
+        <div class="disp">
+          <FencerDisplay
+            :left-fencer="nextMatch[0]"
+            :right-fencer="nextMatch[1]"
+          />
+        </div>
+      </div>
+      <div v-if="!!onDeck">
+        <h1>On Deck:</h1>
+        <div class="disp">
+          <FencerDisplay
+            :left-fencer="onDeck[0]"
+            :right-fencer="onDeck[1]"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -112,5 +168,8 @@ onBeforeUnmount(() => {
 <style scoped>
 div.container {
   padding: 2rem;
+}
+div.disp {
+  height: 25rem;
 }
 </style>

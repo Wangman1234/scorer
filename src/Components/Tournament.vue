@@ -18,6 +18,7 @@
 import Poule from "@/Components/Poule.vue";
 import type { CorrectFencerStatus } from "@/scripts/Types.ts";
 import { useSettingsStore } from "@/stores/settings.ts";
+import tinycolor from "tinycolor2";
 
 defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
@@ -34,9 +35,37 @@ const settings = useSettingsStore();
       <thead>
         <tr>
           <th scope="col">Bout</th>
-          <th scope="col">Left fencer</th>
+          <th
+            :style="{
+              backgroundColor: settings.config.leftColor,
+              color: tinycolor
+                .mostReadable(settings.config.leftColor, ['white', 'black'], {
+                  includeFallbackColors: true,
+                  level: 'AA',
+                  size: 'large',
+                })
+                .toHexString(),
+            }"
+            scope="col"
+          >
+            Left fencer
+          </th>
           <th colspan="5"></th>
-          <th scope="col">Right fencer</th>
+          <th
+            :style="{
+              backgroundColor: settings.config.rightColor,
+              color: tinycolor
+                .mostReadable(settings.config.rightColor, ['white', 'black'], {
+                  includeFallbackColors: true,
+                  level: 'AA',
+                  size: 'large',
+                })
+                .toHexString(),
+            }"
+            scope="col"
+          >
+            Right fencer
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -95,6 +124,7 @@ table {
 th,
 td {
   padding: 0 0.5rem;
+  text-align: center;
 }
 tr.running {
   border: 1px solid gold;

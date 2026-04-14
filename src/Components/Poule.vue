@@ -285,6 +285,7 @@ td {
   padding: 0.25rem;
   border-left: 1px solid var(--p-surface-600);
   border-right: 1px solid var(--p-surface-600);
+  text-align: center;
 }
 td,
 th[scope="col"] {

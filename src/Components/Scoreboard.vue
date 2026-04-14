@@ -15,15 +15,14 @@
   -->
 
 <script lang="ts" setup>
-import tinycolor from "tinycolor2";
 import { omit } from "underscore";
 import NextFencer from "./NextFencer.vue";
 import { useSettingsStore } from "@/stores/settings.ts";
 import { computed } from "vue";
-import { Country } from "@/scripts/Country.ts";
 import Blur from "@/Components/Blur.vue";
 import type { Cyrano } from "@/scripts/Cyrano.ts";
 import type { CorrectFencerStatus, CorrectStatus } from "@/scripts/Types.ts";
+import FencerDisplay from "@/Components/FencerDisplay.vue";
 
 const settings = useSettingsStore();
 
@@ -51,84 +50,10 @@ const short = computed(() => {
 
 <template>
   <div class="container">
-    <div id="fencer-display">
-      <div class="display-box">
-        <div
-          :style="{
-            backgroundColor: settings.config.leftColor,
-            color: tinycolor
-              .mostReadable(settings.config.leftColor, ['white', 'black'], {
-                includeFallbackColors: true,
-                level: 'AA',
-                size: 'large',
-              })
-              .toHexString(),
-          }"
-          class="name fencer-1 clickable"
-          @click.stop="$emit('index', 'PriorityLeft')"
-        >
-          <h1>
-            {{
-              leftFencer.fencer.name.toString(
-                settings.config.lastNameFirst,
-                settings.config.shortenFirst,
-                settings.config.shortenSecond,
-                settings.config.separator,
-                settings.config.ending,
-              )
-            }}
-          </h1>
-          <h2>
-            {{ leftFencer.fencer.club }}
-            <span
-              v-if="
-                settings.config.showFlags &&
-                leftFencer.fencer.country.countryCode
-              "
-              :class="`fi fi-${new Country(leftFencer.fencer.country.countryCode).alphaTwo()}`"
-            />
-          </h2>
-        </div>
-      </div>
-      <div class="display-box">
-        <div
-          :style="{
-            backgroundColor: settings.config.rightColor,
-            color: tinycolor
-              .mostReadable(settings.config.rightColor, ['white', 'black'], {
-                includeFallbackColors: true,
-                level: 'AA',
-                size: 'large',
-              })
-              .toHexString(),
-          }"
-          class="name fencer-2 clickable"
-          @click.stop="$emit('index', 'PriorityRight')"
-        >
-          <h1>
-            {{
-              rightFencer.fencer.name.toString(
-                settings.config.lastNameFirst,
-                settings.config.shortenFirst,
-                settings.config.shortenSecond,
-                settings.config.separator,
-                settings.config.ending,
-              )
-            }}
-          </h1>
-          <h2>
-            {{ rightFencer.fencer.club }}
-            <span
-              v-if="
-                settings.config.showFlags &&
-                rightFencer.fencer.country.countryCode
-              "
-              :class="`fi fi-${new Country(rightFencer.fencer.country.countryCode).alphaTwo()}`"
-            />
-          </h2>
-        </div>
-      </div>
-    </div>
+    <FencerDisplay
+      :leftFencer
+      :rightFencer
+    />
     <div id="scoring-display">
       <div class="side">
         <div></div>
@@ -376,15 +301,7 @@ const short = computed(() => {
 .clickable:hover {
   cursor: pointer;
 }
-#fencer-display {
-  display: grid;
-  grid-template-columns: 50% 50%;
-  grid-template-rows: 100%;
-}
-.display-box {
-  width: 100%;
-  padding: 1%;
-}
+
 .display-box div {
   width: 100%;
   height: 100%;
