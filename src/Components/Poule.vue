@@ -91,19 +91,23 @@ const place = computed<Record<string, number>>(() => {
     const inds = fencerMatchList.value.inds[fencerId] ?? { V: 0, HS: 0, HR: 0 };
     fencerScores.push({
       id: fencerId,
-      score: inds.V * 1000 + inds.HS * 100 - inds.HR * 10 + (inds.HS - inds.HR),
+      score: inds.V * 1000000 + (inds.HS - inds.HR) * 1000 + inds.HS,
     });
   }
   fencerScores.sort((a, b) => b.score - a.score);
   let rec: Record<string, number> = {};
-  let i = 0;
+  let rank = 0;
   let score = 0;
+  let duplicate = 1;
   for (const fencerId of fencerScores) {
     if (score !== fencerId.score) {
-      i++;
+      rank += duplicate;
+      duplicate = 1;
       score = fencerId.score;
+    } else {
+      duplicate++;
     }
-    rec[fencerId.id] = i;
+    rec[fencerId.id] = rank;
   }
   return rec;
 });
