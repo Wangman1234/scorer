@@ -987,21 +987,50 @@ onUnmounted(() => {
       scrollable
     >
       <TabList>
-        <Tab value="bout">Bout</Tab>
+        <Tab
+          value="bout"
+          @click="nav.page = 'bout'"
+        >
+          Bout
+        </Tab>
         <Tab
           :disabled="!cyrano?.nak"
           value="nak"
-          >Corrections</Tab
+          @click="nav.page = 'nak'"
         >
+          Corrections
+        </Tab>
         <Tab
           value="tournament"
           :disabled="!cyrano || settings.cyranoOptions.replayMode"
-          >Tournament</Tab
+          @click="nav.page = 'tournament'"
         >
-        <Tab value="cyrano">Cyrano</Tab>
-        <Tab value="display">Display</Tab>
-        <Tab value="controls">Controls</Tab>
-        <Tab value="restore">Restore</Tab>
+          Tournament
+        </Tab>
+        <Tab
+          value="cyrano"
+          @click="nav.page = 'cyrano'"
+        >
+          Cyrano
+        </Tab>
+        <Tab
+          value="display"
+          @click="nav.page = 'display'"
+        >
+          Display
+        </Tab>
+        <Tab
+          value="controls"
+          @click="nav.page = 'controls'"
+        >
+          Controls
+        </Tab>
+        <Tab
+          value="restore"
+          @click="nav.page = 'restore'"
+        >
+          Restore
+        </Tab>
       </TabList>
       <TabPanels>
         <TabPanel
