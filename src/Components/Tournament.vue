@@ -17,140 +17,20 @@
 <script lang="ts" setup>
 import Poule from "@/Components/Poule.vue";
 import type { CorrectFencerStatus } from "@/scripts/Types.ts";
-import { useSettingsStore } from "@/stores/settings.ts";
-import tinycolor from "tinycolor2";
-import { Country } from "@/scripts/Country.ts";
+import MatchesTable from "@/Components/MatchesTable.vue";
 
 defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
   match: number | "";
 }>();
-
-const settings = useSettingsStore();
 </script>
 
 <template>
   <Poule :matches="matches" />
-  <div>
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Bout</th>
-          <th
-            :style="{
-              backgroundColor: settings.config.leftColor,
-              color: tinycolor
-                .mostReadable(settings.config.leftColor, ['white', 'black'], {
-                  includeFallbackColors: true,
-                  level: 'AA',
-                  size: 'large',
-                })
-                .toHexString(),
-            }"
-            scope="col"
-          >
-            Left fencer
-          </th>
-          <th colspan="5"></th>
-          <th
-            :style="{
-              backgroundColor: settings.config.rightColor,
-              color: tinycolor
-                .mostReadable(settings.config.rightColor, ['white', 'black'], {
-                  includeFallbackColors: true,
-                  level: 'AA',
-                  size: 'large',
-                })
-                .toHexString(),
-            }"
-            scope="col"
-          >
-            Right fencer
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="(item, index) in matches"
-          :key="index"
-          :class="index == match ? 'running' : 'not'"
-        >
-          <th scope="row">{{ index }}.</th>
-          <td>
-            {{ item[0].fencer.id }}
-            -
-            {{
-              item[0].fencer.name.toString(
-                settings.config.lastNameFirst,
-                false,
-                false,
-                settings.config.separator,
-                "",
-              )
-            }}
-            <span
-              v-if="
-                settings.config.showFlags && item[0].fencer.country.countryCode
-              "
-              :class="`fi fi-${new Country(item[0].fencer.country.countryCode).alphaTwo()}`"
-            />
-          </td>
-          <td
-            :style="{
-              backgroundColor:
-                item[0].status === 'V'
-                  ? 'var(--p-green-800)'
-                  : item[0].status === 'D'
-                    ? 'var(--p-red-800)'
-                    : 'transparent',
-            }"
-            class="score"
-          >
-            {{ item[0].status }}
-          </td>
-          <td class="score">
-            {{ item[0].score }}
-          </td>
-          <td>vs.</td>
-          <td class="score">
-            {{ item[1].score }}
-          </td>
-          <td
-            :style="{
-              backgroundColor:
-                item[1].status === 'V'
-                  ? 'var(--p-green-800)'
-                  : item[1].status === 'D'
-                    ? 'var(--p-red-800)'
-                    : 'transparent',
-            }"
-            class="score"
-          >
-            {{ item[1].status }}
-          </td>
-          <td>
-            {{ item[1].fencer.id }}
-            -
-            {{
-              item[1].fencer.name.toString(
-                settings.config.lastNameFirst,
-                false,
-                false,
-                settings.config.separator,
-                "",
-              )
-            }}
-            <span
-              v-if="
-                settings.config.showFlags && item[1].fencer.country.countryCode
-              "
-              :class="`fi fi-${new Country(item[1].fencer.country.countryCode).alphaTwo()}`"
-            />
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <MatchesTable
+    :match="match"
+    :matches="matches"
+  />
 </template>
 
 <style scoped>
@@ -168,8 +48,5 @@ th,
 td {
   padding: 0 0.5rem;
   text-align: center;
-}
-tr.running {
-  border: 1px solid gold;
 }
 </style>
