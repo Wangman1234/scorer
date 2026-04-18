@@ -26,7 +26,10 @@ defineProps<{
 </script>
 
 <template>
-  <Poule :matches="matches" />
+  <Poule
+    :match="match"
+    :matches="matches"
+  />
   <MatchesTable
     :match="match"
     :matches="matches"

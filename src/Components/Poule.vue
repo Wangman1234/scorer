@@ -24,6 +24,7 @@ const settings = useSettingsStore();
 
 const props = defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
+  match: number | "";
 }>();
 const fencerMatchList = computed<{
   mats: Record<string, number[]>;
@@ -118,9 +119,10 @@ function getMatch<T>(a: T[], b: T[]) {
   return [...set1.intersection(set2)];
 }
 
-function getScore(members: number[], id: string) {
-  if (members.length > 1) return "";
-  return gs(members[0] ?? 0, id);
+function getScore(members: number[], index: string, index1: string) {
+  const matchId = members[0];
+  if (index === index1 || typeof matchId === "undefined") return "";
+  return gs(matchId, index);
 }
 
 function gs(matchId: number, id: string) {
@@ -217,12 +219,17 @@ function gs(matchId: number, id: string) {
             )"
             :id="index + index1"
             :key="index1"
+            :class="{
+              running:
+                !(match === '' || index === index1) &&
+                matches[match]?.filter(
+                  (value) =>
+                    value.fencer.id === index || value.fencer.id === index1,
+                ).length === 2,
+            }"
             :style="{
               backgroundColor:
-                getMatch(
-                  fencerMatchList.mats[index] ?? [0],
-                  fencerMatchList.mats[index1] ?? [0],
-                ).length > 1
+                index === index1
                   ? 'var(--p-surface-600)'
                   : (getScore(
                         getMatch(
@@ -230,6 +237,7 @@ function gs(matchId: number, id: string) {
                           fencerMatchList.mats[index1] ?? [0],
                         ),
                         index,
+                        index1,
                       ) ?? '')[0] === 'V'
                     ? 'var(--p-green-800)'
                     : (getScore(
@@ -238,6 +246,7 @@ function gs(matchId: number, id: string) {
                             fencerMatchList.mats[index1] ?? [0],
                           ),
                           index,
+                          index1,
                         ) ?? '')[0] === 'D'
                       ? 'var(--p-red-800)'
                       : 'transparent',
@@ -250,6 +259,7 @@ function gs(matchId: number, id: string) {
                   fencerMatchList.mats[index1] ?? [0],
                 ),
                 index,
+                index1,
               )
             }}
           </td>
@@ -315,5 +325,8 @@ th[scope="row"] {
 }
 .left {
   border-left: 2px solid var(--p-surface-400);
+}
+td.running {
+  border: 2px solid gold;
 }
 </style>
