@@ -23,11 +23,14 @@ async function launch() {
   await document.documentElement.requestFullscreen();
   const { state } = await navigator.permissions.query({
     name: "keyboard-lock",
-  });
+  } as unknown as PermissionDescriptor);
   if (state === "granted") {
-    if ("keyboard" in navigator && "lock" in navigator.keyboard) {
+    const keyboard = (
+      navigator as Navigator & { keyboard: { lock: () => void } }
+    ).keyboard;
+    if ("keyboard" in navigator && "lock" in keyboard) {
       console.log("supported");
-      navigator.keyboard.lock();
+      keyboard.lock();
     } else {
       console.log("not in navigator");
     }

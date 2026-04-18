@@ -124,7 +124,14 @@ const short = computed(() => {
         </div>
         <div
           id="timer"
-          :class="status[0].state"
+          :style="{
+            color:
+              status[0].state === 'P'
+                ? 'blue'
+                : status[0].state === 'F'
+                  ? 'yellow'
+                  : 'white',
+          }"
           class="clickable"
           @click.stop="$emit('index', 'Timer')"
         >
@@ -378,15 +385,6 @@ div.scoring {
 }
 #timer div {
   font-size: 12rem;
-}
-.H {
-  color: white;
-}
-.F {
-  color: yellow;
-}
-.P {
-  color: blue;
 }
 #rounds {
   font-size: 5rem;

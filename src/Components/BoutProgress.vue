@@ -313,19 +313,15 @@ defineProps<{
           </th>
           <th
             v-for="(item, index) in matchData"
-            :class="
-              (item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0]
-                ? 'diff'
-                : '') +
-              ' ' +
-              (item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
-              item.stopwatch[0] !==
-                ((status[0].priority === 'N'
-                  ? status[0].round.toString() + '-'
-                  : 'P-') + toTime(status[0].stopwatch))[0]
-                ? 'ldiff'
-                : '')
-            "
+            :class="{
+              diff: item.stopwatch[0] !== matchData[index - 1]?.stopwatch[0],
+              ldiff:
+                item.stopwatch[0] !== matchData[index + 1]?.stopwatch[0] &&
+                item.stopwatch[0] !==
+                  ((status[0].priority === 'N'
+                    ? status[0].round.toString() + '-'
+                    : 'P-') + toTime(status[0].stopwatch))[0],
+            }"
             scope="col"
           >
             {{ index }}

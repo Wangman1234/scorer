@@ -187,8 +187,7 @@ function restore(event: { files: any[] }) {
   const reader = new FileReader();
 
   reader.onload = async (e) => {
-    const data = JSON.parse(e.target?.result as string);
-    settings.$state = data;
+    settings.$state = JSON.parse(e.target?.result as string);
   };
 
   reader.readAsText(file);
@@ -1268,8 +1267,8 @@ onUnmounted(() => {
               </li>
             </menu>
             <BoutProgress
-              :Lcolor
-              :Rcolor
+              :Lcolor="Lcolor"
+              :Rcolor="Rcolor"
               :leftFencer="match[0]"
               :matchData
               :rightFencer="match[1]"
@@ -1311,7 +1310,7 @@ onUnmounted(() => {
                 <div>phase</div>
                 <input v-model.number="settings.settings.phase" />
               </li>
-              <li v-for="(_item, index) in status[0]">
+              <li v-for="(_, index) in status[0]">
                 <div>{{ index }}</div>
                 <input v-model="status[0][index]" />
               </li>
@@ -1340,7 +1339,7 @@ onUnmounted(() => {
                   <div>country</div>
                   <input v-model="match[0].fencer.country" />
                 </li>
-                <li v-for="(_item, index) in omit(match[0], 'fencer')">
+                <li v-for="(_, index) in omit(match[0], 'fencer')">
                   <div>{{ index }}</div>
                   <input v-model="match[0][index]" />
                 </li>
@@ -1368,7 +1367,7 @@ onUnmounted(() => {
                   <div>country</div>
                   <input v-model="match[1].fencer.country" />
                 </li>
-                <li v-for="(_item, index) in omit(match[1], 'fencer')">
+                <li v-for="(_, index) in omit(match[1], 'fencer')">
                   <div>{{ index }}</div>
                   <input v-model="match[1][index]" />
                 </li>
