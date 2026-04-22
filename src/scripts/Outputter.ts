@@ -63,11 +63,10 @@ export class Outputter {
     if (device === 0) {
       this.$reset();
       for (const i in toValue(matches)) {
-        const status = toValue(matches)[i] ?? [
+        toValue(this.matches)[i] = toValue(matches)[i] ?? [
           defaultFencerStatus(),
           defaultFencerStatus(),
         ];
-        toValue(this.matches)[i] = status;
       }
       this.selfState = "Bout";
       const status = toValue(this.status)[0];
