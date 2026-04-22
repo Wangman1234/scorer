@@ -19,6 +19,7 @@ import { type CorrectFencerStatus, Fencer } from "../scripts/Types.ts";
 import { computed } from "vue";
 import { useSettingsStore } from "@/stores/settings.ts";
 import { Country } from "@/scripts/Country.ts";
+import { points } from "@/scripts/Functions.ts";
 
 const settings = useSettingsStore();
 
@@ -92,7 +93,7 @@ const place = computed<Record<string, number>>(() => {
     const inds = fencerMatchList.value.inds[fencerId] ?? { V: 0, HS: 0, HR: 0 };
     fencerScores.push({
       id: fencerId,
-      score: inds.V * 1000000 + (inds.HS - inds.HR) * 1000 + inds.HS,
+      score: points(inds.V, inds.HS, inds.HR),
     });
   }
   fencerScores.sort((a, b) => b.score - a.score);

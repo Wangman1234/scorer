@@ -72,3 +72,7 @@ export function defaultFencerStatus(): CorrectFencerStatus {
     reserve: "",
   };
 }
+
+export function points(V: number, HS: number, HR: number) {
+  return 1000000 * V + 1000 * (HS - HR) + HS;
+}

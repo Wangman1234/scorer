@@ -15,6 +15,11 @@
  */
 
 import { Country } from "./Country.ts";
+import { ref, type Ref, toValue } from "vue";
+import type { Player } from "tournament-pairings/interfaces";
+import { Swiss } from "tournament-pairings";
+import { points } from "@/scripts/Functions.ts";
+import { isEmpty } from "underscore";
 
 export class Name {
   lastName: string;
@@ -118,6 +123,131 @@ export class Fencer {
 
 export const emptyFencer = new Fencer();
 
+export type FencerPlus = {
+  fencer: Fencer;
+  seed: { [round: number]: number };
+  leftHanded: boolean;
+  fencedFencers: string[];
+  receivedBye: boolean;
+  victory: { [round: number]: boolean };
+  pointsScored: { [round: number]: number };
+  pointsAgainst: { [round: number]: number };
+};
+
+export class FencerList {
+  rounds: Ref<number[]>;
+  fencers: Ref<[FencerPlus[]]>;
+  constructor(fencers: FencerPlus[]) {
+    this.rounds = ref([0]);
+    this.fencers = ref([fencers]);
+  }
+  update(round: number) {
+    if (round > 0) {
+      toValue(this.fencers)[0].forEach((value) => {
+        value.seed[round] = fencerResults(round, value).points;
+      });
+    }
+  }
+  sort(round: number = 0) {
+    this.update(round);
+    return toValue(this.fencers)[0].toSorted(
+      (b, a) =>
+        (a.seed[round] || 0) - (b.seed[round] || 0) ||
+        (a.seed[0] || 0) - (b.seed[0] || 0) ||
+        +b.fencer.id - +a.fencer.id,
+    );
+  }
+  place(fencerID: string, round: number = 0) {
+    return (
+      this.sort(round).findIndex((fencer) => fencer.fencer.id === fencerID) + 1
+    );
+  }
+  ids() {
+    return toValue(this.fencers)[0].map(({ fencer }) => fencer.id);
+  }
+  push(fencer: FencerPlus) {
+    toValue(this.fencers)[0].push(fencer);
+  }
+  length() {
+    return toValue(this.fencers)[0].length;
+  }
+  remove(fencerID: string) {
+    toValue(this.fencers)[0] = toValue(this.fencers)[0].filter(
+      (f) => f.fencer.id !== fencerID,
+    );
+  }
+  pairings(round: number) {
+    const players: Player[] = [];
+    const bye: string[] = [];
+    for (const fencer of toValue(this.fencers)[0]) {
+      const fenced = fencer.fencedFencers;
+      if (fencer.receivedBye) {
+        fenced.push("");
+        bye.push(fencer.fencer.id);
+      }
+      players.push(
+        JSON.parse(
+          JSON.stringify({
+            id: fencer.fencer.id,
+            avoid: fenced,
+            receivedBye: fencer.receivedBye,
+            score: fencer.seed[round - 1] ?? 0,
+          }),
+        ),
+      );
+    }
+    if (!isEmpty(bye)) {
+      players.push({
+        id: "",
+        avoid: bye,
+        receivedBye: false,
+        score: 0,
+      });
+    }
+    console.log(players);
+    const matches = Swiss(players, round);
+    const ms = matches.map((value) => {
+      let match;
+      if (
+        toValue(this.fencers)[0].find((v) => v.fencer.id === value.player2)
+          ?.leftHanded
+      ) {
+        match = [value.player2, value.player1] as [
+          string | null,
+          string | null,
+        ];
+      } else {
+        match = [value.player1, value.player2] as [
+          string | null,
+          string | null,
+        ];
+      }
+      return [value.match, match] as [number, [string | null, string | null]];
+    });
+    const out: Record<number, [string | null, string | null]> = {};
+    for (const m of ms) {
+      out[m[0]] = m[1];
+    }
+    return out;
+  }
+}
+const refFencerList = ref(new FencerList([]));
+export type RefFencerList = typeof refFencerList;
+export function fencerResults(round: number, fencer: FencerPlus) {
+  const out = {
+    points: 0,
+    V: 0,
+    HS: 0,
+    HR: 0,
+  };
+  for (let i = 1; i <= round; i++) {
+    out.V += fencer.victory[i] ? 1 : 0;
+    out.HS += fencer.pointsScored[i] ?? 0;
+    out.HR += fencer.pointsAgainst[i] ?? 0;
+  }
+  out.points = points(out.V, out.HS, out.HR);
+  return out;
+}
 export type Status = {
   poultab: string;
   match: number | "";

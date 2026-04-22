@@ -23,6 +23,7 @@ import Blur from "@/Components/Blur.vue";
 import type { Cyrano } from "@/scripts/Cyrano.ts";
 import type { CorrectFencerStatus, CorrectStatus } from "@/scripts/Types.ts";
 import FencerDisplay from "@/Components/FencerDisplay.vue";
+import type { Outputter } from "@/scripts/Outputter.ts";
 
 const settings = useSettingsStore();
 
@@ -34,6 +35,7 @@ const props = defineProps<{
   passivity: number;
   matches: Record<number | "", [CorrectFencerStatus, CorrectFencerStatus]>;
   cyrano?: Cyrano;
+  outputter?: Outputter;
   winner: boolean;
   matchOver: boolean;
   leftChange: boolean;
@@ -243,6 +245,7 @@ const short = computed(() => {
   >
     {{ cyrano?.cyranoState }}
   </Blur>
+  <Blur v-if="outputter?.selfState === 'No Bouts'"> No Bouts </Blur>
   <Blur
     v-else-if="winner"
     class="clickable"

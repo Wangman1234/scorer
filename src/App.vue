@@ -21,10 +21,12 @@ import {
   type CorrectFencerStatus,
   type CorrectStatus,
   emptyFencer,
+  Fencer,
+  FencerList,
   type map,
   Name,
 } from "@/scripts/Types.ts";
-import { omit } from "underscore";
+import { isEmpty, omit } from "underscore";
 import { useSettingsStore } from "@/stores/settings.ts";
 import Scoreboard from "@/Components/Scoreboard.vue";
 import { Timer } from "@/scripts/Timer.ts";
@@ -37,6 +39,16 @@ import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 import Priority from "@/Components/Priority.vue";
 import Tournament from "@/Components/Tournament.vue";
 import Window from "@/Pages/Window.vue";
+import {
+  Form,
+  type FormResolverOptions,
+  type FormSubmitEvent,
+} from "@primevue/forms";
+import { Round } from "@/scripts/Round.ts";
+import MatchesTable from "@/Components/MatchesTable.vue";
+import ListFencers from "@/ListFencers.vue";
+import { Outputter } from "@/scripts/Outputter.ts";
+import Poule from "@/Components/Poule.vue";
 
 const settings = useSettingsStore();
 const nav = useNavStore();
@@ -282,10 +294,100 @@ const passivityHalted = computed(
 watch(seconds, () => {
   if (cyrano.value?.sendingData && status.value[0].state !== "E")
     cyrano.value.forceWrite();
+  if (outputter.value && settings.mockOptions.useSelf)
+    rounds.value[rounds.value.length - 1]?.update();
 });
 watch(passivityHalted, (value) => {
-  if (value && cyrano.value?.sendingData && status.value[0].state !== "E")
-    cyrano.value.forceWrite();
+  if (value) {
+    if (cyrano.value?.sendingData && status.value[0].state !== "E")
+      cyrano.value.forceWrite();
+    if (outputter.value && settings.mockOptions.useSelf)
+      rounds.value[rounds.value.length - 1]?.update();
+  }
+});
+
+// Mock Tournament
+const mockTab = ref("device");
+const mockFinished = ref(false);
+const fencers = ref(new FencerList([]));
+const rounds = ref<Round[]>([]);
+type RoundType = (typeof rounds.value)[0];
+const outputter = ref<Outputter>();
+
+function resolver(e: FormResolverOptions) {
+  const errors: {
+    id?: any;
+  } = {};
+  if (fencers.value.ids().includes(e.values.id)) {
+    errors.id = [{ message: "id exists" }];
+  }
+  return {
+    values: e.values,
+    errors,
+  };
+}
+function onSubmit(e: FormSubmitEvent) {
+  if (e.valid) {
+    fencers.value.push({
+      fencer: new Fencer(
+        e.values.id,
+        [e.values.lastName, e.values.firstName],
+        new Country(""),
+        e.values.club,
+      ),
+      seed: { 0: e.values.seed },
+      leftHanded: e.values.leftHanded,
+      fencedFencers: [],
+      receivedBye: false,
+      victory: {},
+      pointsScored: {},
+      pointsAgainst: {},
+    });
+    e.reset();
+  }
+}
+
+function startMock() {
+  outputter.value = new Outputter(matches, status, match, $reset);
+}
+function stopMock() {
+  outputter.value?.stopOutputter();
+  delete outputter.value;
+  outputter.value = undefined;
+  resetMock();
+  if (settings.mockOptions.useSelf) reset();
+}
+function newRound() {
+  fencers.value.update(rounds.value.length);
+  const newID = rounds.value.length + 1;
+  rounds.value.push(
+    new Round(newID, fencers, rounds.value.length) as unknown as RoundType,
+  );
+  mockTab.value = newID.toString();
+  if (settings.mockOptions.useSelf) {
+    outputter.value?.assignMatches(
+      rounds.value[newID - 1]?.matches ?? {},
+      newID,
+    );
+  }
+}
+
+function mockFinish() {
+  fencers.value.update(rounds.value.length);
+  mockFinished.value = true;
+  mockTab.value = "final";
+  outputter.value = undefined;
+}
+function resetMock() {
+  outputter.value?.reset();
+  fencers.value = new FencerList([]);
+  rounds.value = [];
+  mockTab.value = "fencers";
+  mockFinished.value = false;
+  matchData.value = [];
+}
+const runningMock = computed(() => {
+  return !isEmpty(rounds.value);
 });
 
 // Match controls
@@ -319,7 +421,7 @@ function reset() {
   passivityStart.value = status.value[0].stopwatch ?? 0;
 }
 
-async function update() {
+async function cyranoUpdate() {
   while (cyrano.value?.sendingData) {
     console.log("not ended");
     console.log(status.value[0].state);
@@ -329,12 +431,43 @@ async function update() {
   cs.cyranoState = "Ending";
   console.log("ended");
 }
+function mockUpdate() {
+  rounds.value[rounds.value.length - 1]?.update();
+  timer.stopTimer("H");
+  status.value[0].stopwatch = settings.settings.maxTime;
+  status.value[0].priority = "N";
+  status.value[0].state = "H";
+  status.value[0].doubles = 0;
+  status.value[0].type = "I";
+  status.value[0].weapon = "F";
+  for (const i in omit(matches.value, "")) {
+    const index = +i;
+    const matchTemp = matches.value[index] ?? [
+      defaultFencerStatus(),
+      defaultFencerStatus(),
+    ];
+    if (matchTemp[0].status !== "V" && matchTemp[1].status !== "V") {
+      status.value[0].match = index;
+      status.value[0].round = status.value[0].match || 0;
+      nav.page = "bout";
+      nav.menu = true;
+      return;
+    }
+  }
+  outputter.value?.noBout();
+  nav.page = "mock";
+  nav.menu = true;
+  status.value[0].match = "";
+  status.value[0].round = 1;
+}
 
 async function finishMatch() {
   status.value[0].state = "E";
   if (cyrano.value && !settings.cyranoOptions.replayMode) {
-    await update();
+    await cyranoUpdate();
     matchData.value = [];
+  } else if (outputter.value && settings.mockOptions.useSelf) {
+    mockUpdate();
   } else {
     nav.page = "bout";
     nav.menu = true;
@@ -456,11 +589,15 @@ function keyHandler(e: KeyboardEvent) {
       }
     } else if (nav.menu) {
       if (
-        (nav.page === "bout" ||
+        ((nav.page === "bout" ||
           nav.page === "cyrano" ||
           nav.page === "tournament") &&
-        key === keymap.value.Timer &&
-        (!cyrano.value || cyrano.value.sendingData)
+          key === keymap.value.Timer &&
+          (!cyrano.value || cyrano.value.sendingData) &&
+          !(outputter.value && outputter.value?.selfState === "No Bouts")) ||
+        (nav.page === "mock" &&
+          outputter.value &&
+          outputter.value?.selfState !== "No Bouts")
       ) {
         nav.menu = false;
       }
@@ -499,6 +636,8 @@ function doFunc(index?: string) {
   passivityStart.value = status.value[0].stopwatch ?? 0;
   if (cyrano.value?.sendingData && status.value[0].state !== "E")
     cyrano.value.forceWrite();
+  if (outputter.value && settings.mockOptions.useSelf)
+    rounds.value[rounds.value.length - 1]?.update();
 }
 
 const newKeymap = ref("custom");
@@ -897,6 +1036,7 @@ onUnmounted(() => {
   />
   <Scoreboard
     :cyrano
+    :outputter
     :leftFencer="match[0]"
     :matchOver
     :matches
@@ -1001,7 +1141,10 @@ onUnmounted(() => {
         </Tab>
         <Tab
           value="tournament"
-          :disabled="!cyrano || settings.cyranoOptions.replayMode"
+          :disabled="
+            (!cyrano || settings.cyranoOptions.replayMode) &&
+            !(outputter && settings.mockOptions.useSelf)
+          "
           @click="nav.page = 'tournament'"
         >
           Tournament
@@ -1030,6 +1173,12 @@ onUnmounted(() => {
         >
           Restore
         </Tab>
+        <Tab
+          value="mock"
+          @click="nav.page = 'mock'"
+        >
+          Mock Tournament
+        </Tab>
       </TabList>
       <TabPanels>
         <TabPanel
@@ -1038,7 +1187,16 @@ onUnmounted(() => {
         >
           <div class="header">
             <h3>Bout Settings</h3>
-            <h4 v-if="cyrano?.sendingData">Tournament Running</h4>
+            <h4
+              v-if="
+                cyrano?.sendingData ||
+                (outputter &&
+                  settings.mockOptions.useSelf &&
+                  outputter.selfState !== 'No Bouts')
+              "
+            >
+              Tournament Running
+            </h4>
             <h4 v-else>Tournament not Running</h4>
           </div>
           <div class="scrollable">
@@ -1384,7 +1542,16 @@ onUnmounted(() => {
         >
           <div class="header">
             <h3>Tournament Bouts</h3>
-            <h4 v-if="cyrano?.sendingData">Tournament Running</h4>
+            <h4
+              v-if="
+                cyrano?.sendingData ||
+                (outputter &&
+                  settings.mockOptions.useSelf &&
+                  outputter.selfState !== 'No Bouts')
+              "
+            >
+              Tournament Running
+            </h4>
             <h4 v-else>Tournament not Running</h4>
           </div>
           <div class="scrollable">
@@ -1392,7 +1559,15 @@ onUnmounted(() => {
               :match="status[0].match"
               :matches="omit(matches, '')"
             />
-            <h4 v-if="cyrano?.cyranoState === 'No Bouts'">No more bouts</h4>
+            <h4
+              v-if="
+                cyrano?.cyranoState === 'No Bouts' ||
+                (outputter?.selfState === 'No Bouts' &&
+                  settings.mockOptions.useSelf)
+              "
+            >
+              No more bouts
+            </h4>
           </div>
           <div class="button">
             <Button @click="tournamentWindow = !tournamentWindow"
@@ -1405,7 +1580,16 @@ onUnmounted(() => {
           value="cyrano"
         >
           <div class="header">
-            <h4 v-if="cyrano?.sendingData">Tournament Running</h4>
+            <h4
+              v-if="
+                cyrano?.sendingData ||
+                (outputter &&
+                  settings.mockOptions.useSelf &&
+                  outputter.selfState !== 'No Bouts')
+              "
+            >
+              Tournament Running
+            </h4>
             <h4 v-else>Tournament not Running</h4>
           </div>
           <div class="scrollable">
@@ -1497,6 +1681,7 @@ onUnmounted(() => {
             <Button
               v-if="!cyrano"
               @click="startCyrano"
+              :disabled="!!outputter"
             >
               Start Cyrano
             </Button>
@@ -1754,6 +1939,343 @@ onUnmounted(() => {
             </menu>
           </div>
         </TabPanel>
+        <TabPanel
+          class="body"
+          value="mock"
+        >
+          <div class="header">
+            <h3>Mock Tournament</h3>
+            <h4
+              v-if="
+                cyrano?.sendingData ||
+                (outputter &&
+                  settings.mockOptions.useSelf &&
+                  outputter.selfState !== 'No Bouts')
+              "
+            >
+              Tournament Running
+            </h4>
+            <h4 v-else>Tournament not Running</h4>
+          </div>
+          <div class="scrollable">
+            <Tabs
+              :value="mockTab"
+              lazy
+              scrollable
+            >
+              <TabList>
+                <Tab
+                  value="device"
+                  @click="mockTab = 'device'"
+                >
+                  Devices
+                </Tab>
+                <Tab
+                  value="fencers"
+                  @click="mockTab = 'fencers'"
+                >
+                  Fencers
+                </Tab>
+                <Tab
+                  v-for="round in rounds"
+                  :id="round.id"
+                  :value="round.id.toString()"
+                  @click="mockTab = round.id.toString()"
+                >
+                  Round {{ round.id }}
+                </Tab>
+                <Tab
+                  v-if="mockFinished"
+                  value="final"
+                  @click="mockTab = 'final'"
+                >
+                  Final
+                </Tab>
+                <Tab
+                  value="reset"
+                  @click="mockTab = 'reset'"
+                >
+                  Reset
+                </Tab>
+              </TabList>
+              <TabPanels>
+                <TabPanel
+                  class="body"
+                  value="device"
+                >
+                  <div class="scrollable">
+                    <menu>
+                      <li>
+                        <div>Use self</div>
+                        <ToggleSwitch
+                          v-model="settings.mockOptions.useSelf"
+                          :disabled="!!outputter"
+                        />
+                      </li>
+                    </menu>
+                  </div>
+                  <div class="button">
+                    <Button
+                      v-if="!outputter"
+                      :disabled="!!cyrano"
+                      @click="startMock"
+                    >
+                      Start Mock Tournament
+                    </Button>
+                    <Button
+                      v-if="outputter"
+                      @click="stopMock"
+                    >
+                      Stop Mock Tournament
+                    </Button>
+                  </div>
+                </TabPanel>
+                <TabPanel
+                  class="body"
+                  value="fencers"
+                >
+                  <div class="scrollable">
+                    <Form
+                      v-slot=""
+                      :initialValues="{
+                        id: (fencers.length() + 1).toString(),
+                        firstName: '',
+                        lastName: '',
+                        club: 'THC',
+                      }"
+                      :resolver
+                      @submit="onSubmit"
+                    >
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">id</th>
+                            <th scope="col">First Name</th>
+                            <th scope="col">Last Name</th>
+                            <th scope="col">Left Handed</th>
+                            <th scope="col">Club</th>
+                            <th scope="col">Seed</th>
+                            <th scope="col"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="fencer in fencers.sort(0)"
+                            :id="fencers.place(fencer.fencer.id).toString()"
+                          >
+                            <td>{{ fencer.fencer.id }}</td>
+                            <td>{{ fencer.fencer.name.firstName }}</td>
+                            <td>{{ fencer.fencer.name.lastName }}</td>
+                            <td>
+                              <Checkbox
+                                v-model="fencer.leftHanded"
+                                :disabled="runningMock"
+                                binary
+                              />
+                            </td>
+                            <td>{{ fencer.fencer.club }}</td>
+                            <td v-if="!runningMock">
+                              <InputNumber
+                                v-model="fencer.seed[0]"
+                                fluid
+                              />
+                            </td>
+                            <td v-if="runningMock">{{ fencer.seed[0] }}</td>
+                            <td v-if="!runningMock">
+                              <Button @click="fencers.remove(fencer.fencer.id)">
+                                Remove
+                              </Button>
+                            </td>
+                          </tr>
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <td>
+                              <InputText
+                                :disabled="runningMock"
+                                autofocus
+                                fluid
+                                name="id"
+                                placeholder="id"
+                                type="text"
+                              />
+                            </td>
+                            <td>
+                              <InputText
+                                :disabled="runningMock"
+                                fluid
+                                name="firstName"
+                                placeholder="First name"
+                                type="text"
+                              />
+                            </td>
+                            <td>
+                              <InputText
+                                :disabled="runningMock"
+                                fluid
+                                name="lastName"
+                                placeholder="Last name"
+                                type="text"
+                              />
+                            </td>
+                            <td>
+                              <Checkbox
+                                :disabled="runningMock"
+                                binary
+                                name="leftHanded"
+                              />
+                            </td>
+                            <td>
+                              <InputText
+                                :disabled="runningMock"
+                                fluid
+                                name="club"
+                                placeholder="Club"
+                                type="text"
+                              />
+                            </td>
+                            <td>
+                              <InputNumber
+                                :disabled="runningMock"
+                                fluid
+                                name="seed"
+                                placeholder="Seed"
+                              />
+                            </td>
+                            <td>
+                              <Button
+                                :disabled="runningMock"
+                                label="Submit"
+                                type="submit"
+                              />
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </Form>
+                  </div>
+                  <div
+                    v-if="!runningMock"
+                    class="button"
+                  >
+                    <Button
+                      :disabled="fencers.length() < 2 || !outputter"
+                      @click="newRound"
+                    >
+                      New Round
+                    </Button>
+                  </div>
+                </TabPanel>
+                <TabPanel
+                  v-for="round in rounds"
+                  :id="round.id"
+                  :value="round.id.toString()"
+                >
+                  <div class="scrollable">
+                    <Poule
+                      :matches="
+                        rounds
+                          .filter((value) => value.id <= round.id)
+                          .map((value) => Object.values(value.matches))
+                          .flat()
+                      "
+                      match=""
+                    />
+                    <MatchesTable
+                      :matches="round.matches"
+                      match=""
+                    />
+                    <menu v-if="round.bye">
+                      <li>
+                        <div>
+                          Bye: {{ round.bye?.fencer.id }} -
+                          {{
+                            round.bye?.fencer.name.toString(
+                              settings.config.lastNameFirst,
+                              false,
+                              false,
+                              settings.config.separator,
+                              "",
+                            )
+                          }}
+                        </div>
+                      </li>
+                    </menu>
+                    <ListFencers
+                      :fencers="fencers"
+                      :roundId="round.id"
+                    />
+                  </div>
+                  <div
+                    v-if="
+                      !mockFinished &&
+                      rounds.length <= round.id &&
+                      rounds.length < 2 * Math.ceil(fencers.length() / 2) - 1
+                    "
+                    class="button"
+                  >
+                    <Button
+                      :disabled="!round.finished()"
+                      @click="newRound"
+                    >
+                      New Round{{
+                        round.id < Math.ceil(Math.log2(fencers.length()))
+                          ? "(Recommended)"
+                          : ""
+                      }}
+                    </Button>
+                  </div>
+                  <div
+                    v-if="!mockFinished && rounds.length <= round.id"
+                    class="button"
+                  >
+                    <Button
+                      :disabled="!round.finished()"
+                      severity="warn"
+                      @click="mockFinish"
+                    >
+                      Make Final{{
+                        round.id === Math.ceil(Math.log2(fencers.length()))
+                          ? "(Recommended)"
+                          : ""
+                      }}
+                    </Button>
+                  </div>
+                </TabPanel>
+                <TabPanel value="final">
+                  <div class="scrollable">
+                    <Poule
+                      :matches="
+                        rounds
+                          .map((value) => Object.values(value.matches))
+                          .flat()
+                      "
+                      match=""
+                    />
+                    <ListFencers
+                      :fencers="fencers"
+                      :roundId="rounds.length"
+                    />
+                  </div>
+                </TabPanel>
+                <TabPanel value="reset">
+                  <div class="header">
+                    <h3>Reset</h3>
+                    <h4>Are you sure you want to reset?</h4>
+                  </div>
+                  <div class="button">
+                    <Button
+                      severity="danger"
+                      @click="resetMock"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </div>
+        </TabPanel>
       </TabPanels>
     </Tabs>
   </Dialog>
@@ -1900,5 +2422,26 @@ li {
   justify-content: space-between;
   padding: 0.1rem 1rem;
   border-bottom: 1px solid var(--p-surface-600);
+}
+
+.poule tr {
+  height: 1.5rem;
+  border-bottom: 1px solid var(--p-surface-600);
+  border-top: 1px solid var(--p-surface-600);
+}
+.poule th,
+.poule td {
+  background-clip: border-box;
+  padding: 0.25rem;
+  border-left: 1px solid var(--p-surface-600);
+  border-right: 1px solid var(--p-surface-600);
+  text-align: center;
+}
+.poule td,
+.poule th[scope="col"] {
+  width: 2rem;
+}
+.poule th[scope="row"] {
+  width: 1.5rem;
 }
 </style>

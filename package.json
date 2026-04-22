@@ -1,7 +1,7 @@
 {
   "name": "scorer",
   "private": true,
-  "version": "0.6.4",
+  "version": "0.7.0",
   "type": "module",
   "directories": {
     "test": "tests"
@@ -34,12 +34,14 @@
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.2",
+    "@primevue/forms": "^4.5.5",
     "flag-icons": "^7.5.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
     "tinycolor2": "^1.6.0",
+    "tournament-pairings": "^2.0.1",
     "underscore": "^1.13.7",
     "vue": "^3.5.25",
     "vue3-marquee": "^4.2.2"

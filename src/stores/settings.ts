@@ -123,8 +123,13 @@ export const useSettingsStore = defineStore(
       pointsPerPeriod: 5,
       roundsPerTableMatch: 3,
     });
+    const mockOptions = ref<{
+      useSelf: boolean;
+    }>({
+      useSelf: true,
+    });
 
-    return { keymaps, config, settings, cyranoOptions };
+    return { keymaps, config, settings, cyranoOptions, mockOptions };
   },
   { persist: true },
 );
