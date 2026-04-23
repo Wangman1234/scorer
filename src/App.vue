@@ -1146,18 +1146,19 @@ onUnmounted(() => {
     v-if="!started"
   />
   <Scoreboard
+    :flip="settings.config.flip"
     :cyrano
     :outputter
-    :leftFencer="match[0]"
+    :lChange="black[0]"
     :matchOver
     :matches
     :passivity
-    :rightFencer="match[1]"
+    :lFencer="match[0]"
     :status
     :stopwatch
     :winner
-    :leftChange="black[0]"
-    :rightChange="black[1]"
+    :rChange="black[1]"
+    :rFencer="match[1]"
     @index="(index) => doFunc(index)"
   />
   <Dialog
@@ -1792,6 +1793,10 @@ onUnmounted(() => {
                 />
               </li>
               <li>
+                <div>Flip display</div>
+                <ToggleSwitch v-model="settings.config.flip" />
+              </li>
+              <li>
                 <div>
                   Allow point overflow(if true, ensure max points + max overflow
                   = max points in FT)
@@ -1899,6 +1904,10 @@ onUnmounted(() => {
               <li>
                 <div>Show doubles</div>
                 <ToggleSwitch v-model="settings.config.showDoubles" />
+              </li>
+              <li>
+                <div>Flip display</div>
+                <ToggleSwitch v-model="settings.config.flip" />
               </li>
               <li>
                 <div>Show country flags</div>

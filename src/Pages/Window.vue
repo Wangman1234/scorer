@@ -26,6 +26,9 @@ import {
   watch,
 } from "vue";
 import FencerDisplay from "@/Components/FencerDisplay.vue";
+import { useSettingsStore } from "@/stores/settings.ts";
+
+const settings = useSettingsStore();
 
 const { match, matches, tournamentWindow } = defineProps<{
   matches: Record<number, [CorrectFencerStatus, CorrectFencerStatus]>;
@@ -138,8 +141,9 @@ onBeforeUnmount(() => {
         <h1>Current:</h1>
         <div class="disp">
           <FencerDisplay
-            :left-fencer="current[0]"
-            :right-fencer="current[1]"
+            :flip="settings.config.flip"
+            :lFencer="current[0]"
+            :rFencer="current[1]"
           />
         </div>
       </div>
@@ -147,8 +151,9 @@ onBeforeUnmount(() => {
         <h1>Up Next:</h1>
         <div class="disp">
           <FencerDisplay
-            :left-fencer="nextMatch[0]"
-            :right-fencer="nextMatch[1]"
+            :flip="settings.config.flip"
+            :lFencer="nextMatch[0]"
+            :rFencer="nextMatch[1]"
           />
         </div>
       </div>
@@ -156,8 +161,9 @@ onBeforeUnmount(() => {
         <h1>On Deck:</h1>
         <div class="disp">
           <FencerDisplay
-            :left-fencer="onDeck[0]"
-            :right-fencer="onDeck[1]"
+            :flip="settings.config.flip"
+            :lFencer="onDeck[0]"
+            :rFencer="onDeck[1]"
           />
         </div>
       </div>

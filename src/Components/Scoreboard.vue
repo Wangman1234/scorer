@@ -28,8 +28,9 @@ import type { Outputter } from "@/scripts/Outputter.ts";
 const settings = useSettingsStore();
 
 const props = defineProps<{
-  leftFencer: CorrectFencerStatus;
-  rightFencer: CorrectFencerStatus;
+  flip: Boolean;
+  lFencer: CorrectFencerStatus;
+  rFencer: CorrectFencerStatus;
   status: [CorrectStatus];
   stopwatch: number;
   passivity: number;
@@ -38,12 +39,30 @@ const props = defineProps<{
   outputter?: Outputter;
   winner: boolean;
   matchOver: boolean;
-  leftChange: boolean;
-  rightChange: boolean;
+  lChange: boolean;
+  rChange: boolean;
 }>();
 defineEmits<{
   index: [func: string];
 }>();
+
+const leftFencer = computed(() => (props.flip ? props.rFencer : props.lFencer));
+const rightFencer = computed(() =>
+  props.flip ? props.lFencer : props.rFencer,
+);
+const leftChange = computed(() => (props.flip ? props.rChange : props.lChange));
+const rightChange = computed(() =>
+  props.flip ? props.lChange : props.rChange,
+);
+const priority = computed(() =>
+  props.flip
+    ? props.status[0].priority === "L"
+      ? "R"
+      : props.status[0].priority === "R"
+        ? "L"
+        : props.status[0].priority
+    : props.status[0].priority,
+);
 
 const short = computed(() => {
   return props.stopwatch < 10;
@@ -53,8 +72,9 @@ const short = computed(() => {
 <template>
   <div class="container">
     <FencerDisplay
-      :leftFencer
-      :rightFencer
+      :flip
+      :lFencer
+      :rFencer
     />
     <div id="scoring-display">
       <div class="side">
@@ -63,7 +83,7 @@ const short = computed(() => {
           id="fencer1-score"
           :style="{
             color: leftChange ? 'transparent' : 'white',
-            borderColor: status[0].priority === 'L' ? 'blue' : 'white',
+            borderColor: priority === 'L' ? 'blue' : 'white',
           }"
           class="scoring fencer-1 clickable"
           @click.stop="$emit('index', 'LeftAdd1')"
@@ -203,7 +223,7 @@ const short = computed(() => {
           id="fencer2-score"
           :style="{
             color: rightChange ? 'transparent' : 'white',
-            borderColor: status[0].priority === 'R' ? 'blue' : 'white',
+            borderColor: priority === 'R' ? 'blue' : 'white',
           }"
           class="scoring fencer-2 clickable"
           @click.stop="$emit('index', 'RightAdd1')"
@@ -255,9 +275,9 @@ const short = computed(() => {
     <template #default>
       Match
       {{
-        leftFencer.status[0] === "V"
+        lFencer.status[0] === "V"
           ? "Left"
-          : rightFencer.status[0] === "V"
+          : rFencer.status[0] === "V"
             ? "Right"
             : "Tie"
       }}
@@ -284,8 +304,8 @@ const short = computed(() => {
   </Blur>
   <Blur v-if="status[0].state === 'P'">
     <template #default>1-min break</template>
-    <template #sub
-      ><span style="color: blue">
+    <template #sub>
+      <span style="color: blue">
         {{ Math.floor((stopwatch ?? 0) / 60) }}:{{
           (Math.floor(stopwatch ?? 0) % 60).toString().padStart(2, "0")
         }}

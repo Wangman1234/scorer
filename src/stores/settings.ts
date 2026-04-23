@@ -74,6 +74,7 @@ export const useSettingsStore = defineStore(
       blurred: true,
       playSounds: true,
       click: true,
+      flip: false,
     });
     const settings = ref({
       piste: "1",

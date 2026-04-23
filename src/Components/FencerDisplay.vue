@@ -19,13 +19,26 @@ import { useSettingsStore } from "@/stores/settings.ts";
 import type { CorrectFencerStatus } from "@/scripts/Types.ts";
 import tinycolor from "tinycolor2";
 import { Country } from "@/scripts/Country.ts";
+import { computed } from "vue";
 
 const settings = useSettingsStore();
 
-defineProps<{
-  leftFencer: CorrectFencerStatus;
-  rightFencer: CorrectFencerStatus;
+const props = defineProps<{
+  flip: Boolean;
+  lFencer: CorrectFencerStatus;
+  rFencer: CorrectFencerStatus;
 }>();
+
+const leftFencer = computed(() => (props.flip ? props.rFencer : props.lFencer));
+const rightFencer = computed(() =>
+  props.flip ? props.lFencer : props.rFencer,
+);
+const leftColor = computed(() =>
+  props.flip ? settings.config.rightColor : settings.config.leftColor,
+);
+const rightColor = computed(() =>
+  props.flip ? settings.config.leftColor : settings.config.rightColor,
+);
 </script>
 
 <template>
@@ -33,9 +46,9 @@ defineProps<{
     <div class="display-box">
       <div
         :style="{
-          backgroundColor: settings.config.leftColor,
+          backgroundColor: leftColor,
           color: tinycolor
-            .mostReadable(settings.config.leftColor, ['white', 'black'], {
+            .mostReadable(leftColor, ['white', 'black'], {
               includeFallbackColors: true,
               level: 'AA',
               size: 'large',
@@ -71,9 +84,9 @@ defineProps<{
     <div class="display-box">
       <div
         :style="{
-          backgroundColor: settings.config.rightColor,
+          backgroundColor: rightColor,
           color: tinycolor
-            .mostReadable(settings.config.rightColor, ['white', 'black'], {
+            .mostReadable(rightColor, ['white', 'black'], {
               includeFallbackColors: true,
               level: 'AA',
               size: 'large',
