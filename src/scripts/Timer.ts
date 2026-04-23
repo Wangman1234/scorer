@@ -23,12 +23,15 @@ export class Timer {
 
   status: MaybeRefOrGetter<[CorrectStatus]>;
   passivity: MaybeRefOrGetter<number>;
+  sound: MaybeRefOrGetter<Howl | undefined>;
   constructor(
     status: MaybeRefOrGetter<[CorrectStatus]>,
     passivity: MaybeRefOrGetter<number>,
+    sound: MaybeRefOrGetter<Howl | undefined>,
   ) {
     this.status = status;
     this.passivity = passivity;
+    this.sound = sound;
   }
 
   interval: NodeJS.Timeout | number = 0;
@@ -56,6 +59,7 @@ export class Timer {
             100,
         ) / 100;
       if ((toValue(this.status)[0].stopwatch ?? 0) <= 0) {
+        toValue(this.sound)?.play();
         clearInterval(this.interval);
         if (
           set === "F" &&

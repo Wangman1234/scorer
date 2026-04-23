@@ -160,6 +160,13 @@ const click = computed(() => {
       })
     : undefined;
 });
+const timeHalt = computed(() => {
+  return settings.config.playSounds
+    ? new Howl({
+        src: "/sounds/time.wav",
+      })
+    : undefined;
+});
 
 function $reset() {
   matches.value = {
@@ -214,7 +221,7 @@ function restore(event: { files: any[] }) {
 }
 
 // Timer
-const timer = new Timer(status, passivity);
+const timer = new Timer(status, passivity, timeHalt);
 
 // Bout controls
 let interval: [NodeJS.Timeout | number, NodeJS.Timeout | number] = [0, 0];
@@ -314,6 +321,7 @@ watch(seconds, () => {
 });
 watch(passivityHalted, (value) => {
   if (value) {
+    timeHalt.value?.play();
     if (cyrano.value?.sendingData && status.value[0].state !== "E")
       cyrano.value.forceWrite();
     if (outputter.value && settings.mockOptions.useSelf)
