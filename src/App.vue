@@ -711,18 +711,20 @@ function keyHandler(e: KeyboardEvent) {
 function doFunc(index?: string) {
   const func = functions[index ?? ""] ?? { func: function () {} };
   const playSound = func.func();
-  passivityStart.value = status.value[0].stopwatch ?? 0;
-  if (cyrano.value?.sendingData && status.value[0].state !== "E")
-    cyrano.value.forceWrite();
-  if (outputter.value && settings.mockOptions.useSelf)
-    rounds.value[rounds.value.length - 1]?.update();
-  if (settings.config.playSounds && playSound && func.sound) {
-    const howl = new Howl({
-      src: "/sounds/" + func.sound,
-    });
-    howl.play();
-  } else if (settings.config.click && playSound === false) {
-    click.value?.play();
+  if (typeof playSound !== "undefined") {
+    passivityStart.value = status.value[0].stopwatch ?? 0;
+    if (cyrano.value?.sendingData && status.value[0].state !== "E")
+      cyrano.value.forceWrite();
+    if (outputter.value && settings.mockOptions.useSelf)
+      rounds.value[rounds.value.length - 1]?.update();
+    if (settings.config.playSounds && playSound && func.sound) {
+      const howl = new Howl({
+        src: "/sounds/" + func.sound,
+      });
+      howl.play();
+    } else if (settings.config.click) {
+      click.value?.play();
+    }
   }
 }
 
