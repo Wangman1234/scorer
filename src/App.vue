@@ -883,9 +883,9 @@ const functions: map<{
         settings.settings.maxDoubles === 0
       ) {
         status.value[0].doubles++;
-        changeScore(0, settings.settings.doublesAddPoints, true);
-        changeScore(1, settings.settings.doublesAddPoints, true);
-        return true;
+        const a = changeScore(0, settings.settings.doublesAddPoints, true);
+        const b = changeScore(1, settings.settings.doublesAddPoints, true);
+        return a || b;
       }
       return false;
     },
@@ -899,9 +899,9 @@ const functions: map<{
         settings.settings.maxDoubles === 0
       ) {
         status.value[0].doubles++;
-        changeScore(0, settings.settings.doublesAddPoints1, true);
-        changeScore(1, settings.settings.doublesAddPoints1, true);
-        return true;
+        const a = changeScore(0, settings.settings.doublesAddPoints1, true);
+        const b = changeScore(1, settings.settings.doublesAddPoints1, true);
+        return a || b;
       }
       return false;
     },
@@ -912,9 +912,9 @@ const functions: map<{
     func: () => {
       if (status.value[0].doubles > 0) {
         status.value[0].doubles--;
-        changeScore(0, -settings.settings.doublesAddPoints, true);
-        changeScore(1, -settings.settings.doublesAddPoints, true);
-        return true;
+        const a = changeScore(0, -settings.settings.doublesAddPoints, true);
+        const b = changeScore(1, -settings.settings.doublesAddPoints, true);
+        return a || b;
       }
       return false;
     },
@@ -925,9 +925,9 @@ const functions: map<{
     func: () => {
       if (status.value[0].doubles > 0) {
         status.value[0].doubles--;
-        changeScore(0, -settings.settings.doublesAddPoints1, true);
-        changeScore(1, -settings.settings.doublesAddPoints1, true);
-        return true;
+        const a = changeScore(0, -settings.settings.doublesAddPoints1, true);
+        const b = changeScore(1, -settings.settings.doublesAddPoints1, true);
+        return a || b;
       }
       return false;
     },
