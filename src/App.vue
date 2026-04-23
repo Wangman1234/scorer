@@ -992,7 +992,7 @@ const functions: map<{
     },
   },
   Timer: {
-    name: "Timer/Next",
+    name: "Timer/next",
     func: () => {
       if (
         cyrano.value &&
@@ -1794,7 +1794,7 @@ onUnmounted(() => {
                 />
               </li>
               <li>
-                <div>Remote Address</div>
+                <div>Remote address(not required on Chrome OS)</div>
                 <InputText
                   v-model="settings.cyranoOptions.remoteAddress"
                   :disabled="!!cyrano"
@@ -1811,7 +1811,7 @@ onUnmounted(() => {
                 />
               </li>
               <li>
-                <div>Send Interval</div>
+                <div>Send interval</div>
                 <InputNumber
                   v-model.number="settings.cyranoOptions.interval"
                   :useGrouping="false"
@@ -1838,7 +1838,7 @@ onUnmounted(() => {
                 />
               </li>
               <li>
-                <div>Points per Period</div>
+                <div>Points per period</div>
                 <InputNumber
                   v-model.number="settings.cyranoOptions.pointsPerPeriod"
                   :min="1"
@@ -1848,7 +1848,7 @@ onUnmounted(() => {
                 />
               </li>
               <li>
-                <div>Periods per Table Match</div>
+                <div>Periods per table match</div>
                 <InputNumber
                   v-model.number="settings.cyranoOptions.roundsPerTableMatch"
                   :min="1"
@@ -2039,7 +2039,7 @@ onUnmounted(() => {
                 </div>
               </li>
               <li>
-                <div>New Keymap</div>
+                <div>New keymap</div>
                 <div>
                   <InputGroup>
                     <InputText
@@ -2067,7 +2067,7 @@ onUnmounted(() => {
                 </div>
               </li>
               <li>
-                <div>Timer Key Ends Match</div>
+                <div>Timer key ends match</div>
                 <div>
                   <ToggleSwitch v-model="settings.config.timerEndsMatch" />
                 </div>
@@ -2146,11 +2146,11 @@ onUnmounted(() => {
           <div class="scrollable">
             <menu>
               <li>
-                <div>Export Current Settings</div>
+                <div>Export current settings</div>
                 <Button @click="download">Export</Button>
               </li>
               <li>
-                <div>Restore Settings</div>
+                <div>Restore settings</div>
                 <FileUpload
                   :auto="true"
                   :chooseButtonProps="{ size: 'small' }"
