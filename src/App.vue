@@ -49,6 +49,7 @@ import MatchesTable from "@/Components/MatchesTable.vue";
 import ListFencers from "@/ListFencers.vue";
 import { Outputter } from "@/scripts/Outputter.ts";
 import Poule from "@/Components/Poule.vue";
+import { Howl } from "howler";
 
 const settings = useSettingsStore();
 const nav = useNavStore();
@@ -152,6 +153,13 @@ const matchOver = computed(() => {
 const winner = computed(() => {
   return match.value[0].status === "D" || match.value[1].status === "D";
 });
+const click = computed(() => {
+  return settings.config.playSounds
+    ? new Howl({
+        src: "/sounds/menu.flac",
+      })
+    : undefined;
+});
 
 function $reset() {
   matches.value = {
@@ -235,20 +243,27 @@ function changeScore(fencer: 0 | 1, value: number, double: boolean = false) {
         black.value[fencer] = false;
       }
     }, 200);
+    return true;
   }
+  return;
 }
 async function choosePriority(state: "N" | "L" | "R") {
   priorityPicker.value = false;
   if (state === "N") {
     for (let i = 0; i < 20; i++) {
       if (Math.random() >= 0.5) {
+        if (status.value[0].priority !== "R") click.value?.play();
         status.value[0].priority = "R";
       } else {
+        if (status.value[0].priority !== "L") click.value?.play();
         status.value[0].priority = "L";
       }
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   } else {
+    if (settings.config.click) {
+      click.value?.play();
+    }
     status.value[0].priority = state;
   }
 }
@@ -593,8 +608,14 @@ function keyHandler(e: KeyboardEvent) {
       if (key === " ") delete keymap.value[change.value];
       else keymap.value[change.value] = key;
       change.value = false;
+      if (settings.config.click) {
+        click.value?.play();
+      }
     } else if (key === keymap.value.Menu || key === "Escape") {
       nav.menu = !nav.menu;
+      if (settings.config.click) {
+        click.value?.play();
+      }
     } else if (priorityPicker.value) {
       switch (key) {
         case keymap.value.LeftAdd1:
@@ -634,6 +655,9 @@ function keyHandler(e: KeyboardEvent) {
           outputter.value?.selfState !== "No Bouts")
       ) {
         nav.menu = false;
+        if (settings.config.click) {
+          click.value?.play();
+        }
       }
     } else if (choices.value) {
       switch (key) {
@@ -641,11 +665,17 @@ function keyHandler(e: KeyboardEvent) {
         case keymap.value.Choices:
         case keymap.value.Timer:
           choices.value = false;
+          if (settings.config.click) {
+            click.value?.play();
+          }
       }
     } else if (inputTime.value) {
       if (key === keymap.value.Timer) {
         inputTime.value = false;
         passivityStart.value = status.value[0].stopwatch ?? 0;
+        if (settings.config.click) {
+          click.value?.play();
+        }
       }
     } else if (
       !cyrano.value ||
@@ -669,12 +699,20 @@ function keyHandler(e: KeyboardEvent) {
 
 function doFunc(index?: string) {
   const func = functions[index ?? ""] ?? { func: function () {} };
-  func.func();
+  const playSound = func.func();
   passivityStart.value = status.value[0].stopwatch ?? 0;
   if (cyrano.value?.sendingData && status.value[0].state !== "E")
     cyrano.value.forceWrite();
   if (outputter.value && settings.mockOptions.useSelf)
     rounds.value[rounds.value.length - 1]?.update();
+  if (settings.config.playSounds && playSound && func.sound) {
+    const howl = new Howl({
+      src: "/sounds/" + func.sound,
+    });
+    howl.play();
+  } else if (settings.config.click) {
+    click.value?.play();
+  }
 }
 
 const newKeymap = ref("custom");
@@ -773,7 +811,11 @@ function isDefault() {
   );
 }
 
-const functions: map<{ name?: string; func: () => void }> = {
+const functions: map<{
+  name?: string;
+  func: () => void | Promise<void> | Boolean;
+  sound?: string;
+}> = {
   Menu: { func: () => {} },
   Choices: {
     name: "Open all functions dialog(WIP)",
@@ -781,19 +823,45 @@ const functions: map<{ name?: string; func: () => void }> = {
       choices.value = true;
     },
   },
-  LeftAdd1: { name: "Add 1 point to FotL", func: () => changeScore(0, 1) },
-  RightAdd1: { name: "Add 1 point to FotR", func: () => changeScore(1, 1) },
-  LeftAdd2: { name: "Add 2 point to FotL", func: () => changeScore(0, 2) },
-  RightAdd2: { name: "Add 2 point to FotR", func: () => changeScore(1, 2) },
-  LeftAdd3: { name: "Add 3 point to FotL", func: () => changeScore(0, 3) },
-  RightAdd3: { name: "Add 3 point to FotR", func: () => changeScore(1, 3) },
+  LeftAdd1: {
+    name: "Add 1 point to FotL",
+    func: () => changeScore(0, 1),
+    sound: "add.wav",
+  },
+  RightAdd1: {
+    name: "Add 1 point to FotR",
+    func: () => changeScore(1, 1),
+    sound: "add.wav",
+  },
+  LeftAdd2: {
+    name: "Add 2 point to FotL",
+    func: () => changeScore(0, 2),
+    sound: "add.wav",
+  },
+  RightAdd2: {
+    name: "Add 2 point to FotR",
+    func: () => changeScore(1, 2),
+    sound: "add.wav",
+  },
+  LeftAdd3: {
+    name: "Add 3 point to FotL",
+    func: () => changeScore(0, 3),
+    sound: "add.wav",
+  },
+  RightAdd3: {
+    name: "Add 3 point to FotR",
+    func: () => changeScore(1, 3),
+    sound: "add.wav",
+  },
   LeftMinus1: {
     name: "Subtract 1 point to FotL",
     func: () => changeScore(0, -1),
+    sound: "minus.wav",
   },
   RightMinus1: {
     name: "Subtract 1 point to FotR",
     func: () => changeScore(1, -1),
+    sound: "minus.wav",
   },
   Double: {
     name: "Add 1 double",
@@ -807,19 +875,21 @@ const functions: map<{ name?: string; func: () => void }> = {
         changeScore(1, settings.settings.doublesAddPoints, true);
       }
     },
+    sound: "add.wav",
   },
   Double1: {
-    name: "Add 1 double plus 1 point",
+    name: "Add 1 type 2 double",
     func: () => {
       if (
         status.value[0].doubles < settings.settings.maxDoubles ||
         settings.settings.maxDoubles === 0
       ) {
         status.value[0].doubles++;
-        changeScore(0, settings.settings.doublesAddPoints + 1, true);
-        changeScore(1, settings.settings.doublesAddPoints + 1, true);
+        changeScore(0, settings.settings.doublesAddPoints1, true);
+        changeScore(1, settings.settings.doublesAddPoints1, true);
       }
     },
+    sound: "add.wav",
   },
   MinusDouble: {
     name: "Subtract 1 double",
@@ -830,16 +900,18 @@ const functions: map<{ name?: string; func: () => void }> = {
         changeScore(1, -settings.settings.doublesAddPoints, true);
       }
     },
+    sound: "minus.wav",
   },
   MinusDouble1: {
-    name: "Subtract 1 double and 1 point",
+    name: "Subtract 1 type 2 double",
     func: () => {
       if (status.value[0].doubles > 0) {
         status.value[0].doubles--;
-        changeScore(0, -settings.settings.doublesAddPoints - 1, true);
-        changeScore(1, -settings.settings.doublesAddPoints - 1, true);
+        changeScore(0, -settings.settings.doublesAddPoints1, true);
+        changeScore(1, -settings.settings.doublesAddPoints1, true);
       }
     },
+    sound: "minus.wav",
   },
   LeftCard: {
     name: "Card FotL",
@@ -904,6 +976,7 @@ const functions: map<{ name?: string; func: () => void }> = {
         return;
       if (status.value[0].state === "F") {
         timer.stopTimer("H");
+        return true;
       } else if (winner.value) {
         finishMatch();
       } else if (matchOver.value) {
@@ -920,11 +993,10 @@ const functions: map<{ name?: string; func: () => void }> = {
         ) {
           push();
           timer.startTimer("F");
-        } else {
-          end();
-        }
+        } else end();
       }
     },
+    sound: "timer.flac",
   },
   SetTime: {
     name: "Manually set time",
@@ -978,7 +1050,9 @@ const functions: map<{ name?: string; func: () => void }> = {
   },
   ResetTime: {
     name: "Reset time",
-    func: () => (status.value[0].stopwatch = settings.settings.maxTime),
+    func: () => {
+      status.value[0].stopwatch = settings.settings.maxTime;
+    },
   },
   ResetBout: { name: "Reset bout", func: reset },
   SkipBout: { name: "Skip bout", func: skip },
@@ -993,7 +1067,9 @@ const functions: map<{ name?: string; func: () => void }> = {
   },
   ResetPriority: {
     name: "Reset priority",
-    func: () => (status.value[0].priority = "N"),
+    func: () => {
+      status.value[0].priority = "N";
+    },
   },
   EndMatch: { name: "End match", func: end },
   Period: {
@@ -1011,6 +1087,12 @@ const functions: map<{ name?: string; func: () => void }> = {
       let f1 = match.value[0].fencer;
       match.value[0].fencer = match.value[1].fencer;
       match.value[1].fencer = f1;
+    },
+  },
+  Mute: {
+    name: "Mute",
+    func: () => {
+      settings.config.playSounds = !settings.config.playSounds;
     },
   },
 };
@@ -1195,6 +1277,12 @@ onUnmounted(() => {
           @click="nav.page = 'controls'"
         >
           Controls
+        </Tab>
+        <Tab
+          value="sounds"
+          @click="nav.page = 'sounds'"
+        >
+          Sounds
         </Tab>
         <Tab
           value="restore"
@@ -1422,6 +1510,15 @@ onUnmounted(() => {
                 <div>Doubles add points</div>
                 <InputNumber
                   v-model="settings.settings.doublesAddPoints"
+                  :step="1"
+                  showButtons
+                  size="small"
+                />
+              </li>
+              <li>
+                <div>Type 2 doubles add points</div>
+                <InputNumber
+                  v-model="settings.settings.doublesAddPoints1"
                   :step="1"
                   showButtons
                   size="small"
@@ -1934,6 +2031,33 @@ onUnmounted(() => {
                 >
                   {{ keymap[index] }}
                 </ToggleButton>
+              </li>
+            </menu>
+          </div>
+        </TabPanel>
+        <TabPanel
+          class="body"
+          value="sounds"
+        >
+          <div class="header">
+            <h3>Sounds</h3>
+          </div>
+          <div class="scrollable">
+            <menu>
+              <li>
+                <div>Play sounds</div>
+                <div>
+                  <ToggleSwitch v-model="settings.config.playSounds" />
+                </div>
+              </li>
+              <li>
+                <div>Click sounds</div>
+                <div>
+                  <ToggleSwitch
+                    v-model="settings.config.click"
+                    :disabled="!settings.config.playSounds"
+                  />
+                </div>
               </li>
             </menu>
           </div>

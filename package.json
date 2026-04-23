@@ -16,6 +16,7 @@
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.5.4",
     "@testing-library/vue": "^8.1.0",
+    "@types/howler": "^2.2.12",
     "@types/node": "^24.10.2",
     "@types/tinycolor2": "^1.4.6",
     "@types/underscore": "^1.13.0",
@@ -36,6 +37,7 @@
     "@primeuix/themes": "^2.0.2",
     "@primevue/forms": "^4.5.5",
     "flag-icons": "^7.5.0",
+    "howler": "^2.2.4",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "primeicons": "^7.0.0",

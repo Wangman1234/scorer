@@ -1,0 +1,5 @@
+add.wav - Pop!.wav by kwahmah_02 -- https://freesound.org/s/260614/ -- License: Attribution 3.0
+minus.wav - button by Leszek_Szary -- https://freesound.org/s/171521/ -- License: Creative Commons 0
+timer.wav - timeout by Leszek_Szary -- https://freesound.org/s/146734/ -- License: Creative Commons 0
+menu.flac - Metronome 2kHz (strong pulse) by unfa -- https://freesound.org/s/243748/ -- License: Creative Commons 0
+timer.flac - Metronome 1kHz (weak pulse) by unfa -- https://freesound.org/s/243749/ -- License: Creative Commons 0

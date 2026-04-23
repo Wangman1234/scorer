@@ -58,21 +58,7 @@ export const useSettingsStore = defineStore(
         Flip: "f",
       },
     });
-    const config = ref<{
-      keymap: string;
-      timerEndsMatch: boolean;
-      leftColor: string;
-      rightColor: string;
-      showSubSec: boolean;
-      lastNameFirst: boolean;
-      shortenFirst: boolean;
-      shortenSecond: boolean;
-      separator: string;
-      ending: string;
-      showFlags: boolean;
-      showDoubles: boolean;
-      blurred: boolean;
-    }>({
+    const config = ref({
       keymap: "default remote",
       timerEndsMatch: true,
       leftColor: "#ff0000",
@@ -86,6 +72,8 @@ export const useSettingsStore = defineStore(
       showFlags: false,
       showDoubles: false,
       blurred: true,
+      playSounds: true,
+      click: true,
     });
     const settings = ref({
       piste: "1",
@@ -100,6 +88,7 @@ export const useSettingsStore = defineStore(
       priority: 60,
       allowOver: false,
       doublesAddPoints: 0,
+      doublesAddPoints1: 1,
       maxDoubles: 0,
       passivity: 60,
       passivityStops: true,
@@ -123,9 +112,7 @@ export const useSettingsStore = defineStore(
       pointsPerPeriod: 5,
       roundsPerTableMatch: 3,
     });
-    const mockOptions = ref<{
-      useSelf: boolean;
-    }>({
+    const mockOptions = ref({
       useSelf: true,
     });
 
