@@ -16,7 +16,7 @@
 import { defaultFencerStatus, fencerEqual } from "@/scripts/Functions.ts";
 import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 import type { CorrectFencerStatus, CorrectStatus } from "@/scripts/Types.ts";
-import { min, omit } from "underscore";
+import { isEmpty, min, omit } from "underscore";
 import { useSettingsStore } from "@/stores/settings.ts";
 import { useNavStore } from "@/stores/nav.ts";
 import { type MaybeRefOrGetter, toValue } from "vue";
@@ -47,6 +47,7 @@ export class Cyrano {
   prevDisp = new CyranoMessage("|EFP1|HELLO|0|0|%|");
   cyranoState = "Waiting";
   cyranoOut = "";
+  skipped: [string, string][] = [];
 
   constructor(
     matches: MaybeRefOrGetter<
@@ -139,6 +140,8 @@ export class Cyrano {
       await new Promise((resolve) => setTimeout(resolve, 100, ""));
       if (toValue(this.status)[0].state === "E") {
         msg = "INFO";
+      } else if (this.cyranoState === "Skipped") {
+        msg = "PREV";
       } else {
         msg = "";
       }
@@ -212,17 +215,30 @@ export class Cyrano {
         }
         // No longer listing bouts
         if (cyranoMsg.status.poultab === "X") {
-          if (this.cyranoState === "No Bouts") break;
-          this.cyranoState = "No Bouts";
-          this.nav.page = "tournament";
-          this.nav.menu = true;
+          if (isEmpty(this.skipped)) {
+            if (this.cyranoState === "No Bouts") break;
+            this.cyranoState = "No Bouts";
+            this.nav.page = "tournament";
+            this.nav.menu = true;
+            return "PREV";
+          }
+          this.skipped = [];
+          this.knowList = 1;
           return "PREV";
         }
         // Read display ended bout
         if (
           cyranoMsg.status.state === "E" ||
           cyranoMsg.leftfencer.status !== "U" ||
-          cyranoMsg.rightfencer.status !== "U"
+          cyranoMsg.rightfencer.status !== "U" ||
+          this.skipped.includes([
+            cyranoMsg.leftfencer.fencer.id,
+            cyranoMsg.rightfencer.fencer.id,
+          ]) ||
+          this.skipped.includes([
+            cyranoMsg.rightfencer.fencer.id,
+            cyranoMsg.leftfencer.fencer.id,
+          ])
         ) {
           if (
             typeof toValue(this.matches)[cyranoMsg.status.match] === "undefined"
@@ -302,6 +318,25 @@ export class Cyrano {
           return "";
         }
         return "INFO";
+      case "Skipping":
+        toValue(this.matches)[""] = [
+          defaultFencerStatus(),
+          defaultFencerStatus(),
+        ];
+        toValue(this.status)[0] = {
+          poultab: "",
+          match: "",
+          round: 1,
+          time: "",
+          stopwatch: undefined,
+          type: "",
+          weapon: "F",
+          priority: "N",
+          state: "W",
+          doubles: 0,
+        };
+        this.cyranoState = "Waiting";
+        return "NEXT";
     }
     return "";
   }
@@ -346,7 +381,8 @@ export class Cyrano {
   }
   check(): boolean {
     if (
-      toValue(this.status)[0].state === "E" &&
+      (toValue(this.status)[0].state === "E" ||
+        this.cyranoState === "Skipping") &&
       !this.settings.cyranoOptions.replayMode
     ) {
       this.reader?.releaseLock();

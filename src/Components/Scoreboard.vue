@@ -239,7 +239,8 @@ const short = computed(() => {
     v-if="
       status[0].state === 'E' ||
       ((cyrano?.cyranoState === 'Waiting' ||
-        cyrano?.cyranoState === 'No Bouts') &&
+        cyrano?.cyranoState === 'No Bouts' ||
+        cyrano?.cyranoState === 'Skipping') &&
         cyrano)
     "
   >

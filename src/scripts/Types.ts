@@ -204,7 +204,6 @@ export class FencerList {
         score: 0,
       });
     }
-    console.log(players);
     const matches = Swiss(players, round);
     const ms = matches.map((value) => {
       let match;

@@ -311,6 +311,7 @@ const mockTab = ref("device");
 const mockFinished = ref(false);
 const fencers = ref(new FencerList([]));
 const rounds = ref<Round[]>([]);
+const skipped = ref<[string, string][]>([]);
 type RoundType = (typeof rounds.value)[0];
 const outputter = ref<Outputter>();
 
@@ -318,9 +319,6 @@ function resolver(e: FormResolverOptions) {
   const errors: {
     id?: any;
   } = {};
-  if (fencers.value.ids().includes(e.values.id)) {
-    errors.id = [{ message: "id exists" }];
-  }
   return {
     values: e.values,
     errors,
@@ -330,7 +328,7 @@ function onSubmit(e: FormSubmitEvent) {
   if (e.valid) {
     fencers.value.push({
       fencer: new Fencer(
-        e.values.id,
+        e.values.id || (fencers.value.length() + 1).toString(),
         [e.values.lastName, e.values.firstName],
         new Country(""),
         e.values.club,
@@ -446,19 +444,55 @@ function mockUpdate() {
       defaultFencerStatus(),
       defaultFencerStatus(),
     ];
-    if (matchTemp[0].status !== "V" && matchTemp[1].status !== "V") {
-      status.value[0].match = index;
-      status.value[0].round = status.value[0].match || 0;
-      nav.page = "bout";
-      nav.menu = true;
-      return;
+    let cont = true;
+    for (const m of skipped.value) {
+      if (
+        m.includes(matchTemp[0].fencer.id) &&
+        m.includes(matchTemp[1].fencer.id)
+      ) {
+        cont = false;
+        break;
+      }
     }
+    if (cont) {
+      if (matchTemp[0].status !== "V" && matchTemp[1].status !== "V") {
+        status.value[0].match = index;
+        status.value[0].round = status.value[0].match || 0;
+        nav.page = "bout";
+        nav.menu = true;
+        return;
+      }
+    }
+  }
+  if (!isEmpty(skipped.value)) {
+    skipped.value = [];
+    mockUpdate();
+    return;
   }
   outputter.value?.noBout();
   nav.page = "mock";
   nav.menu = true;
   status.value[0].match = "";
   status.value[0].round = 1;
+}
+
+async function skip() {
+  timer.stopTimer("H");
+  if (cyrano.value && !settings.cyranoOptions.replayMode) {
+    const cs = cyrano.value ?? { cyranoState: "", skipped: [["", ""]] };
+    cs.skipped.push([match.value[0].fencer.id, match.value[1].fencer.id]);
+    cs.cyranoState = "Skipping";
+    while (cyrano.value?.sendingData) {
+      console.log("not ended");
+      console.log(status.value[0].state);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    cs.cyranoState = "Skipping";
+  } else if (outputter.value && settings.mockOptions.useSelf) {
+    skipped.value.push([match.value[0].fencer.id, match.value[1].fencer.id]);
+    mockUpdate();
+  }
+  console.log("skipping");
 }
 
 async function finishMatch() {
@@ -615,8 +649,11 @@ function keyHandler(e: KeyboardEvent) {
       }
     } else if (
       !cyrano.value ||
-      cyrano.value.sendingData ||
-      status.value[0].state !== "E"
+      ((cyrano.value.sendingData || status.value[0].state !== "E") &&
+        !(
+          cyrano.value.cyranoState === "Skipping" ||
+          cyrano.value.cyranoState === "Ending"
+        ))
     ) {
       e.preventDefault();
       if (key === " ") key = keymap.value.Timer;
@@ -944,6 +981,7 @@ const functions: map<{ name?: string; func: () => void }> = {
     func: () => (status.value[0].stopwatch = settings.settings.maxTime),
   },
   ResetBout: { name: "Reset bout", func: reset },
+  SkipBout: { name: "Skip bout", func: skip },
   PrioritySelector: {
     name: "Open priority selector",
     func: () => (priorityPicker.value = true),
@@ -977,46 +1015,37 @@ const functions: map<{ name?: string; func: () => void }> = {
   },
 };
 
+function keyDownListener(e: {
+  repeat: boolean;
+  key: string;
+  preventDefault: () => void;
+}) {
+  repeat.value = e.repeat;
+  if (
+    (!(nav.menu || choices.value || inputTime.value) ||
+      e.key === "Enter" ||
+      e.key === "ContextMenu" ||
+      change.value != false) &&
+    started.value
+  ) {
+    e.preventDefault();
+  }
+}
+function fullScreen() {
+  if (!document.fullscreenElement) {
+    started.value = false;
+  }
+}
 onMounted(() => {
   $reset();
-  window.addEventListener("keydown", (e) => {
-    repeat.value = e.repeat;
-    if (
-      (!(nav.menu || choices.value || inputTime.value) ||
-        e.key === "Enter" ||
-        e.key === "ContextMenu" ||
-        change.value != false) &&
-      started.value
-    ) {
-      e.preventDefault();
-    }
-  });
+  window.addEventListener("keydown", keyDownListener);
   window.addEventListener("keyup", keyHandler);
-  document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement) {
-      started.value = false;
-    }
-  });
+  document.addEventListener("fullscreenchange", fullScreen);
 });
 onUnmounted(() => {
-  document.removeEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement) {
-      started.value = false;
-    }
-  });
+  document.removeEventListener("fullscreenchange", fullScreen);
   window.removeEventListener("keyup", keyHandler);
-  window.removeEventListener("keydown", (e) => {
-    repeat.value = e.repeat;
-    if (
-      (!(nav.menu || choices.value || inputTime.value) ||
-        e.key === "Enter" ||
-        e.key === "ContextMenu" ||
-        change.value != false) &&
-      started.value
-    ) {
-      e.preventDefault();
-    }
-  });
+  window.removeEventListener("keydown", keyDownListener);
   stopCyrano();
   timer.stopTimer("H");
   $reset();
@@ -2038,7 +2067,7 @@ onUnmounted(() => {
                     <Form
                       v-slot=""
                       :initialValues="{
-                        id: (fencers.length() + 1).toString(),
+                        id: '',
                         firstName: '',
                         lastName: '',
                         club: 'THC',
