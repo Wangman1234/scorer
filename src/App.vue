@@ -228,31 +228,32 @@ let interval: [NodeJS.Timeout | number, NodeJS.Timeout | number] = [0, 0];
 let changeTimes: [number, number] = [0, 0];
 const black = ref<[boolean, boolean]>([false, false]);
 function changeScore(fencer: 0 | 1, value: number, double: boolean = false) {
-  if (value === 0) return;
-  let val = match.value[fencer].score + value;
-  if (
-    (val >= 0 &&
-      (status.value[0].priority !== "N" ||
-        value <= 0 ||
-        match.value[fencer].score < settings.settings.maxScore)) ||
-    double
-  ) {
-    match.value[fencer].score = val;
+  if (value !== 0) {
+    let val = match.value[fencer].score + value;
+    if (
+      (val >= 0 &&
+        (status.value[0].priority !== "N" ||
+          value <= 0 ||
+          match.value[fencer].score < settings.settings.maxScore)) ||
+      double
+    ) {
+      match.value[fencer].score = val;
 
-    clearInterval(interval[fencer]);
-    changeTimes[fencer] = 0;
-    black.value[fencer] = false;
-    interval[fencer] = setInterval(() => {
-      black.value[fencer] = !black.value[fencer];
-      changeTimes[fencer]++;
-      if (changeTimes[fencer] >= 10) {
-        clearInterval(interval[fencer]);
-        black.value[fencer] = false;
-      }
-    }, 200);
-    return true;
+      clearInterval(interval[fencer]);
+      changeTimes[fencer] = 0;
+      black.value[fencer] = false;
+      interval[fencer] = setInterval(() => {
+        black.value[fencer] = !black.value[fencer];
+        changeTimes[fencer]++;
+        if (changeTimes[fencer] >= 10) {
+          clearInterval(interval[fencer]);
+          black.value[fencer] = false;
+        }
+      }, 200);
+      return true;
+    }
   }
-  return;
+  return false;
 }
 async function choosePriority(state: "N" | "L" | "R") {
   priorityPicker.value = false;
@@ -440,6 +441,7 @@ function reset() {
   matchData.value = [];
   nav.menu = false;
   passivityStart.value = status.value[0].stopwatch ?? 0;
+  return false;
 }
 
 async function cyranoUpdate() {
@@ -560,7 +562,7 @@ function end() {
     priorityPicker.value = true;
     status.value[0].stopwatch = settings.settings.priority;
     status.value[0].doubles = 0;
-    return;
+    return false;
   }
   push();
   if (!settings.settings.allowOver) {
@@ -581,6 +583,7 @@ function end() {
       }
     }
   }
+  return false;
 }
 
 // Key handler
@@ -718,7 +721,7 @@ function doFunc(index?: string) {
       src: "/sounds/" + func.sound,
     });
     howl.play();
-  } else if (settings.config.click) {
+  } else if (settings.config.click && playSound === false) {
     click.value?.play();
   }
 }
@@ -821,14 +824,15 @@ function isDefault() {
 
 const functions: map<{
   name?: string;
-  func: () => void | Promise<void> | Boolean;
+  func: () => void | Boolean;
   sound?: string;
 }> = {
-  Menu: { func: () => {} },
+  Menu: { func: () => false },
   Choices: {
     name: "Open all functions dialog(WIP)",
     func: () => {
       choices.value = true;
+      return false;
     },
   },
   LeftAdd1: {
@@ -881,7 +885,9 @@ const functions: map<{
         status.value[0].doubles++;
         changeScore(0, settings.settings.doublesAddPoints, true);
         changeScore(1, settings.settings.doublesAddPoints, true);
+        return true;
       }
+      return false;
     },
     sound: "add.wav",
   },
@@ -895,7 +901,9 @@ const functions: map<{
         status.value[0].doubles++;
         changeScore(0, settings.settings.doublesAddPoints1, true);
         changeScore(1, settings.settings.doublesAddPoints1, true);
+        return true;
       }
+      return false;
     },
     sound: "add.wav",
   },
@@ -906,7 +914,9 @@ const functions: map<{
         status.value[0].doubles--;
         changeScore(0, -settings.settings.doublesAddPoints, true);
         changeScore(1, -settings.settings.doublesAddPoints, true);
+        return true;
       }
+      return false;
     },
     sound: "minus.wav",
   },
@@ -917,7 +927,9 @@ const functions: map<{
         status.value[0].doubles--;
         changeScore(0, -settings.settings.doublesAddPoints1, true);
         changeScore(1, -settings.settings.doublesAddPoints1, true);
+        return true;
       }
+      return false;
     },
     sound: "minus.wav",
   },
@@ -927,11 +939,12 @@ const functions: map<{
       if (match.value[0].ycard) {
         if (match.value[0].rcard === 0) {
           match.value[0].rcard = 1;
-          return;
+          return false;
         }
         match.value[0].rcard = 0;
       }
       match.value[0].ycard = !match.value[0].ycard;
+      return false;
     },
   },
   RightCard: {
@@ -940,11 +953,12 @@ const functions: map<{
       if (match.value[1].ycard) {
         if (match.value[1].rcard === 0) {
           match.value[1].rcard = 1;
-          return;
+          return false;
         }
         match.value[1].rcard = 0;
       }
       match.value[1].ycard = !match.value[1].ycard;
+      return false;
     },
   },
   LeftRCard: {
@@ -952,6 +966,7 @@ const functions: map<{
     func: () => {
       match.value[0].rcard++;
       match.value[0].rcard %= 10;
+      return false;
     },
   },
   RightRCard: {
@@ -959,18 +974,21 @@ const functions: map<{
     func: () => {
       match.value[1].rcard++;
       match.value[1].rcard %= 10;
+      return false;
     },
   },
   LeftMinusRCard: {
     name: "Remove 1 red card from FotL",
     func: () => {
       if (match.value[0].rcard > 0) match.value[0].rcard--;
+      return false;
     },
   },
   RightMinusRCard: {
     name: "Remove 1 red card from FotR",
     func: () => {
       if (match.value[1].rcard > 0) match.value[1].rcard--;
+      return false;
     },
   },
   Timer: {
@@ -981,7 +999,7 @@ const functions: map<{
         cyrano.value.sendingData &&
         status.value[0].state === "E"
       )
-        return;
+        return false;
       if (status.value[0].state === "F") {
         timer.stopTimer("H");
         return true;
@@ -1003,6 +1021,7 @@ const functions: map<{
           timer.startTimer("F");
         } else end();
       }
+      return false;
     },
     sound: "timer.flac",
   },
@@ -1010,23 +1029,36 @@ const functions: map<{
     name: "Manually set time",
     func: () => {
       inputTime.value = true;
+      return false;
     },
   },
   AddMin: {
     name: "Add 1 min to time",
-    func: () => timer.addTime(60),
+    func: () => {
+      timer.addTime(60);
+      return false;
+    },
   },
   AddSec: {
     name: "Add 1 sec from time",
-    func: () => timer.addTime(1),
+    func: () => {
+      timer.addTime(1);
+      return false;
+    },
   },
   MinusMin: {
     name: "Subtract 1 min from time",
-    func: () => timer.addTime(-60),
+    func: () => {
+      timer.addTime(-60);
+      return false;
+    },
   },
   MinusSec: {
     name: "Subtract 1 sec from time",
-    func: () => timer.addTime(-1),
+    func: () => {
+      timer.addTime(-1);
+      return false;
+    },
   },
   Rest: {
     name: "Rest and next round",
@@ -1042,6 +1074,7 @@ const functions: map<{
       } else {
         timer.startTimer("P");
       }
+      return false;
     },
   },
   Break: {
@@ -1054,29 +1087,50 @@ const functions: map<{
       } else {
         timer.startTimer("P", true);
       }
+      return false;
     },
   },
   ResetTime: {
     name: "Reset time",
     func: () => {
       status.value[0].stopwatch = settings.settings.maxTime;
+      return false;
     },
   },
   ResetBout: { name: "Reset bout", func: reset },
-  SkipBout: { name: "Skip bout", func: skip },
+  SkipBout: {
+    name: "Skip bout",
+    func: () => {
+      skip();
+      return false;
+    },
+  },
   PrioritySelector: {
     name: "Open priority selector",
-    func: () => (priorityPicker.value = true),
+    func: () => {
+      priorityPicker.value = true;
+      return false;
+    },
   },
-  PriorityLeft: { name: "Give FotL priority", func: () => choosePriority("L") },
+  PriorityLeft: {
+    name: "Give FotL priority",
+    func: () => {
+      choosePriority("L");
+      return false;
+    },
+  },
   PriorityRight: {
     name: "Give FotR priority",
-    func: () => choosePriority("R"),
+    func: () => {
+      choosePriority("R");
+      return false;
+    },
   },
   ResetPriority: {
     name: "Reset priority",
     func: () => {
       status.value[0].priority = "N";
+      return false;
     },
   },
   EndMatch: { name: "End match", func: end },
@@ -1087,6 +1141,7 @@ const functions: map<{
         status.value[0].round =
           (status.value[0].round % settings.settings.rounds) + 1;
       }
+      return false;
     },
   },
   Flip: {
@@ -1095,12 +1150,14 @@ const functions: map<{
       let f1 = match.value[0].fencer;
       match.value[0].fencer = match.value[1].fencer;
       match.value[1].fencer = f1;
+      return false;
     },
   },
   Mute: {
     name: "Mute",
     func: () => {
       settings.config.playSounds = !settings.config.playSounds;
+      return false;
     },
   },
 };
