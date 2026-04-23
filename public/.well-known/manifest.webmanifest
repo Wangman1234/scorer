@@ -2,7 +2,7 @@
   "id": "/",
   "short_name": "Scorer",
   "name": "Scorer IWA",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "update_manifest_url": "https://github.com/Wangman1234/scorer/releases/latest/download/update.json",
   "icons": [
     {
