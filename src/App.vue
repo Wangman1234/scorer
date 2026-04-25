@@ -364,7 +364,12 @@ function onSubmit(e: FormSubmitEvent) {
     fencers.value.push({
       fencer: new Fencer(
         e.values.id || (fencers.value.length() + 1).toString(),
-        [e.values.lastName, e.values.firstName],
+        [
+          e.values.lastName,
+          e.values.firstName ||
+            e.values.id ||
+            (fencers.value.length() + 1).toString(),
+        ],
         new Country(""),
         e.values.club,
       ),
