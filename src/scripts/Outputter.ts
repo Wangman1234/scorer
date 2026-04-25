@@ -89,6 +89,12 @@ export class Outputter {
   noBout() {
     this.selfState = "No Bouts";
   }
+  waiting() {
+    this.selfState = "Waiting";
+  }
+  bout() {
+    this.selfState = "Bout";
+  }
 
   stopOutputter() {
     if (this.settings.mockOptions.useSelf) {

@@ -161,7 +161,17 @@ const click = computed(() => {
     : undefined;
 });
 const timeHalt = computed(() => {
-  return settings.config.playSounds
+  return settings.config.playSounds &&
+    !(
+      cyrano.value &&
+      (cyrano.value.cyranoState === "Waiting" ||
+        cyrano.value.cyranoState === "No Bouts")
+    ) &&
+    !(
+      outputter.value &&
+      (outputter.value.selfState === "Waiting" ||
+        outputter.value.selfState === "No Bouts")
+    )
     ? new Howl({
         src: "/sounds/time.wav",
       })
@@ -301,6 +311,7 @@ async function stopCyrano() {
   delete cyrano.value;
   cyrano.value = undefined;
   if (!settings.cyranoOptions.replayMode) reset();
+  tournamentWindow.value = false;
   nav.page = "bout";
   nav.menu = true;
 }
@@ -377,7 +388,10 @@ function stopMock() {
   delete outputter.value;
   outputter.value = undefined;
   resetMock();
-  if (settings.mockOptions.useSelf) reset();
+  if (settings.mockOptions.useSelf) {
+    reset();
+    tournamentWindow.value = false;
+  }
 }
 function newRound() {
   fencers.value.update(rounds.value.length);
@@ -457,6 +471,7 @@ async function cyranoUpdate() {
 function mockUpdate() {
   rounds.value[rounds.value.length - 1]?.update();
   timer.stopTimer("H");
+  outputter.value?.waiting();
   status.value[0].stopwatch = settings.settings.maxTime;
   status.value[0].priority = "N";
   status.value[0].state = "H";
@@ -485,6 +500,7 @@ function mockUpdate() {
         status.value[0].round = status.value[0].match || 0;
         nav.page = "bout";
         nav.menu = true;
+        outputter.value?.bout();
         return;
       }
     }
