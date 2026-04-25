@@ -110,11 +110,11 @@ export class Timer {
         : toValue(this.status)[0].priority !== "N"
           ? this.settings.settings.priority
           : this.settings.settings.maxTime;
-    if ((toValue(this.status)[0].stopwatch ?? 0) < 0) {
+    toValue(this.status)[0].stopwatch =
+      (toValue(this.status)[0].stopwatch ?? 0) % maxTime;
+    if ((toValue(this.status)[0].stopwatch ?? 0) <= 0) {
       toValue(this.status)[0].stopwatch =
         (toValue(this.status)[0].stopwatch ?? 0) + maxTime;
     }
-    toValue(this.status)[0].stopwatch =
-      (toValue(this.status)[0].stopwatch ?? 0) % maxTime;
   }
 }
