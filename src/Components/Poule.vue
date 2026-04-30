@@ -291,10 +291,8 @@ function gs(matchId: number, id: string) {
 <!--suppress CssUnresolvedCustomProperty -->
 <style scoped>
 div {
-  width: 100%;
   overflow-x: auto;
-  justify-items: center;
-  margin-bottom: 1rem;
+  margin: auto auto 1rem;
 }
 table {
   overflow-x: auto;

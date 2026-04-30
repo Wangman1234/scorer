@@ -113,8 +113,19 @@ export const useSettingsStore = defineStore(
       pointsPerPeriod: 5,
       roundsPerTableMatch: 3,
     });
-    const mockOptions = ref({
-      useSelf: true,
+    const mockOptions = ref<{
+      useSelf: number;
+      port: number;
+      devices: {
+        [piste: number]: {
+          remoteAddress: string;
+          protocol: "EFP1" | "EFP1.1";
+        };
+      };
+    }>({
+      useSelf: 1,
+      port: 50100,
+      devices: {},
     });
 
     return { keymaps, config, settings, cyranoOptions, mockOptions };

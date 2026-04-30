@@ -266,7 +266,13 @@ const short = computed(() => {
   >
     {{ cyrano?.cyranoState }}
   </Blur>
-  <Blur v-else-if="outputter?.selfState === 'No Bouts'"> No Bouts </Blur>
+  <Blur
+    v-else-if="
+      outputter?.selfState === 'No Bouts' && settings.mockOptions.useSelf
+    "
+  >
+    No Bouts
+  </Blur>
   <Blur
     v-else-if="winner"
     class="clickable"

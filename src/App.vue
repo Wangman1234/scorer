@@ -349,8 +349,17 @@ const rounds = ref<Round[]>([]);
 const skipped = ref<[string, string][]>([]);
 type RoundType = (typeof rounds.value)[0];
 const outputter = ref<Outputter>();
+const devices = computed(() => {
+  const out: number[] = Object.keys(settings.mockOptions.devices).map(
+    (v) => +v,
+  );
+  if (settings.mockOptions.useSelf) {
+    out.push(settings.mockOptions.useSelf);
+  }
+  return out.sort();
+});
 
-function resolver(e: FormResolverOptions) {
+function fencerResolver(e: FormResolverOptions) {
   const errors: {
     id?: any;
   } = {};
@@ -359,16 +368,56 @@ function resolver(e: FormResolverOptions) {
     errors,
   };
 }
-function onSubmit(e: FormSubmitEvent) {
+function deviceResolver(e: FormResolverOptions) {
+  const errors: {
+    piste?: any;
+    remoteAddress?: any;
+  } = {};
+  if (
+    e.values.piste === settings.mockOptions.useSelf ||
+    e.values.piste in settings.mockOptions.devices
+  ) {
+    errors.piste = [{ message: "Piste already in use" }];
+  }
+  if (e.values.piste === 0) {
+    errors.piste = [{ message: "Piste cannot be 0" }];
+  }
+  if (
+    Object.values(settings.mockOptions.devices)
+      .map((v) => v.remoteAddress)
+      .includes(e.values.remoteAddress)
+  ) {
+    errors.remoteAddress = [{ message: "ip already in use" }];
+  }
+  if (!e.values.remoteAddress) {
+    errors.remoteAddress = [{ message: "ip not allowed" }];
+  }
+  return {
+    values: e.values,
+    errors,
+  };
+}
+function submitFencer(e: FormSubmitEvent) {
   if (e.valid) {
     fencers.value.push({
       fencer: new Fencer(
-        e.values.id || (fencers.value.length() + 1).toString(),
+        e.values.id ||
+          (
+            (Math.max(
+              ...fencers.value.fencers[0].map((v) => +v.fencer.id),
+              0,
+            ) || fencers.value.length()) + 1
+          ).toString(),
         [
           e.values.lastName,
           e.values.firstName ||
             e.values.id ||
-            (fencers.value.length() + 1).toString(),
+            (
+              (Math.max(
+                ...fencers.value.fencers[0].map((v) => +v.fencer.id),
+                0,
+              ) || fencers.value.length()) + 1
+            ).toString(),
         ],
         new Country(""),
         e.values.club,
@@ -384,9 +433,27 @@ function onSubmit(e: FormSubmitEvent) {
     e.reset();
   }
 }
+function submitDevice(e: FormSubmitEvent) {
+  if (e.valid) {
+    settings.mockOptions.devices[e.values.piste] = {
+      remoteAddress: e.values.remoteAddress,
+      protocol: e.values.protocol,
+    };
+  }
+}
 
 function startMock() {
-  outputter.value = new Outputter(matches, status, match, $reset);
+  outputter.value = new Outputter(
+    matches,
+    status,
+    rounds as unknown as Round[],
+    fencers as unknown as FencerList,
+    $reset,
+    devices,
+  );
+  if (outputter.value.socket) {
+    outputter.value.startCyrano();
+  }
 }
 function stopMock() {
   outputter.value?.stopOutputter();
@@ -395,6 +462,7 @@ function stopMock() {
   resetMock();
   if (settings.mockOptions.useSelf) {
     reset();
+    nav.menu = true;
     tournamentWindow.value = false;
   }
 }
@@ -405,18 +473,14 @@ function newRound() {
     new Round(newID, fencers, rounds.value.length) as unknown as RoundType,
   );
   mockTab.value = newID.toString();
-  if (settings.mockOptions.useSelf) {
-    outputter.value?.assignMatches(
-      rounds.value[newID - 1]?.matches ?? {},
-      newID,
-    );
-  }
+  outputter.value?.assignMatches(rounds.value[newID - 1]?.matches ?? {}, newID);
 }
 
 function mockFinish() {
   fencers.value.update(rounds.value.length);
   mockFinished.value = true;
   mockTab.value = "final";
+  outputter.value?.stopOutputter();
   outputter.value = undefined;
 }
 function resetMock() {
@@ -502,6 +566,8 @@ function mockUpdate() {
     if (cont) {
       if (matchTemp[0].status !== "V" && matchTemp[1].status !== "V") {
         status.value[0].match = index;
+        (outputter.value?.cyranoMatch ?? {})[settings.mockOptions.useSelf] =
+          index;
         status.value[0].round = status.value[0].match || 0;
         nav.page = "bout";
         nav.menu = true;
@@ -520,6 +586,8 @@ function mockUpdate() {
   nav.menu = true;
   status.value[0].match = "";
   status.value[0].round = 1;
+  (outputter.value?.cyranoMatch ?? {})[settings.mockOptions.useSelf] = 0;
+  matchData.value = [];
 }
 
 async function skip() {
@@ -1217,6 +1285,7 @@ onUnmounted(() => {
   window.removeEventListener("keyup", keyHandler);
   window.removeEventListener("keydown", keyDownListener);
   stopCyrano();
+  stopMock();
   timer.stopTimer("H");
   $reset();
 });
@@ -2256,18 +2325,148 @@ onUnmounted(() => {
                   <div class="scrollable">
                     <menu>
                       <li>
-                        <div>Use self</div>
-                        <ToggleSwitch
-                          v-model="settings.mockOptions.useSelf"
+                        <div>Piste for self(0 to disable)</div>
+                        <InputNumber
+                          v-model.number="settings.mockOptions.useSelf"
+                          :invalid="
+                            settings.mockOptions.useSelf in
+                            settings.mockOptions.devices
+                          "
+                          :min="0"
                           :disabled="!!outputter"
+                          prefix="Piste "
+                        />
+                      </li>
+                      <li>
+                        <div>Cyrano port</div>
+                        <InputNumber
+                          v-model.number="settings.mockOptions.port"
+                          :disabled="!!outputter"
+                          :useGrouping="false"
                         />
                       </li>
                     </menu>
+                    <Form
+                      v-slot=""
+                      :initialValues="{
+                        piste: 0,
+                        remoteAddress: '',
+                        port: 50100,
+                        protocol: 'EFP1.1',
+                      }"
+                      :resolver="deviceResolver"
+                      validateOnBlur
+                      validateOnMount
+                      validateOnSubmit
+                      validateOnValueUpdate
+                      @submit="submitDevice"
+                    >
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">Piste</th>
+                            <th scope="col">Remote Address</th>
+                            <th scope="col">Protocol</th>
+                            <th
+                              v-if="outputter"
+                              scope="col"
+                            >
+                              Status
+                            </th>
+                            <th scope="col"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="piste of devices"
+                            :id="piste.toString()"
+                          >
+                            <td>{{ piste }}</td>
+                            <td>
+                              {{
+                                settings.mockOptions.devices[piste]
+                                  ?.remoteAddress ?? "self"
+                              }}
+                            </td>
+                            <td>
+                              {{
+                                settings.mockOptions.devices[piste]?.protocol ??
+                                "Direct"
+                              }}
+                            </td>
+                            <td v-if="outputter">
+                              {{
+                                (outputter.deviceState[piste] ?? 100) < 10
+                                  ? "Connected"
+                                  : "Disconnected"
+                              }}
+                            </td>
+                            <td v-if="!outputter">
+                              <Button
+                                @click="
+                                  piste === settings.mockOptions.useSelf
+                                    ? (settings.mockOptions.useSelf = 0)
+                                    : delete settings.mockOptions.devices[piste]
+                                "
+                              >
+                                Remove
+                              </Button>
+                            </td>
+                          </tr>
+                        </tbody>
+                        <tfoot>
+                          <tr>
+                            <td>
+                              <InputNumber
+                                :disabled="!!outputter"
+                                autofocus
+                                fluid
+                                name="piste"
+                                placeholder="piste"
+                                type="number"
+                              />
+                            </td>
+                            <td>
+                              <InputText
+                                :disabled="!!outputter"
+                                fluid
+                                name="remoteAddress"
+                                placeholder="Remote Address"
+                                type="text"
+                              />
+                            </td>
+                            <td>
+                              <Select
+                                :disabled="!!outputter"
+                                :options="['EFP1', 'EFP1.1']"
+                                fluid
+                                name="protocol"
+                                placeholder="Select a protocol"
+                              />
+                            </td>
+                            <td>
+                              <Button
+                                :disabled="!!outputter"
+                                label="Submit"
+                                type="submit"
+                              />
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </Form>
+                    <div>
+                      <code>{{ outputter?.cyranoOut }}</code>
+                    </div>
                   </div>
                   <div class="button">
                     <Button
                       v-if="!outputter"
-                      :disabled="!!cyrano"
+                      :disabled="
+                        !!cyrano ||
+                        settings.mockOptions.useSelf in
+                          settings.mockOptions.devices
+                      "
                       @click="startMock"
                     >
                       Start Mock Tournament
@@ -2293,8 +2492,12 @@ onUnmounted(() => {
                         lastName: '',
                         club: 'THC',
                       }"
-                      :resolver
-                      @submit="onSubmit"
+                      :resolver="fencerResolver"
+                      validateOnBlur
+                      validateOnMount
+                      validateOnSubmit
+                      validateOnValueUpdate
+                      @submit="submitFencer"
                     >
                       <table>
                         <thead>
@@ -2431,7 +2634,22 @@ onUnmounted(() => {
                       "
                       match=""
                     />
+                    <div
+                      v-for="(ms, piste) in outputter.cyranoMatches"
+                      v-if="outputter && round.id === rounds.length"
+                    >
+                      <menu>
+                        <li>
+                          <div>Piste {{ piste }}:</div>
+                        </li>
+                      </menu>
+                      <MatchesTable
+                        :match="outputter.cyranoMatch[piste] ?? ''"
+                        :matches="ms"
+                      />
+                    </div>
                     <MatchesTable
+                      v-else
                       :matches="round.matches"
                       match=""
                     />
@@ -2516,7 +2734,7 @@ onUnmounted(() => {
                   <div class="button">
                     <Button
                       severity="danger"
-                      @click="resetMock"
+                      @click="resetMock()"
                     >
                       Reset
                     </Button>
