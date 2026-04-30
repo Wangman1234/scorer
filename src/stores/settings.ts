@@ -88,6 +88,7 @@ export const useSettingsStore = defineStore(
       allowTies: false,
       priority: 60,
       allowOver: false,
+      allowFirst: false,
       doublesAddPoints: 0,
       doublesAddPoints1: 1,
       maxDoubles: 0,

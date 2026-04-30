@@ -624,6 +624,9 @@ async function finishMatch() {
 }
 function end() {
   timer.stopTimer("H");
+  if (settings.settings.allowFirst) {
+    allowOver();
+  }
   if (
     status.value[0].doubles >= settings.settings.maxDoubles &&
     settings.settings.maxDoubles > 0 &&
@@ -654,6 +657,10 @@ function end() {
     return false;
   }
   push();
+  allowOver();
+  return false;
+}
+function allowOver() {
   if (!settings.settings.allowOver) {
     if (match.value[0].score > settings.settings.maxScore) {
       match.value[0].score = settings.settings.maxScore;
@@ -667,12 +674,11 @@ function end() {
     ) {
       if (match.value[0].status === "V") {
         status.value[0].priority = "L";
-      } else {
+      } else if (match.value[1].status === "V") {
         status.value[0].priority = "R";
       }
     }
   }
-  return false;
 }
 
 // Key handler
@@ -1664,6 +1670,10 @@ onUnmounted(() => {
                 <div>Allow point overflow</div>
                 <ToggleSwitch v-model="settings.settings.allowOver" />
               </li>
+              <li v-if="!settings.settings.allowOver">
+                <div>Remove point overflow before calculating winner</div>
+                <ToggleSwitch v-model="settings.settings.allowFirst" />
+              </li>
               <li>
                 <div>Doubles add points</div>
                 <InputNumber
@@ -1959,6 +1969,10 @@ onUnmounted(() => {
                   = max points in FT)
                 </div>
                 <ToggleSwitch v-model="settings.settings.allowOver" />
+              </li>
+              <li v-if="!settings.settings.allowOver">
+                <div>Remove point overflow before calculating winner</div>
+                <ToggleSwitch v-model="settings.settings.allowFirst" />
               </li>
             </menu>
             <div>
