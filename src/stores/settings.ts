@@ -86,6 +86,7 @@ export const useSettingsStore = defineStore(
       rest: 60,
       break: 60,
       allowTies: false,
+      doubleLoss: false,
       priority: 60,
       allowOver: false,
       allowFirst: false,

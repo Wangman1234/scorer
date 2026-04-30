@@ -630,7 +630,18 @@ function end() {
   if (
     status.value[0].doubles >= settings.settings.maxDoubles &&
     settings.settings.maxDoubles > 0 &&
-    settings.settings.allowTies
+    settings.settings.doubleLoss
+  ) {
+    const min = Math.min(match.value[0].score, match.value[1].score);
+    match.value[0].score = min;
+    match.value[1].score = min;
+    status.value[0].doubles = 0;
+  }
+  if (
+    status.value[0].doubles >= settings.settings.maxDoubles &&
+    settings.settings.maxDoubles > 0 &&
+    settings.settings.allowTies &&
+    settings.settings.doubleLoss
   ) {
     match.value[0].status = "D";
     match.value[1].status = "D";
@@ -1701,6 +1712,10 @@ onUnmounted(() => {
                   showButtons
                   size="small"
                 />
+              </li>
+              <li v-if="settings.settings.maxDoubles > 0">
+                <div>Maximum doubles ties</div>
+                <ToggleSwitch v-model="settings.settings.doubleLoss" />
               </li>
               <li>
                 <div>Passivity timer</div>
