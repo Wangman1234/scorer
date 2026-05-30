@@ -14,7 +14,7 @@
   - limitations under the License.
   -->
 
-<script setup lang="ts">
+<script lang="ts" setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import Init from "@/Components/Init.vue";
 import {
@@ -24,7 +24,7 @@ import {
   Fencer,
   FencerList,
   type map,
-  Name,
+  Name
 } from "@/scripts/Types.ts";
 import { isEmpty, omit } from "underscore";
 import { useSettingsStore } from "@/stores/settings.ts";
@@ -39,11 +39,7 @@ import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 import Priority from "@/Components/Priority.vue";
 import Tournament from "@/Components/Tournament.vue";
 import Window from "@/Pages/Window.vue";
-import {
-  Form,
-  type FormResolverOptions,
-  type FormSubmitEvent,
-} from "@primevue/forms";
+import { Form, type FormResolverOptions, type FormSubmitEvent } from "@primevue/forms";
 import { Round } from "@/scripts/Round.ts";
 import MatchesTable from "@/Components/MatchesTable.vue";
 import ListFencers from "@/ListFencers.vue";
@@ -624,7 +620,7 @@ async function finishMatch() {
 }
 function end() {
   timer.stopTimer("H");
-  if (settings.settings.allowFirst) {
+  if (settings.settings.allowFirst && status.value[0].priority === "N") {
     allowOver();
   }
   if (
@@ -1310,6 +1306,7 @@ onUnmounted(() => {
 
 <template>
   <Init
+    v-if="!started"
     class="init"
     @started="
       (start) => {
@@ -1317,22 +1314,21 @@ onUnmounted(() => {
         nav.menu = start;
       }
     "
-    v-if="!started"
   />
   <Scoreboard
-    :flip="settings.config.flip"
     :cyrano
-    :outputter
+    :flip="settings.config.flip"
     :lChange="black[0]"
+    :lFencer="match[0]"
     :matchOver
     :matches
+    :outputter
     :passivity
-    :lFencer="match[0]"
+    :rChange="black[1]"
+    :rFencer="match[1]"
     :status
     :stopwatch
     :winner
-    :rChange="black[1]"
-    :rFencer="match[1]"
     @index="(index) => doFunc(index)"
   />
   <Dialog
@@ -1386,9 +1382,9 @@ onUnmounted(() => {
   >
     <input
       ref="stopwatchRef"
-      autofocus
       v-model="status[0].stopwatch"
       :max="settings.settings.maxTime"
+      autofocus
       min="0"
       step="0.01"
       type="number"
@@ -1396,13 +1392,13 @@ onUnmounted(() => {
   </Dialog>
   <Dialog
     v-model:visible="nav.menu"
-    :closeOnEscape="false"
     :closable="false"
-    :maximizable="true"
+    :closeOnEscape="false"
     :draggable="false"
+    :maximizable="true"
     :style="{ width: '50rem', height: '50rem' }"
-    header="Settings"
     dismissableMask
+    header="Settings"
     modal
   >
     <Tabs
@@ -1426,11 +1422,11 @@ onUnmounted(() => {
           Corrections
         </Tab>
         <Tab
-          value="tournament"
           :disabled="
             (!cyrano || settings.cyranoOptions.replayMode) &&
             !(outputter && settings.mockOptions.useSelf)
           "
+          value="tournament"
           @click="nav.page = 'tournament'"
         >
           Tournament
@@ -1922,8 +1918,8 @@ onUnmounted(() => {
                 <div>Port</div>
                 <InputNumber
                   v-model.number="settings.cyranoOptions.port"
-                  :useGrouping="false"
                   :disabled="!!cyrano"
+                  :useGrouping="false"
                   size="small"
                 />
               </li>
@@ -1997,8 +1993,8 @@ onUnmounted(() => {
           <div class="button">
             <Button
               v-if="!cyrano"
-              @click="startCyrano"
               :disabled="!!outputter"
+              @click="startCyrano"
             >
               Start Cyrano
             </Button>
@@ -2199,6 +2195,7 @@ onUnmounted(() => {
               >
                 <div>{{ item.name ?? index }}</div>
                 <ToggleButton
+                  :disabled="settings.config.keymap.split(' ')[0] === 'default'"
                   :dt="{
                     colorScheme: {
                       dark: {
@@ -2218,10 +2215,9 @@ onUnmounted(() => {
                     Object.values(keymap).filter((it) => it === keymap[index])
                       .length > 1
                   "
+                  :modelValue="change === index"
                   class="bind keys"
                   size="small"
-                  :disabled="settings.config.keymap.split(' ')[0] === 'default'"
-                  :modelValue="change === index"
                   @update:modelValue="change = index"
                 >
                   {{ keymap[index] }}
@@ -2357,12 +2353,12 @@ onUnmounted(() => {
                         <div>Piste for self(0 to disable)</div>
                         <InputNumber
                           v-model.number="settings.mockOptions.useSelf"
+                          :disabled="!!outputter"
                           :invalid="
                             settings.mockOptions.useSelf in
                             settings.mockOptions.devices
                           "
                           :min="0"
-                          :disabled="!!outputter"
                           prefix="Piste "
                         />
                       </li>
