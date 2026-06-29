@@ -258,6 +258,7 @@ export type Status = {
   priority: "N" | "L" | "R" | "";
   state: "F" | "H" | "P" | "W" | "E" | "";
   doubles: number;
+  exchanges: number;
 };
 
 export type CorrectStatus = {
@@ -271,6 +272,7 @@ export type CorrectStatus = {
   priority: "N" | "L" | "R";
   state: "F" | "H" | "P" | "W" | "E" | "";
   doubles: number;
+  exchanges: number;
 };
 
 export const emptyStatus: Status = {
@@ -284,6 +286,7 @@ export const emptyStatus: Status = {
   priority: "",
   state: "",
   doubles: 0,
+  exchanges: 0,
 };
 
 export type FencerStatus = {

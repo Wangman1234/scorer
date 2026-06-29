@@ -201,6 +201,20 @@ const short = computed(() => {
             }}
             Doubles
           </div>
+          <div
+            v-if="settings.config.showExchanges"
+            id="doubles"
+            class="clickable"
+            @click.stop="$emit('index', 'Double')"
+          >
+            {{ status[0].exchanges
+            }}{{
+              settings.settings.maxExchanges > 0
+                ? "/" + settings.settings.maxExchanges.toString()
+                : ""
+            }}
+            Exchanges
+          </div>
         </div>
         <div
           id="rounds"

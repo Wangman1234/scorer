@@ -349,6 +349,7 @@ export class Outputter {
           stopwatch: 180,
           type: "I",
           weapon: "F",
+          exchanges: 0,
         };
         let leftFencer: FencerStatus;
         let rightFencer: FencerStatus;

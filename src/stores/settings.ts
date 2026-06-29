@@ -71,6 +71,7 @@ export const useSettingsStore = defineStore(
       ending: "",
       showFlags: false,
       showDoubles: false,
+      showExchanges: false,
       blurred: true,
       playSounds: true,
       click: true,
@@ -93,6 +94,7 @@ export const useSettingsStore = defineStore(
       doublesAddPoints: 0,
       doublesAddPoints1: 1,
       maxDoubles: 0,
+      maxExchanges: 0,
       passivity: 60,
       passivityStops: true,
     });

@@ -137,6 +137,7 @@ export class CyranoMessage {
         priority: (section1s[13] as "N" | "L" | "R") ?? "",
         state: (section1s[14] as "F" | "H" | "P" | "W" | "E") ?? "",
         doubles: 0,
+        exchanges: 0,
       };
       this.ref = new Fencer(
         section1s[15] ?? "",

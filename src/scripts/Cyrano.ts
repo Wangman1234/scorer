@@ -308,6 +308,7 @@ export class Cyrano {
             priority: "N",
             state: "W",
             doubles: 0,
+            exchanges: 0,
           };
           this.cyranoState = "Waiting";
           return "NEXT";
@@ -334,6 +335,7 @@ export class Cyrano {
           priority: "N",
           state: "W",
           doubles: 0,
+          exchanges: 0,
         };
         this.cyranoState = "Waiting";
         return "NEXT";
