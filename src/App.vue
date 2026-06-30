@@ -145,8 +145,11 @@ const matchOver = computed(() => {
       status.value[0].priority === "N") ||
     (settings.settings.maxDoubles <= status.value[0].doubles &&
       settings.settings.maxDoubles > 0) ||
-    (settings.settings.maxExchanges <= status.value[0].exchanges &&
-      settings.settings.maxExchanges > 0)
+    (maxExchanges.value <= status.value[0].exchanges &&
+      maxExchanges.value > 0) ||
+    (maxExchanges.value <= status.value[0].exchanges + 1 &&
+      exchange.value &&
+      maxExchanges.value > 0)
   );
 });
 const winner = computed(() => {
@@ -176,6 +179,24 @@ const timeHalt = computed(() => {
       })
     : undefined;
 });
+const exchange = computed(() => {
+  return (
+    status.value[0].stopwatch !== settings.settings.maxTime &&
+    (match.value[0].score !== matchData.value.at(-1)?.leftFencerStatus.score ||
+      match.value[0].ycard !== matchData.value.at(-1)?.leftFencerStatus.ycard ||
+      match.value[0].rcard !== matchData.value.at(-1)?.leftFencerStatus.rcard ||
+      match.value[1].score !==
+        matchData.value.at(-1)?.rightFencerStatus.score ||
+      match.value[1].ycard !==
+        matchData.value.at(-1)?.rightFencerStatus.ycard ||
+      match.value[1].rcard !==
+        matchData.value.at(-1)?.rightFencerStatus.rcard ||
+      status.value[0].doubles !== matchData.value.at(-1)?.doubles)
+  );
+});
+const maxExchanges = computed(() =>
+  status.value[0].priority === "N" ? settings.settings.maxExchanges : 1,
+);
 
 function $reset() {
   matches.value = {
@@ -671,6 +692,9 @@ function end() {
     status.value[0].exchanges = 0;
     return false;
   }
+  if (exchange.value) {
+    status.value[0].exchanges++;
+  }
   push();
   allowOver();
   return false;
@@ -1124,39 +1148,11 @@ const functions: map<{
         status.value[0].state === "W" ||
         status.value[0].state === ""
       ) {
-        if (
-          status.value[0].priority === "N" ||
-          (match.value[0].score === match.value[1].score &&
-            status.value[0].doubles === 0)
-        ) {
-          if (
-            status.value[0].stopwatch !== settings.settings.maxTime &&
-            (match.value[0].score !==
-              matchData.value.at(-1)?.leftFencerStatus.score ||
-              match.value[0].ycard !==
-                matchData.value.at(-1)?.leftFencerStatus.ycard ||
-              match.value[0].rcard !==
-                matchData.value.at(-1)?.leftFencerStatus.rcard ||
-              match.value[1].score !==
-                matchData.value.at(-1)?.rightFencerStatus.score ||
-              match.value[1].ycard !==
-                matchData.value.at(-1)?.rightFencerStatus.ycard ||
-              match.value[1].rcard !==
-                matchData.value.at(-1)?.rightFencerStatus.rcard ||
-              status.value[0].doubles !== matchData.value.at(-1)?.doubles)
-          ) {
-            status.value[0].exchanges++;
-            if (
-              status.value[0].exchanges >= settings.settings.maxExchanges &&
-              settings.settings.maxExchanges > 0
-            ) {
-              push();
-              return false;
-            }
-          }
-          push();
-          timer.startTimer("F");
-        } else end();
+        if (exchange.value) {
+          status.value[0].exchanges++;
+        }
+        push();
+        timer.startTimer("F");
       }
       return false;
     },
@@ -1350,11 +1346,13 @@ onUnmounted(() => {
   />
   <Scoreboard
     :cyrano
+    :exchange
     :flip="settings.config.flip"
     :lChange="black[0]"
     :lFencer="match[0]"
     :matchOver
     :matches
+    :maxExchanges
     :outputter
     :passivity
     :rChange="black[1]"

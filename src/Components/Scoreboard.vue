@@ -41,6 +41,8 @@ const props = defineProps<{
   matchOver: boolean;
   lChange: boolean;
   rChange: boolean;
+  exchange: boolean;
+  maxExchanges: number;
 }>();
 defineEmits<{
   index: [func: string];
@@ -188,7 +190,15 @@ const short = computed(() => {
         </div>
         <div>
           <div
-            v-if="settings.config.showDoubles"
+            v-if="settings.config.showExchanges"
+            id="doubles"
+          >
+            {{ status[0].exchanges + (exchange ? 1 : 0)
+            }}{{ maxExchanges > 0 ? "/" + maxExchanges.toString() : "" }}
+            Exchanges
+          </div>
+          <div
+            v-else-if="settings.config.showDoubles"
             id="doubles"
             class="clickable"
             @click.stop="$emit('index', 'Double')"
@@ -200,20 +210,6 @@ const short = computed(() => {
                 : ""
             }}
             Doubles
-          </div>
-          <div
-            v-if="settings.config.showExchanges"
-            id="doubles"
-            class="clickable"
-            @click.stop="$emit('index', 'Double')"
-          >
-            {{ status[0].exchanges
-            }}{{
-              settings.settings.maxExchanges > 0
-                ? "/" + settings.settings.maxExchanges.toString()
-                : ""
-            }}
-            Exchanges
           </div>
         </div>
         <div
