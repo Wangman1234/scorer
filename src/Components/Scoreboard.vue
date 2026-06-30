@@ -190,26 +190,25 @@ const short = computed(() => {
         </div>
         <div>
           <div
-            v-if="settings.config.showExchanges"
-            id="doubles"
-          >
-            {{ status[0].exchanges + (exchange ? 1 : 0)
-            }}{{ maxExchanges > 0 ? "/" + maxExchanges.toString() : "" }}
-            Exchanges
-          </div>
-          <div
-            v-else-if="settings.config.showDoubles"
+            v-if="settings.config.showExchanges || settings.config.showDoubles"
             id="doubles"
             class="clickable"
             @click.stop="$emit('index', 'Double')"
           >
-            {{ status[0].doubles
-            }}{{
-              settings.settings.maxDoubles > 0
-                ? "/" + settings.settings.maxDoubles.toString()
-                : ""
-            }}
-            Doubles
+            <span v-if="settings.config.showExchanges">
+              {{ status[0].exchanges + (exchange ? 1 : 0)
+              }}{{ maxExchanges > 0 ? "/" + maxExchanges.toString() : "" }}
+              {{ settings.config.showDoubles ? "XG" : "Exchanges" }}
+            </span>
+            <span v-if="settings.config.showDoubles">
+              {{ status[0].doubles
+              }}{{
+                settings.settings.maxDoubles > 0
+                  ? "/" + settings.settings.maxDoubles.toString()
+                  : ""
+              }}
+              {{ settings.config.showExchanges ? "DB" : "Doubles" }}
+            </span>
           </div>
         </div>
         <div
@@ -419,6 +418,9 @@ div.scoring {
 }
 #doubles {
   font-size: 3rem;
+  span {
+    padding: 0 1rem;
+  }
 }
 #timer {
   z-index: 990;
