@@ -97,6 +97,7 @@ export const useSettingsStore = defineStore(
       maxExchanges: 0,
       passivity: 60,
       passivityStops: true,
+      leadRequired: 0,
     });
     const cyranoOptions = ref<{
       port: number;

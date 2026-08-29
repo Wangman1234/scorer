@@ -137,6 +137,8 @@ const short = computed(() => {
                 rightFencer.score >= (3 / 5) * settings.settings.maxScore ||
                 (status[0].doubles >= settings.settings.maxDoubles / 2 &&
                   settings.settings.maxDoubles !== 0) ||
+                (status[0].exchanges >= settings.settings.maxExchanges / 2 &&
+                  settings.settings.maxExchanges !== 0) ||
                 (Number(status[0].stopwatch) <= settings.settings.maxTime / 3 &&
                   status[0].round == settings.settings.rounds)) &&
               cyrano &&

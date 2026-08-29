@@ -24,7 +24,7 @@ import {
   Fencer,
   FencerList,
   type map,
-  Name
+  Name,
 } from "@/scripts/Types.ts";
 import { isEmpty, omit } from "underscore";
 import { useSettingsStore } from "@/stores/settings.ts";
@@ -39,7 +39,11 @@ import { CyranoMessage } from "@/scripts/CyranoMessage.ts";
 import Priority from "@/Components/Priority.vue";
 import Tournament from "@/Components/Tournament.vue";
 import Window from "@/Pages/Window.vue";
-import { Form, type FormResolverOptions, type FormSubmitEvent } from "@primevue/forms";
+import {
+  Form,
+  type FormResolverOptions,
+  type FormSubmitEvent,
+} from "@primevue/forms";
 import { Round } from "@/scripts/Round.ts";
 import MatchesTable from "@/Components/MatchesTable.vue";
 import ListFencers from "@/ListFencers.vue";
@@ -140,8 +144,12 @@ const matchOver = computed(() => {
     ((stopwatch.value ?? 0) <= 0 &&
       (status.value[0].round === settings.settings.rounds ||
         status.value[0].priority !== "N")) ||
-    ((match.value[0].score >= settings.settings.maxScore ||
-      match.value[1].score >= settings.settings.maxScore) &&
+    (((match.value[0].score >= settings.settings.maxScore &&
+      match.value[0].score - match.value[1].score >=
+        settings.settings.leadRequired) ||
+      (match.value[1].score >= settings.settings.maxScore &&
+        match.value[1].score - match.value[0].score >=
+          settings.settings.leadRequired)) &&
       status.value[0].priority === "N") ||
     (settings.settings.maxDoubles <= status.value[0].doubles &&
       settings.settings.maxDoubles > 0) ||
@@ -265,7 +273,8 @@ function changeScore(fencer: 0 | 1, value: number, double: boolean = false) {
       (val >= 0 &&
         (status.value[0].priority !== "N" ||
           value <= 0 ||
-          match.value[fencer].score < settings.settings.maxScore)) ||
+          match.value[fencer].score < settings.settings.maxScore ||
+          settings.settings.leadRequired !== 0)) ||
       double
     ) {
       match.value[fencer].score = val;
@@ -1663,6 +1672,16 @@ onUnmounted(() => {
                 <InputNumber
                   v-model="settings.settings.maxScore"
                   :min="1"
+                  :step="1"
+                  showButtons
+                  size="small"
+                />
+              </li>
+              <li>
+                <div>Lead in score required</div>
+                <InputNumber
+                  v-model="settings.settings.leadRequired"
+                  :min="0"
                   :step="1"
                   showButtons
                   size="small"
