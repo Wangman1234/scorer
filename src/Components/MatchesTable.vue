@@ -70,8 +70,8 @@ const settings = useSettingsStore();
       <tbody>
         <tr
           v-for="(item, index) in matches"
-          :key="index"
-          :class="index == match ? 'running' : 'not'"
+          :key="+index"
+          :class="+index == match ? 'running' : 'not'"
         >
           <th scope="row">{{ index }}.</th>
           <td>
