@@ -834,10 +834,8 @@ function keyHandler(e: KeyboardEvent) {
     } else if (
       !cyrano.value ||
       ((cyrano.value.sendingData || status.value[0].state !== "E") &&
-        !(
-          cyrano.value.cyranoState === "Skipping" ||
-          cyrano.value.cyranoState === "Ending"
-        ))
+        cyrano.value.cyranoState !== "Skipping" &&
+        cyrano.value.cyranoState !== "Ending")
     ) {
       e.preventDefault();
       if (key === " ") key = keymap.value.Timer;
@@ -1141,8 +1139,7 @@ const functions: map<{
     func: () => {
       if (
         cyrano.value &&
-        cyrano.value.sendingData &&
-        status.value[0].state === "E"
+        (status.value[0].state === "E" || !cyrano.value.sendingData)
       )
         return false;
       if (status.value[0].state === "F") {
